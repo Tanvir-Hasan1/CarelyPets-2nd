@@ -1,24 +1,49 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import React, { useEffect, useState } from "react";
+import "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState<
+    boolean | null
+  >(null);
+
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const hasSeenOnboarding = await AsyncStorage.getItem(
+          "hasSeenOnboarding"
+        );
+        setIsOnboardingComplete(hasSeenOnboarding === "true");
+      } catch (error) {
+        console.error("Error checking onboarding status:", error);
+        setIsOnboardingComplete(false);
+      }
+    };
+
+    checkOnboarding();
+  }, []);
+
+  if (isOnboardingComplete === null) {
+    return null; // Loading state
+  }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+    <SafeAreaView style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        {!isOnboardingComplete ? (
+          <Stack.Screen
+            name="(auth)/onboarding"
+            options={{
+              gestureEnabled: false,
+            }}
+          />
+        ) : null}
+        <Stack.Screen name="(auth)" />
       </Stack>
       <StatusBar style="auto" />
-    </ThemeProvider>
+    </SafeAreaView>
   );
 }
