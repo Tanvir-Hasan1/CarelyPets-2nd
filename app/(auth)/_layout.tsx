@@ -10,9 +10,13 @@ export default function AuthLayout() {
           gestureEnabled: false,
         }}
       />
-      <Stack.Screen name="forgetPassword/index" />
-      <Stack.Screen name="login/index" />
-      <Stack.Screen name="signup/index" />
+      <Stack.Screen name="forgetScreen" />
+      <Stack.Screen name="newPassword" />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="signup" />
+      <Stack.Screen name="verifyCode" />
+      <Stack.Screen name="otpVerify" />
+      <Stack.Screen name="PC-Successful" />
     </Stack>
   );
 }

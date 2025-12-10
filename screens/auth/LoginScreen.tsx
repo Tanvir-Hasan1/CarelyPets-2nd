@@ -140,7 +140,6 @@ export default function LoginScreen() {
               ) : (
                 <Eye width={24} height={24} />
               )}
-              {/* {showPassword ? "👁️" : "🙈"} */}
             </TouchableOpacity>
           </View>
         </View>
@@ -300,7 +299,7 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.lg,
   },
   forgotPasswordContainer: {
-    alignItems: "flex-end",
+    alignSelf: "flex-end",
     marginBottom: Spacing.xl,
   },
   forgotPasswordText: {
