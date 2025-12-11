@@ -60,7 +60,10 @@ export default function SignupScreen() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // For now, just navigate to login
-      router.push("../login");
+      router.push({
+        pathname: "../verifyEmailOTP",
+        params: { email, redirectTo: "../login" },
+      });
     } catch (err) {
       setError("Signup failed. Please try again.");
       console.error("Signup error:", err);

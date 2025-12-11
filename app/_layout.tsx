@@ -35,13 +35,14 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         {!isOnboardingComplete ? (
           <Stack.Screen
-            name="(auth)/onboarding"
+            name="onboarding"
             options={{
               gestureEnabled: false,
             }}
           />
-        ) : null}
-        <Stack.Screen name="(auth)" />
+        ) : (
+          <Stack.Screen name="(auth)" />
+        )}
       </Stack>
       <StatusBar style="auto" />
     </SafeAreaView>
