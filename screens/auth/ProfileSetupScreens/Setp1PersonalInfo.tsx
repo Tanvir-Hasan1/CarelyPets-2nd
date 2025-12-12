@@ -284,6 +284,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   scrollContent: {
+    justifyContent: "center",
     flexGrow: 1,
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.lg,

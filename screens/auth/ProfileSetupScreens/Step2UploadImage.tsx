@@ -1,5 +1,3 @@
-// app/screens/profileSetup/Step2UploadImage.tsx
-
 import {
   BorderRadius,
   Colors,
@@ -7,7 +5,7 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
-import * as Camera from "expo-camera";
+import { useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
 import {
@@ -40,11 +38,7 @@ export default function Step2UploadImage({
   const [previewImage, setPreviewImage] = useState<string | null>(
     profileImage || null
   );
-
-  const requestCameraPermission = async () => {
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    return status === "granted";
-  };
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const requestGalleryPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -55,15 +49,17 @@ export default function Step2UploadImage({
     console.log("camera");
 
     // Check camera permission
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      alert("Camera permission is required to take photos");
-      return;
+    if (!cameraPermission?.granted) {
+      const permissionResponse = await requestCameraPermission();
+      if (!permissionResponse.granted) {
+        alert("Camera permission is required to take photos");
+        return;
+      }
     }
 
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: "images", // FIXED: Use string literal instead of MediaTypeOptions
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -92,7 +88,7 @@ export default function Step2UploadImage({
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: "images", // FIXED: Use string literal instead of MediaTypeOptions
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -219,6 +215,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   scrollContent: {
+    justifyContent: "center",
     flexGrow: 1,
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.lg,
@@ -285,22 +282,21 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   imagePreview: {
-    width: 150,
-    height: 150,
+    width: 100,
+    height: 100,
     borderRadius: 75,
     borderWidth: 3,
     borderColor: Colors.primary,
     position: "relative",
-    overflow: "hidden",
   },
   previewImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 72, // Slightly less than container to account for border
+    borderRadius: 72,
   },
   removeButton: {
     position: "absolute",
-    top: 5,
+    top: -5,
     right: 5,
     width: 30,
     height: 30,

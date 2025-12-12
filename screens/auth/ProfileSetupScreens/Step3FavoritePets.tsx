@@ -1,6 +1,5 @@
 // app/screens/profileSetup/Step3FavoritePets.tsx
 
-import ClawHeader from "@/components/ui/ClawHeader";
 import {
   BorderRadius,
   Colors,
@@ -8,7 +7,6 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
-import { Check } from "lucide-react-native";
 import React from "react";
 import {
   ScrollView,
@@ -62,17 +60,9 @@ export default function Step3FavoritePets({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo Section */}
-        <View style={styles.logoContainer}>
-          <ClawHeader />
-        </View>
-
-        {/* Progress Indicator */}
+        {/* Progress Text at Top Left */}
         <View style={styles.progressContainer}>
           <Text style={styles.progressText}>3 OUT OF 3</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: "100%" }]} />
-          </View>
         </View>
 
         {/* Title Section */}
@@ -84,7 +74,7 @@ export default function Step3FavoritePets({
           </Text>
         </View>
 
-        {/* Pet Selection Grid */}
+        {/* Pet Selection Grid - Now horizontal scroll for better layout */}
         <View style={styles.petsContainer}>
           {petOptions.map((pet) => (
             <TouchableOpacity
@@ -103,11 +93,6 @@ export default function Step3FavoritePets({
               >
                 {pet}
               </Text>
-              {favoritePets.includes(pet) && (
-                <View style={styles.checkIcon}>
-                  <Check size={16} color={Colors.background} />
-                </View>
-              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -132,36 +117,20 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   scrollContent: {
+    justifyContent: "center",
     flexGrow: 1,
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.xl,
     paddingBottom: Spacing.xl,
   },
-  logoContainer: {
-    alignItems: "center",
-    marginTop: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
   progressContainer: {
-    alignItems: "center",
+    alignSelf: "flex-start",
     marginBottom: Spacing.xl,
   },
   progressText: {
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.semibold,
-    color: Colors.primary,
-    marginBottom: Spacing.xs,
-  },
-  progressBar: {
-    width: "100%",
-    height: 4,
-    backgroundColor: Colors.lightGray,
-    borderRadius: 2,
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: Colors.primary,
-    borderRadius: 2,
+    color: Colors.text,
   },
   titleContainer: {
     justifyContent: "center",
@@ -185,17 +154,16 @@ const styles = StyleSheet.create({
   petsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    gap: Spacing.sm,
     marginBottom: Spacing.xl,
   },
   petButton: {
-    width: "48%",
     backgroundColor: Colors.lightGray,
-    borderRadius: BorderRadius.md,
-    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.full,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -210,17 +178,6 @@ const styles = StyleSheet.create({
   },
   petButtonTextSelected: {
     color: Colors.background,
-  },
-  checkIcon: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: Colors.background,
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    alignItems: "center",
-    justifyContent: "center",
   },
   navigationContainer: {
     flexDirection: "row",
