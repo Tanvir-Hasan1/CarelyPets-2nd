@@ -2,7 +2,6 @@
 
 import AtIcon from "@/assets/images/icons/at.svg";
 import GlobeIcon from "@/assets/images/icons/globe.svg";
-import UserIcon from "@/assets/images/icons/user.svg";
 import {
   BorderRadius,
   Colors,
@@ -27,11 +26,11 @@ import {
 
 interface Step1PersonalInfoProps {
   data: {
-    name: string;
+
     username: string;
     country: string;
   };
-  onChange: (data: { name: string; username: string; country: string }) => void;
+  onChange: (data: { username: string; country: string }) => void;
   onNext: () => void;
 }
 
@@ -104,7 +103,7 @@ export default function Step1PersonalInfo({
   };
 
   const handleNext = () => {
-    if (!data.name || !data.username || !data.country) {
+    if (!data.username || !data.country) {
       alert("Please fill in all fields");
       return;
     }
@@ -150,21 +149,7 @@ export default function Step1PersonalInfo({
           </Text>
         </View>
 
-        {/* Name Input */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>NAME</Text>
-          <View style={styles.inputWithIcon}>
-            <UserIcon width={20} height={20} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Tuvol Jane"
-              placeholderTextColor={Colors.placeholder}
-              value={data.name}
-              onChangeText={(text) => onChange({ ...data, name: text })}
-              autoCapitalize="words"
-            />
-          </View>
-        </View>
+
 
         {/* Username Input */}
         <View style={styles.inputContainer}>
@@ -213,7 +198,7 @@ export default function Step1PersonalInfo({
             style={styles.nextButton}
             onPress={handleNext}
             disabled={
-              !data.name || !data.username || !data.country || !!errors.username
+              !data.username || !data.country || !!errors.username
             }
           >
             <Text style={styles.nextButtonText}>Next</Text>

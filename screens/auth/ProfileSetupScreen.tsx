@@ -9,7 +9,7 @@ import Step3FavoritePets from "./ProfileSetupScreens/Step3FavoritePets";
 export default function ProfileSetupScreen() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [profileData, setProfileData] = useState<ProfileData>({
-    name: "",
+
     username: "",
     country: "",
     profileImage: undefined,
@@ -17,7 +17,7 @@ export default function ProfileSetupScreen() {
   });
 
   const updateStep1Data = (data: {
-    name: string;
+
     username: string;
     country: string;
   }) => {
@@ -56,7 +56,7 @@ export default function ProfileSetupScreen() {
       {step === 1 && (
         <Step1PersonalInfo
           data={{
-            name: profileData.name,
+
             username: profileData.username,
             country: profileData.country,
           }}

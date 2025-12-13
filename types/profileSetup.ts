@@ -1,6 +1,6 @@
 // app/types/profileSetup.ts
 export type ProfileData = {
-  name: string;
+
   username: string;
   country: string;
   profileImage?: string;

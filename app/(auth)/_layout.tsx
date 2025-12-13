@@ -4,19 +4,19 @@ import React from "react";
 export default function AuthLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="login" />
-      <Stack.Screen name="forgetScreen/index" />
-      <Stack.Screen name="newPassword" />
+      <Stack.Screen name="login/index" />
+      <Stack.Screen name="forgetPassword/index" />
+      <Stack.Screen name="newPassword/index" />
 
-      <Stack.Screen name="signup" />
-      <Stack.Screen name="verifyCode" />
-      <Stack.Screen name="otpVerify" />
-      <Stack.Screen name="PC-Successful" />
-      <Stack.Screen name="changePassword" />
-      <Stack.Screen name="verifyEmailOTP" />
-      <Stack.Screen name="emailVerify" />
-      <Stack.Screen name="emailVerifyError" />
-      <Stack.Screen name="setupProfile" />
+      <Stack.Screen name="signup/index" />
+      <Stack.Screen name="verifyCode/index" />
+      <Stack.Screen name="otpVerify/index" />
+      <Stack.Screen name="PC-Successful/index" />
+      <Stack.Screen name="changePassword/index" />
+      <Stack.Screen name="verifyEmailOTP/index" />
+      <Stack.Screen name="emailVerify/index" />
+      <Stack.Screen name="emailVerifyError/index" />
+      <Stack.Screen name="setupProfile/index" />
     </Stack>
   );
 }
