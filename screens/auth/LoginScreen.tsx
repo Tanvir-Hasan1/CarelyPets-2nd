@@ -51,8 +51,7 @@ export default function LoginScreen() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // For now, just navigate to home
-      // router.replace('/(tabs)');
-      router.replace("../changePassword");
+      router.replace("/(tabs)/home");
     } catch (err) {
       setError("Login failed. Please try again.");
       console.error("Login error:", err);
