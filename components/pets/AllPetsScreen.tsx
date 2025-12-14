@@ -36,10 +36,13 @@ export default function AllPetsScreen() {
             <StatusBar barStyle="dark-content" />
             {/* Header */}
             <View style={[styles.header, { paddingTop: insets.top }]}>
+                <View style={[StyleSheet.absoluteFill, { paddingTop: insets.top, paddingBottom: Spacing.md, justifyContent: 'center', alignItems: 'center' }]} pointerEvents="none">
+                    <Text style={styles.headerTitle}>My Pets</Text>
+                </View>
+
                 <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
                     <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>My Pets</Text>
                 <View style={styles.headerActions}>
                     <TouchableOpacity style={styles.iconButton}>
                         <HugeiconsIcon icon={ShoppingBag02Icon} size={24} color={Colors.text} />
@@ -61,7 +64,11 @@ export default function AllPetsScreen() {
                 ) : (
                     <View style={styles.grid}>
                         {pets.map((pet) => (
-                            <View key={pet.id} style={styles.card}>
+                            <TouchableOpacity 
+                                key={pet.id} 
+                                style={styles.card}
+                                onPress={() => router.push(`/pet-details/${pet.id}`)}
+                            >
                                 <Image source={{ uri: pet.image }} style={styles.cardImage} />
                                 <View style={styles.cardContent}>
                                     <View style={styles.nameRow}>
@@ -79,11 +86,11 @@ export default function AllPetsScreen() {
                                         </View>
                                     </View>
                                     <Text style={styles.petDetails}>{pet.breed} • {pet.age} years old</Text>
-                                    <TouchableOpacity style={styles.petFactsButton}>
+                                    <View style={styles.petFactsButton}>
                                         <Text style={styles.petFactsText}>Pet Facts</Text>
-                                    </TouchableOpacity>
+                                    </View>
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         ))}
                     </View>
                 )}

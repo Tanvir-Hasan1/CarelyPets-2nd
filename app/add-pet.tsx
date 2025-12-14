@@ -1,4 +1,4 @@
-import AddPetScreen from "@/components/home/AddPetScreen";
+import AddPetScreen from "@/components/pets/AddPetScreen";
 
 export default function AddPetRoute() {
   return <AddPetScreen />;

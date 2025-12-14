@@ -10,11 +10,13 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { ScrollView, StatusBar, StyleSheet, View } from "react-native";
 
+import { SafeAreaView } from "react-native-safe-area-context";
+
 export default function HomeScreen() {
   const router = useRouter();
 
   return (
-    <View style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <HomeHeader />
       <ScrollView
@@ -22,6 +24,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        {/* ... content ... */}
         <WelcomeBanner />
         
         <QuickActions />
@@ -38,7 +41,7 @@ export default function HomeScreen() {
         {/* Bottom padding for tab bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

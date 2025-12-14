@@ -5,13 +5,15 @@ import {
   Spacing,
 } from "@/constants/colors";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import React from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, Text, TouchableOpacity } from "react-native";
 
 import { usePetStore } from "@/store/usePetStore";
 import EmptyPetList from "./EmptyPetList";
 
 export default function PetList() {
+  const router = useRouter();
   const pets = usePetStore((state) => state.pets);
 
   if (pets.length === 0) {
@@ -26,10 +28,13 @@ export default function PetList() {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.listContainer}
       renderItem={({ item }) => (
-        <View style={styles.itemContainer}>
+        <TouchableOpacity 
+          style={styles.itemContainer} 
+          onPress={() => router.push({ pathname: "/pet-details/[id]", params: { id: item.id } })}
+        >
           <Image source={{ uri: item.image }} style={styles.image} />
           <Text style={styles.name}>{item.name}</Text>
-        </View>
+        </TouchableOpacity>
       )}
     />
   );

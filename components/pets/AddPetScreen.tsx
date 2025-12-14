@@ -1,0 +1,747 @@
+import {
+    BorderRadius,
+    Colors,
+    FontSizes,
+    FontWeights,
+    Spacing,
+} from "@/constants/colors";
+import { usePetStore } from "@/store/usePetStore";
+import {
+    Add01Icon,
+    ArrowDown01Icon,
+    ArrowLeft02Icon,
+    Cancel01Icon,
+    MultiplicationSignIcon,
+    Notification02Icon,
+    ShoppingBag02Icon,
+    Upload02Icon,
+    ViewIcon
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import {
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Reusable Components
+const SectionLabel = ({ title }: { title: string }) => (
+  <Text style={styles.sectionLabel}>{title}</Text>
+);
+
+const RadioGroup = ({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: string[];
+  selected: string;
+  onSelect: (val: string) => void;
+}) => (
+  <View style={styles.radioGroup}>
+    {options.map((opt) => (
+      <TouchableOpacity
+        key={opt}
+        style={styles.radioItem}
+        onPress={() => onSelect(opt)}
+      >
+        <View style={styles.radioCircle}>
+          {selected === opt && <View style={styles.radioInnerCircle} />}
+        </View>
+        <Text style={styles.radioText}>{opt}</Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+);
+
+// Custom Selection Modal Component
+const SelectionModal = ({
+  visible,
+  onClose,
+  title,
+  options,
+  onSelect,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  title: string;
+  options: string[];
+  onSelect: (val: string) => void;
+}) => (
+  <Modal
+    animationType="fade"
+    transparent={true}
+    visible={visible}
+    onRequestClose={onClose}
+  >
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          <TouchableOpacity onPress={onClose}>
+            <HugeiconsIcon icon={Cancel01Icon} size={24} color={Colors.text} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={styles.modalList}>
+          {options.map((opt) => (
+            <TouchableOpacity
+              key={opt}
+              style={styles.modalItem}
+              onPress={() => {
+                onSelect(opt);
+                onClose();
+              }}
+            >
+              <Text style={styles.modalItemText}>{opt}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    </View>
+  </Modal>
+);
+
+const DropdownInput = ({
+  placeholder,
+  value,
+  onPress,
+}: {
+  placeholder: string;
+  value: string;
+  onPress: () => void;
+}) => (
+  <TouchableOpacity style={styles.dropdownButton} onPress={onPress}>
+    <Text style={[styles.dropdownText, !value && { color: Colors.placeholder }]}>
+      {value || placeholder}
+    </Text>
+    <HugeiconsIcon icon={ArrowDown01Icon} size={20} color={Colors.textSecondary} />
+  </TouchableOpacity>
+);
+
+export default function AddPetScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const addPet = usePetStore((state) => state.addPet);
+
+  const [name, setName] = useState("");
+  const [type, setType] = useState("");
+  const [breed, setBreed] = useState("");
+  const [age, setAge] = useState("");
+  const [weight, setWeight] = useState("");
+  const [gender, setGender] = useState<"Male" | "Female">("Male");
+  const [trained, setTrained] = useState("Yes");
+  const [vaccinated, setVaccinated] = useState("Yes");
+  const [neutered, setNeutered] = useState("Yes");
+  const [traitInput, setTraitInput] = useState("");
+  const [traits, setTraits] = useState<string[]>([]);
+  const [about, setAbout] = useState("");
+  const [snaps, setSnaps] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const [viewedImage, setViewedImage] = useState<string | null>(null);
+
+  // Modal State
+  const [typeModalVisible, setTypeModalVisible] = useState(false);
+  const [breedModalVisible, setBreedModalVisible] = useState(false);
+
+  // Mock Options
+  const PET_TYPES = ["Dog", "Cat", "Bird", "Rabbit", "Hamster", "Other"];
+  const DOG_BREEDS = ["Golden Retriever", "German Shepherd", "Bulldog", "Poodle", "Labrador", "Beagle", "Husky", "Mixed"];
+  const CAT_BREEDS = ["Persian", "Maine Coon", "Siamese", "Ragdoll", "Bengal", "Sphynx", "Mixed"];
+  
+  const getBreeds = () => {
+    if (type === "Dog") return DOG_BREEDS;
+    if (type === "Cat") return CAT_BREEDS;
+    return ["Mixed", "Unknown", "Other"];
+  };
+
+  const pickImage = async () => {
+    if (snaps.length >= 3) {
+      alert("You can upload a maximum of 3 snaps.");
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setSnaps([...snaps, result.assets[0]]);
+    }
+  };
+
+  const removeSnap = (index: number) => {
+    setSnaps(snaps.filter((_, i) => i !== index));
+  };
+
+  const handleAddTrait = () => {
+    if (traitInput.trim() && traits.length < 5) {
+      setTraits([...traits, traitInput.trim()]);
+      setTraitInput("");
+    }
+  };
+
+  const removeTrait = (index: number) => {
+    setTraits(traits.filter((_, i) => i !== index));
+  };
+
+  const handleSave = () => {
+    // Basic validation
+    if (!name) {
+      alert("Please enter a pet name");
+      return;
+    }
+
+    if (snaps.length === 0) {
+      alert("Please select at least 1 photo of your pet.");
+      return;
+    }
+
+    addPet({
+      id: Date.now().toString(),
+      name,
+      type,
+      breed,
+      age,
+      weight,
+      gender,
+      traits,
+      about,
+      // Use the first snap as the main image
+      image: snaps[0].uri,
+      snaps: snaps.map(s => s.uri),
+      trained,
+      vaccinated,
+      neutered,
+    });
+    router.back();
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+           <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Add Pet</Text>
+        <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.iconButton}>
+                 <HugeiconsIcon icon={ShoppingBag02Icon} size={24} color={Colors.text} />
+            </TouchableOpacity>
+             <TouchableOpacity style={styles.iconButton}>
+                 <HugeiconsIcon icon={Notification02Icon} size={24} color={Colors.text} />
+            </TouchableOpacity>
+        </View>
+      </View>
+
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"} 
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Pet Snaps */}
+        <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+                <View>
+                     <Text style={styles.sectionTitle}>Pet Snaps</Text>
+                     <Text style={styles.sectionSubtitle}>(You can upload maximum 3 snaps)</Text>
+                </View>
+                <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+                    <HugeiconsIcon icon={Upload02Icon} size={16} color="#006064" />
+                    <Text style={styles.uploadButtonText}>Upload snaps</Text>
+                </TouchableOpacity>
+            </View>
+            
+            {snaps.map((snap, i) => (
+                <View key={i} style={styles.fileItem}>
+                    <Image source={{ uri: snap.uri }} style={styles.fileIcon} />
+                    <View style={styles.fileInfo}>
+                        <Text style={styles.fileName}>{snap.fileName || `Snap ${i + 1}`}</Text>
+                        <Text style={styles.fileType}>{snap.mimeType || 'image/jpeg'} • {snap.fileSize ? (snap.fileSize / 1024).toFixed(0) + 'KB' : 'Unknown size'}</Text>
+                    </View>
+                     <View style={styles.fileActions}>
+                        <TouchableOpacity onPress={() => setViewedImage(snap.uri)}>
+                             <HugeiconsIcon icon={ViewIcon} size={20} color={Colors.textSecondary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => removeSnap(i)}>
+                             <HugeiconsIcon icon={MultiplicationSignIcon} size={20} color={Colors.textSecondary} />
+                        </TouchableOpacity>
+                     </View>
+                </View>
+            ))}
+        </View>
+
+        {/* Pet Information */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Pet Information</Text>
+          
+          <SectionLabel title="NAME" />
+          <TextInput
+            style={styles.input}
+            placeholder="Pet name"
+            placeholderTextColor={Colors.placeholder}
+            value={name}
+            onChangeText={setName}
+          />
+
+          <SectionLabel title="TYPE" />
+          <DropdownInput
+            placeholder="Pet type"
+            value={type}
+            onPress={() => setTypeModalVisible(true)}
+          />
+
+          <SectionLabel title="BREED" />
+           <DropdownInput
+            placeholder="Choose breed"
+            value={breed}
+            onPress={() => setBreedModalVisible(true)}
+          />
+
+          <SelectionModal
+            visible={typeModalVisible}
+            onClose={() => setTypeModalVisible(false)}
+            title="Select Pet Type"
+            options={PET_TYPES}
+            onSelect={(val) => {
+                if (val !== type) {
+                    setType(val);
+                    setBreed("");
+                }
+            }}
+          />
+
+          <SelectionModal
+            visible={breedModalVisible}
+            onClose={() => setBreedModalVisible(false)}
+            title="Select Breed"
+            options={getBreeds()}
+            onSelect={setBreed}
+          />
+
+          {/* Image Preview Modal */}
+          <Modal
+            visible={!!viewedImage}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setViewedImage(null)}
+          >
+            <View style={styles.previewModalOverlay}>
+              <TouchableOpacity style={styles.previewCloseButton} onPress={() => setViewedImage(null)}>
+                 <HugeiconsIcon icon={Cancel01Icon} size={32} color="#ffffff" />
+              </TouchableOpacity>
+              {viewedImage && (
+                <Image source={{ uri: viewedImage }} style={styles.previewImage} resizeMode="contain" />
+              )}
+            </View>
+          </Modal>
+
+          <View style={styles.row}>
+            <View style={[styles.flex1, { marginRight: Spacing.sm }]}>
+              <SectionLabel title="YEAR" />
+              <TextInput
+                style={styles.input}
+                placeholder="Pet age"
+                 placeholderTextColor={Colors.placeholder}
+                value={age}
+                onChangeText={setAge}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={[styles.flex1, { marginLeft: Spacing.sm }]}>
+              <SectionLabel title="WEIGHT (lbs)" />
+              <TextInput
+                style={styles.input}
+                placeholder="Pet weight"
+                 placeholderTextColor={Colors.placeholder}
+                value={weight}
+                onChangeText={setWeight}
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+
+          <SectionLabel title="GENDER" />
+          <RadioGroup
+            options={["Male", "Female"]}
+            selected={gender}
+            onSelect={(val) => setGender(val as any)}
+          />
+
+          <SectionLabel title="TRAINED" />
+          <RadioGroup
+            options={["Yes", "No"]}
+            selected={trained}
+            onSelect={setTrained}
+          />
+
+          <SectionLabel title="VACCINATED" />
+          <RadioGroup
+            options={["Yes", "No"]}
+            selected={vaccinated}
+            onSelect={setVaccinated}
+          />
+          
+          <SectionLabel title="NEUTERED" />
+          <RadioGroup
+            options={["Yes", "No"]}
+            selected={neutered}
+            onSelect={setNeutered}
+          />
+
+           <SectionLabel title="PERSONALITY (max 5)" />
+           <View style={styles.traitInputRow}>
+               <TextInput
+                 style={[styles.input, styles.flex1]}
+                 placeholder="Type trait and press add"
+                  placeholderTextColor={Colors.placeholder}
+                 value={traitInput}
+                 onChangeText={setTraitInput}
+               />
+               <TouchableOpacity style={styles.addButton} onPress={handleAddTrait}>
+                  <HugeiconsIcon icon={Add01Icon} size={20} color={Colors.text} />
+               </TouchableOpacity>
+           </View>
+           <View style={styles.traitsContainer}>
+             {traits.map((t, index) => (
+                 <View key={index} style={styles.traitChip}>
+                     <Text style={styles.traitText}>{t}</Text>
+                     <TouchableOpacity onPress={() => removeTrait(index)}>
+                         <HugeiconsIcon icon={MultiplicationSignIcon} size={14} color={Colors.text} />
+                     </TouchableOpacity>
+                 </View>
+             ))}
+           </View>
+
+           <SectionLabel title="ABOUT PET" />
+           <TextInput
+             style={[styles.input, styles.textArea]}
+             placeholder="Write about your pet"
+              placeholderTextColor={Colors.placeholder}
+             value={about}
+             onChangeText={setAbout}
+             multiline
+           />
+
+        </View>
+
+      </ScrollView>
+      </KeyboardAvoidingView>
+      
+      {/* Footer */}
+      <View style={styles.footer}>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+              <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+               <Text style={styles.saveText}>Save</Text>
+          </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F9FA", // Light gray background from image
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.background,
+  },
+  headerTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.bold,
+    color: "#006064",
+  },
+  headerActions: {
+      flexDirection: 'row',
+      gap: Spacing.xs,
+  },
+  iconButton: {
+    padding: Spacing.xs,
+    borderRadius: 20,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  scrollContent: {
+    padding: Spacing.lg,
+    paddingBottom: 100,
+  },
+  section: {
+    marginBottom: Spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.bold,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  sectionSubtitle: {
+    fontSize: FontSizes.xs,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
+  },
+  sectionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+  },
+  uploadButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#B2EBF2',
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.xs,
+      borderRadius: BorderRadius.sm,
+      gap: 4,
+  },
+  uploadButtonText: {
+      fontSize: FontSizes.xs,
+      color: '#006064',
+      fontWeight: FontWeights.medium,
+  },
+  fileItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: Colors.background,
+      padding: Spacing.sm,
+      borderRadius: BorderRadius.md,
+      marginBottom: Spacing.sm,
+  },
+  fileIcon: {
+      width: 32,
+      height: 32,
+      backgroundColor: '#E1BEE7', // Light purple
+      borderRadius: BorderRadius.sm,
+      marginRight: Spacing.md,
+  },
+  fileInfo: {
+      flex: 1,
+  },
+  fileName: {
+      fontSize: FontSizes.sm,
+      fontWeight: FontWeights.bold,
+      color: Colors.text,
+  },
+  fileType: {
+      fontSize: 10,
+      color: Colors.textSecondary,
+  },
+  fileActions: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: FontWeights.bold,
+    color: Colors.text,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xs,
+    textTransform: "uppercase",
+  },
+  input: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+    fontSize: FontSizes.sm,
+    color: Colors.text,
+  },
+  row: {
+    flexDirection: "row",
+  },
+  flex1: {
+    flex: 1,
+  },
+  radioGroup: {
+    flexDirection: "row",
+    gap: Spacing.lg,
+  },
+  radioItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.xs,
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.text,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: Spacing.xs,
+  },
+  radioInnerCircle: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#00BCD4", // Cyan
+  },
+  radioText: {
+    fontSize: FontSizes.sm,
+    color: Colors.text,
+  },
+  traitInputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+  },
+  addButton: {
+      backgroundColor: '#B2EBF2',
+      width: 48,
+      height: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: BorderRadius.md,
+  },
+  traitsContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: Spacing.sm,
+      marginTop: Spacing.sm,
+  },
+  traitChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#EEEEEE',
+      borderRadius: 20,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 6,
+      gap: 6,
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+  },
+  traitText: {
+      fontSize: FontSizes.xs,
+      color: Colors.text,
+      fontWeight: FontWeights.medium,
+  },
+  textArea: {
+      height: 100,
+      textAlignVertical: 'top',
+  },
+  footer: {
+      padding: Spacing.lg,
+      backgroundColor: '#F8F9FA',
+      flexDirection: 'row',
+      gap: Spacing.md,
+  },
+  cancelButton: {
+      flex: 1,
+      paddingVertical: Spacing.md,
+      backgroundColor: '#EEEEEE',
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+  },
+  cancelText: {
+       fontSize: FontSizes.md,
+       fontWeight: FontWeights.bold,
+       color: Colors.text,
+  },
+  saveButton: {
+      flex: 1,
+      paddingVertical: Spacing.md,
+      backgroundColor: '#00BCD4',
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+  },
+  saveText: {
+      fontSize: FontSizes.md,
+       fontWeight: FontWeights.bold,
+       color: '#ffffff',
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+  },
+  dropdownText: {
+    fontSize: FontSizes.sm,
+    color: Colors.text,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: BorderRadius.lg,
+    borderTopRightRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    maxHeight: '50%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  modalTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.bold,
+    color: Colors.text,
+  },
+  modalList: {
+    marginBottom: Spacing.xl,
+  },
+  modalItem: {
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalItemText: {
+    fontSize: FontSizes.md,
+    color: Colors.text,
+  },
+  previewModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  previewCloseButton: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 1,
+    padding: Spacing.sm,
+  },
+  previewImage: {
+    width: "100%",
+    height: "80%",
+  },
+});

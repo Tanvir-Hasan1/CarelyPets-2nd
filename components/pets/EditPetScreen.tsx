@@ -5,7 +5,7 @@ import {
     FontWeights,
     Spacing,
 } from "@/constants/colors";
-import { usePetStore } from "@/store/usePetStore";
+import { Pet, usePetStore } from "@/store/usePetStore";
 import {
     Add01Icon,
     ArrowDown01Icon,
@@ -130,24 +130,27 @@ const DropdownInput = ({
   </TouchableOpacity>
 );
 
-export default function AddPetScreen() {
+export default function EditPetScreen({ initialData }: { initialData: Pet }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const addPet = usePetStore((state) => state.addPet);
+  const updatePet = usePetStore((state) => state.updatePet);
 
-  const [name, setName] = useState("");
-  const [type, setType] = useState("");
-  const [breed, setBreed] = useState("");
-  const [age, setAge] = useState("");
-  const [weight, setWeight] = useState("");
-  const [gender, setGender] = useState<"Male" | "Female">("Male");
-  const [trained, setTrained] = useState("Yes");
-  const [vaccinated, setVaccinated] = useState("Yes");
-  const [neutered, setNeutered] = useState("Yes");
+  const [name, setName] = useState(initialData.name);
+  const [type, setType] = useState(initialData.type);
+  const [breed, setBreed] = useState(initialData.breed);
+  const [age, setAge] = useState(initialData.age);
+  const [weight, setWeight] = useState(initialData.weight);
+  const [gender, setGender] = useState<"Male" | "Female">(initialData.gender);
+  const [trained, setTrained] = useState(initialData.trained);
+  const [vaccinated, setVaccinated] = useState(initialData.vaccinated);
+  const [neutered, setNeutered] = useState(initialData.neutered);
   const [traitInput, setTraitInput] = useState("");
-  const [traits, setTraits] = useState<string[]>([]);
-  const [about, setAbout] = useState("");
-  const [snaps, setSnaps] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const [traits, setTraits] = useState<string[]>(initialData.traits || []);
+  const [about, setAbout] = useState(initialData.about || "");
+  const [snaps, setSnaps] = useState<ImagePicker.ImagePickerAsset[]>(
+    initialData.snaps?.map(uri => ({ uri, width: 0, height: 0, assetId: null, base64: null, exif: null, fileName: "Existing Image", fileSize: 0, mimeType: 'image/jpeg' })) || []
+  );
+  const [viewedImage, setViewedImage] = useState<string | null>(null);
 
   // Modal State
   const [typeModalVisible, setTypeModalVisible] = useState(false);
@@ -209,8 +212,8 @@ export default function AddPetScreen() {
       return;
     }
 
-    addPet({
-      id: Date.now().toString(),
+    updatePet({
+      id: initialData.id,
       name,
       type,
       breed,
@@ -237,7 +240,7 @@ export default function AddPetScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
            <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Pet</Text>
+        <Text style={styles.headerTitle}>Edit Pet Facts</Text>
         <View style={styles.headerActions}>
             <TouchableOpacity style={styles.iconButton}>
                  <HugeiconsIcon icon={ShoppingBag02Icon} size={24} color={Colors.text} />
@@ -275,7 +278,7 @@ export default function AddPetScreen() {
                         <Text style={styles.fileType}>{snap.mimeType || 'image/jpeg'} • {snap.fileSize ? (snap.fileSize / 1024).toFixed(0) + 'KB' : 'Unknown size'}</Text>
                     </View>
                      <View style={styles.fileActions}>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={() => setViewedImage(snap.uri)}>
                              <HugeiconsIcon icon={ViewIcon} size={20} color={Colors.textSecondary} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => removeSnap(i)}>
@@ -333,6 +336,23 @@ export default function AddPetScreen() {
             options={getBreeds()}
             onSelect={setBreed}
           />
+
+          {/* Image Preview Modal */}
+          <Modal
+            visible={!!viewedImage}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setViewedImage(null)}
+          >
+            <View style={styles.previewModalOverlay}>
+              <TouchableOpacity style={styles.previewCloseButton} onPress={() => setViewedImage(null)}>
+                 <HugeiconsIcon icon={Cancel01Icon} size={32} color="#ffffff" />
+              </TouchableOpacity>
+              {viewedImage && (
+                <Image source={{ uri: viewedImage }} style={styles.previewImage} resizeMode="contain" />
+              )}
+            </View>
+          </Modal>
 
           <View style={styles.row}>
             <View style={[styles.flex1, { marginRight: Spacing.sm }]}>
@@ -708,5 +728,22 @@ const styles = StyleSheet.create({
   modalItemText: {
     fontSize: FontSizes.md,
     color: Colors.text,
+  },
+  previewModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  previewCloseButton: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 1,
+    padding: Spacing.sm,
+  },
+  previewImage: {
+    width: "100%",
+    height: "80%",
   },
 });
