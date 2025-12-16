@@ -1,3 +1,4 @@
+import Header from "@/components/ui/Header";
 import {
     BorderRadius,
     Colors,
@@ -16,7 +17,6 @@ import {
     Male02Icon,
     Note01Icon,
     Notification02Icon,
-    ShoppingBag02Icon,
     WeightScale01Icon
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
@@ -76,9 +76,9 @@ export default function PetDetailsScreen({ id }: { id: string }) {
 
     const healthRecords = [
         { id: '1', title: 'Vaccination', date: 'Last updated Jan 6, 2025', icon: Note01Icon, bg: '#E8F5E9', color: '#4CAF50' },
-        { id: '2', title: 'Annual Check-up', date: 'Last updated Jan 6, 2025', icon: Calendar03Icon, bg: '#E3F2FD', color: '#2196F3' },
+        { id: '2', title: 'Check-up', date: 'Last updated Jan 6, 2025', icon: Calendar03Icon, bg: '#E3F2FD', color: '#2196F3' },
         { id: '3', title: 'Medication', date: 'Last updated Jan 6, 2025', icon: Notification02Icon, bg: '#FFEBEE', color: '#F44336' },
-        { id: '4', title: 'Flea & Tick Treatment', date: 'Last updated Jan 6, 2025', icon: Edit02Icon, bg: '#F3E5F5', color: '#9C27B0' },
+        { id: '4', title: 'Tick', date: 'Last updated Jan 6, 2025', icon: Edit02Icon, bg: '#F3E5F5', color: '#9C27B0' },
         { id: '5', title: 'Surgery', date: 'Last updated Jan 6, 2025', icon: Note01Icon, bg: '#FFEBEE', color: '#E91E63' },
         { id: '6', title: 'Dental', date: 'Last updated Jan 6, 2025', icon: Note01Icon, bg: '#FFF3E0', color: '#FF9800' },
         { id: '7', title: 'Other', date: 'Last updated Jan 6, 2025', icon: Note01Icon, bg: '#FAFAFA', color: '#757575' },
@@ -95,20 +95,8 @@ export default function PetDetailsScreen({ id }: { id: string }) {
             <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
             
             {/* Header - Absolute Positioned */}
-            <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                    <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Pet Facts</Text>
-                <View style={styles.headerActions}>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <HugeiconsIcon icon={ShoppingBag02Icon} size={24} color={Colors.text} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <HugeiconsIcon icon={Notification02Icon} size={24} color={Colors.text} />
-                    </TouchableOpacity>
-                </View>
-            </View>
+            {/* Header - Absolute Positioned */}
+            <Header title="Pet Facts" />
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
                 {/* Image Carousel */}
@@ -142,7 +130,7 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                             <Text style={styles.petName}>{pet.name}</Text>
                             <Text style={styles.petBreed}>{pet.breed}</Text>
                         </View>
-                        <TouchableOpacity onPress={() => router.push({ pathname: "/edit-pet/[id]", params: { id: pet.id } })}>
+                        <TouchableOpacity onPress={() => router.push({ pathname: "/pets/edit-pet/[id]", params: { id: pet.id } })}>
                             <HugeiconsIcon icon={Edit02Icon} size={24} color="#00BCD4" />
                         </TouchableOpacity>
                         <View style={{ flex: 1 }} />
@@ -220,12 +208,19 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                     <View style={styles.section}>
                          <View style={styles.healthHeader}>
                             <Text style={styles.sectionTitle}>Health Records</Text>
-                            <TouchableOpacity onPress={() => router.push("/add-health-record")}>
+                            <TouchableOpacity onPress={() => router.push({ pathname: "/pets/add-health-record", params: { petId: pet.id } })}>
                                 <Text style={styles.addHealthText}>+ Add</Text>
                             </TouchableOpacity>
                          </View>
                          {healthRecords.map((record) => (
-                             <View key={record.id} style={styles.healthItem}>
+                             <TouchableOpacity 
+                                key={record.id} 
+                                style={styles.healthItem}
+                                onPress={() => router.push({
+                                    pathname: "/pets/health-records-list",
+                                    params: { petId: pet.id, recordType: record.title }
+                                })}
+                             >
                                  <View style={[styles.healthIcon, { backgroundColor: record.bg }]}>
                                      <HugeiconsIcon icon={record.icon} size={20} color={record.color} />
                                  </View>
@@ -234,7 +229,7 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                                      <Text style={styles.healthDate}>{record.date}</Text>
                                  </View>
                                  <HugeiconsIcon icon={ArrowLeft02Icon} size={16} color={Colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
-                             </View>
+                             </TouchableOpacity>
                          ))}
                     </View>
                 </View>
@@ -302,7 +297,7 @@ const styles = StyleSheet.create({
     },
     paginationBadge: {
         position: 'absolute',
-        top: 100, // Adjust based on header
+        top: Spacing.md,
         right: Spacing.lg,
         backgroundColor: "rgba(0,0,0,0.6)",
         paddingHorizontal: 8,

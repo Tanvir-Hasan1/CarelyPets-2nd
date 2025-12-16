@@ -1,38 +1,38 @@
 import {
-    BorderRadius,
-    Colors,
-    FontSizes,
-    FontWeights,
-    Spacing,
+  BorderRadius,
+  Colors,
+  FontSizes,
+  FontWeights,
+  Spacing,
 } from "@/constants/colors";
 import { Pet, usePetStore } from "@/store/usePetStore";
 import {
-    Add01Icon,
-    ArrowDown01Icon,
-    ArrowLeft02Icon,
-    Cancel01Icon,
-    MultiplicationSignIcon,
-    Notification02Icon,
-    ShoppingBag02Icon,
-    Upload02Icon,
-    ViewIcon
+  Add01Icon,
+  ArrowDown01Icon,
+  ArrowLeft02Icon,
+  Cancel01Icon,
+  MultiplicationSignIcon,
+  Notification02Icon,
+  ShoppingBag02Icon,
+  Upload02Icon,
+  ViewIcon
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -228,6 +228,7 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
       trained,
       vaccinated,
       neutered,
+      healthRecords: initialData.healthRecords || [],
     });
     router.back();
   };

@@ -30,7 +30,7 @@ export default function PetList() {
       renderItem={({ item }) => (
         <TouchableOpacity 
           style={styles.itemContainer} 
-          onPress={() => router.push({ pathname: "/pet-details/[id]", params: { id: item.id } })}
+          onPress={() => router.push({ pathname: "/pets/[id]", params: { id: item.id } })}
         >
           <Image source={{ uri: item.image }} style={styles.image} />
           <Text style={styles.name}>{item.name}</Text>

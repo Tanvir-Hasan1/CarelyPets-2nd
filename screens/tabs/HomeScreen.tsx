@@ -29,7 +29,7 @@ export default function HomeScreen() {
         
         <QuickActions />
 
-        <SectionHeader title="My Pets" onSeeAll={() => router.push("/all-pets")} />
+        <SectionHeader title="My Pets" onSeeAll={() => router.push("/pets/all-pets")} />
         <PetList />
 
         <SectionHeader title="Pet Pals" onSeeAll={() => console.log("See All My Pets")} />

@@ -59,7 +59,7 @@ export default function QuickActions() {
           label="Add a Pet"
           color="#2196F3"
           bgColor="#E3F2FD"
-          onPress={() => router.push("/add-pet")}
+          onPress={() => router.push("/pets/add-pet")}
         />
       </View>
     </View>

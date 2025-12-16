@@ -1,3 +1,4 @@
+import Header from "@/components/ui/Header";
 import {
     BorderRadius,
     Colors,
@@ -6,20 +7,21 @@ import {
     Spacing,
 } from "@/constants/colors";
 import {
-    ArrowLeft02Icon,
-    CheckListIcon,
-    CircleIcon,
-    Doctor01Icon,
-    Medicine02Icon,
-    Notification02Icon,
-    ShoppingBag02Icon,
-    Square01Icon,
+    BandageIcon,
+    Bug02Icon,
+    DentalToothIcon,
+    InjectionIcon,
+    Medicine01Icon,
+    Note01Icon,
+    Stethoscope02Icon,
     Tick02Icon
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
+    KeyboardAvoidingView,
+    Platform,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -28,6 +30,12 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { HealthRecord, usePetStore } from "../../store/usePetStore";
+import AttachmentsStep from "./health-records/AttachmentsStep";
+import ObservationStep from "./health-records/ObservationStep";
+import RecordDetailsStep from "./health-records/RecordDetailsStep";
+import VetInfoStep from "./health-records/VetInfoStep";
+import VitalSignsStep from "./health-records/VitalSignsStep";
 
 interface RecordType {
     id: string;
@@ -38,40 +46,193 @@ interface RecordType {
 }
 
 const RECORD_TYPES: RecordType[] = [
-    { id: 'vaccination', label: 'Vaccination', icon: Medicine02Icon, color: '#4CAF50', bgColor: '#E8F5E9' }, // Fallback to Medicine
-    { id: 'checkup', label: 'Check-up', icon: Doctor01Icon, color: '#2196F3', bgColor: '#E3F2FD' },
-    { id: 'medication', label: 'Medication', icon: Medicine02Icon, color: '#F44336', bgColor: '#FFEBEE' },
-    { id: 'tick', label: 'Tick', icon: CircleIcon, color: '#9C27B0', bgColor: '#F3E5F5' }, // Fallback
-    { id: 'surgery', label: 'Surgery', icon: Square01Icon, color: '#E91E63', bgColor: '#FCE4EC' }, // Fallback
-    { id: 'dental', label: 'Dental', icon: Square01Icon, color: '#FF9800', bgColor: '#FFF3E0' }, // Fallback
-    { id: 'other', label: 'Other', icon: CheckListIcon, color: '#757575', bgColor: '#EEEEEE' }, 
+    { id: 'vaccination', label: 'Vaccination', icon: InjectionIcon, color: '#4CAF50', bgColor: '#E8F5E9' },
+    { id: 'checkup', label: 'Check-up', icon: Stethoscope02Icon, color: '#2196F3', bgColor: '#E3F2FD' },
+    { id: 'medication', label: 'Medication', icon: Medicine01Icon, color: '#F44336', bgColor: '#FFEBEE' },
+    { id: 'tick', label: 'Tick', icon: Bug02Icon, color: '#9C27B0', bgColor: '#F3E5F5' }, 
+    { id: 'surgery', label: 'Surgery', icon: BandageIcon, color: '#E91E63', bgColor: '#FCE4EC' }, 
+    { id: 'dental', label: 'Dental', icon: DentalToothIcon, color: '#FF9800', bgColor: '#FFF3E0' }, 
+    { id: 'other', label: 'Other', icon: Note01Icon, color: '#757575', bgColor: '#EEEEEE' }, 
+];
+
+const STEPS = [
+    'RecordDetails',
+    'VetInfo',
+    'VitalSigns',
+    'Observation',
+    'Attachments'
 ];
 
 export default function AddHealthRecordScreen() {
     const router = useRouter();
-    const [selectedType, setSelectedType] = useState<string | null>(null);
+    const { petId, type, recordId } = useLocalSearchParams<{ petId: string, type: string, recordId: string }>();
+    const scrollViewRef = useRef<ScrollView>(null);
+    const { pets, addHealthRecord, updateHealthRecord } = usePetStore();
 
-    return (
-        <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="dark-content" />
-            <View style={styles.container}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                        <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Add Health Record</Text>
-                    <View style={styles.headerActions}>
-                        <TouchableOpacity style={styles.iconButton}>
-                            <HugeiconsIcon icon={ShoppingBag02Icon} size={24} color={Colors.text} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.iconButton}>
-                            <HugeiconsIcon icon={Notification02Icon} size={24} color={Colors.text} />
-                        </TouchableOpacity>
-                    </View>
-                </View>
+    // If type is passed, pre-select it and start at step 0
+    const [selectedType, setSelectedType] = useState<string | null>(type || null);
+    const [currentStepIndex, setCurrentStepIndex] = useState(type ? 0 : -1);
 
-                <ScrollView contentContainerStyle={styles.content}>
+    const [formData, setFormData] = useState({
+        // Record Details
+        // recordType is derived from selectedType
+        recordName: '',
+        batchNumber: '',
+        otherInfo: '',
+        cost: '',
+        date: '',
+        nextDueDate: '',
+        reminderEnabled: false,
+        reminderDuration: '1 week',
+        
+        // Vet Info
+        vetDesignation: '',
+        vetName: '',
+        clinicName: '',
+        licenseNumber: '',
+        vetContact: '',
+
+        // Vital Signs
+        weight: '',
+        weightStatus: 'Normal',
+        temperature: '',
+        temperatureStatus: 'Normal',
+        heartRate: '',
+        heartRateStatus: 'Normal',
+        respiratoryRate: '',
+        respiratoryRateStatus: 'Normal',
+
+        // Observation
+        observations: [] as string[],
+        clinicalNotes: '',
+
+        // Attachments
+        attachments: [] as any[],
+    });
+
+    // Scroll to top when step changes
+    useEffect(() => {
+        if (scrollViewRef.current) {
+            scrollViewRef.current.scrollTo({ y: 0, animated: true });
+        }
+    }, [currentStepIndex]);
+
+    // Helper to get label
+    const getRecordTypeLabel = () => {
+        const record = RECORD_TYPES.find(r => r.id === selectedType);
+        return record ? record.label : '';
+    };
+
+    const updateFormData = (key: string, value: any) => {
+        setFormData(prev => ({ ...prev, [key]: value }));
+    };
+
+    useEffect(() => {
+        if (recordId && petId) {
+            const pet = pets.find(p => p.id === petId);
+            const record = pet?.healthRecords?.find(r => r.id === recordId);
+            
+            if (record) {
+                // Pre-fill form
+                setSelectedType(record.recordType.toLowerCase());
+                setCurrentStepIndex(0); // Go to first step directly
+                
+                setFormData({
+                    recordName: record.recordName,
+                    batchNumber: record.batchNumber,
+                    otherInfo: record.otherInfo,
+                    cost: record.cost,
+                    date: record.date,
+                    nextDueDate: record.nextDueDate,
+                    reminderEnabled: record.reminderEnabled,
+                    reminderDuration: record.reminderDuration,
+                    vetDesignation: record.vetDesignation,
+                    vetName: record.vetName,
+                    clinicName: record.clinicName,
+                    licenseNumber: record.licenseNumber,
+                    vetContact: record.vetContact,
+                    weight: record.weight,
+                    weightStatus: record.weightStatus,
+                    temperature: record.temperature,
+                    temperatureStatus: record.temperatureStatus,
+                    heartRate: record.heartRate,
+                    heartRateStatus: record.heartRateStatus,
+                    respiratoryRate: record.respiratoryRate,
+                    respiratoryRateStatus: record.respiratoryRateStatus,
+                    observations: record.observations,
+                    clinicalNotes: record.clinicalNotes,
+                    attachments: record.attachments
+                });
+            }
+        }
+    }, [recordId, petId, pets]);
+
+    const handleNext = () => {
+        if (currentStepIndex < STEPS.length - 1) {
+            setCurrentStepIndex(prev => prev + 1);
+        } else {
+            handleSubmit();
+        }
+    };
+
+    const handleBack = () => {
+        if (currentStepIndex > 0) {
+            setCurrentStepIndex(prev => prev - 1);
+        } else if (currentStepIndex === 0 && !type) {
+             // If type wasn't passed initially, go back to selection
+             setCurrentStepIndex(-1);
+             setSelectedType(null);
+        } else {
+            router.back();
+        }
+    };
+
+    const handleSubmit = () => {
+        if (!petId || !selectedType) return;
+        
+        const newRecord: HealthRecord = {
+            id: recordId || Date.now().toString(),
+            recordType: getRecordTypeLabel(),
+            recordName: formData.recordName,
+            batchNumber: formData.batchNumber,
+            otherInfo: formData.otherInfo, 
+            cost: formData.cost,
+            date: formData.date,
+            nextDueDate: formData.nextDueDate,
+            reminderEnabled: formData.reminderEnabled,
+            reminderDuration: formData.reminderDuration,
+            vetDesignation: formData.vetDesignation,
+            vetName: formData.vetName,
+            clinicName: formData.clinicName,
+            licenseNumber: formData.licenseNumber,
+            vetContact: formData.vetContact,
+            weight: formData.weight,
+            weightStatus: formData.weightStatus,
+            temperature: formData.temperature,
+            temperatureStatus: formData.temperatureStatus,
+            heartRate: formData.heartRate,
+            heartRateStatus: formData.heartRateStatus,
+            respiratoryRate: formData.respiratoryRate,
+            respiratoryRateStatus: formData.respiratoryRateStatus,
+            observations: formData.observations as string[],
+            clinicalNotes: formData.clinicalNotes,
+            attachments: formData.attachments
+        };
+
+        if (recordId) {
+            updateHealthRecord(petId, newRecord);
+            console.log("Health Record Updated:", newRecord);
+        } else {
+            addHealthRecord(petId, newRecord);
+            console.log("Health Record Added:", newRecord);
+        }
+        router.back();
+    };
+
+    const renderStepContent = () => {
+        if (currentStepIndex === -1) {
+             return (
+                <>
                     <View style={styles.titleSection}>
                         <Text style={styles.mainTitle}>Add your pet's health record</Text>
                         <Text style={styles.subtitle}>
@@ -104,22 +265,82 @@ export default function AddHealthRecordScreen() {
                             ))}
                         </View>
                     </View>
-                </ScrollView>
+                </>
+             );
+        }
 
-                <View style={styles.footer}>
-                    <TouchableOpacity 
-                        style={[styles.nextButton, !selectedType && styles.disabledButton]} 
-                        disabled={!selectedType}
-                        onPress={() => {
-                            // TODO: Navigate to form input with selected type
-                            console.log("Selected:", selectedType);
-                            router.back(); // Temporary placeholder
-                        }}
+        const stepWrapper = (Component: React.ElementType, extraData: any = {}) => (
+             <View style={styles.stepContainer}>
+                <Component data={{ ...formData, ...extraData }} updateData={updateFormData} />
+             </View>
+        );
+
+        switch (currentStepIndex) {
+            case 0: return stepWrapper(RecordDetailsStep, { recordType: getRecordTypeLabel() });
+            case 1: return stepWrapper(VetInfoStep);
+            case 2: return stepWrapper(VitalSignsStep);
+            case 3: return stepWrapper(ObservationStep);
+            case 4: return stepWrapper(AttachmentsStep);
+            default: return null;
+        }
+    };
+
+    const getProgressText = () => {
+        if (currentStepIndex === -1) return "1 OUT OF 6"; // Including selection as step 1 logic-wise for user
+        return `${currentStepIndex + 2} OUT OF 6`;
+    };
+
+    return (
+        <SafeAreaView style={styles.safeArea} edges={['right', 'left', 'bottom']}>
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }} 
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+            >
+                <StatusBar barStyle="dark-content" />
+                <View style={styles.container}>
+                    {/* Header */}
+                    <Header title="Add Health Record" onBackPress={handleBack} />
+
+                    {/* Progress Indicator (Optional - simplistic text version) */}
+                     {selectedType && (
+                        <View style={styles.progressContainer}>
+                             <Text style={styles.progressText}>{getProgressText()}</Text>
+                        </View>
+                     )}
+
+
+                    <ScrollView 
+                        ref={scrollViewRef}
+                        contentContainerStyle={styles.content}
                     >
-                        <Text style={styles.nextButtonText}>Next</Text>
-                    </TouchableOpacity>
+                        {renderStepContent()}
+                    </ScrollView>
+
+                    <View style={styles.footer}>
+                         <View style={styles.footerButtons}>
+                            <TouchableOpacity 
+                                style={styles.backButton} 
+                                onPress={handleBack}
+                            >
+                                <Text style={styles.backButtonText}>Back</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity 
+                                style={[
+                                    styles.nextButton, 
+                                    (currentStepIndex === -1 && !selectedType) && styles.disabledButton
+                                ]} 
+                                disabled={currentStepIndex === -1 && !selectedType}
+                                onPress={handleNext}
+                            >
+                                <Text style={styles.nextButtonText}>
+                                    {currentStepIndex === STEPS.length - 1 ? 'Save' : 'Next'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 </View>
-            </View>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -157,8 +378,26 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.border,
     },
+    progressContainer: {
+        alignItems: 'flex-end',
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.xs,
+        backgroundColor: '#F8F9FA',
+    },
+    progressText: {
+        fontSize: FontSizes.xs,
+        color: Colors.textSecondary,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+    },
     content: {
         padding: Spacing.lg,
+    },
+    stepContainer: {
+        backgroundColor: Colors.background,
+        borderRadius: BorderRadius.lg,
+        padding: Spacing.lg,
+        marginBottom: Spacing.lg,
     },
     titleSection: {
         alignItems: 'center',
@@ -228,11 +467,28 @@ const styles = StyleSheet.create({
     },
     footer: {
         padding: Spacing.lg,
-        backgroundColor: Colors.background,
-        borderTopWidth: 1,
-        borderTopColor: Colors.border,
+        backgroundColor: Colors.background, // Should match background for seamless look or stand out
+    },
+    footerButtons: {
+        flexDirection: 'row',
+        gap: Spacing.md,
+    },
+    backButton: {
+        flex: 1,
+        backgroundColor: '#F5F5F5',
+        paddingVertical: Spacing.md,
+        borderRadius: BorderRadius.md,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+    },
+    backButtonText: {
+        color: Colors.text,
+        fontWeight: FontWeights.bold,
+        fontSize: FontSizes.md,
     },
     nextButton: {
+        flex: 1,
         backgroundColor: '#00BCD4',
         paddingVertical: Spacing.md,
         borderRadius: BorderRadius.md,
