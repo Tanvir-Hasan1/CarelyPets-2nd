@@ -24,6 +24,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -85,130 +86,132 @@ export default function SignupScreen() {
   const keyboardOffset = Platform.OS === "ios" ? 90 : 20;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={keyboardOffset}
-      style={styles.container}
-    >
-      <ScrollView
-        ref={(r) => {
-          scrollRef.current = r;
-        }}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Spacing.xl * 2 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={keyboardOffset}
+        style={styles.keyboardAvoidingView}
       >
-        {/* Logo Section */}
-        <View style={styles.logoContainer}>
-          <ClawHeader />
-        </View>
-
-        {/* Welcome Section */}
-        <View style={styles.welcomeContainer}>
-          <Text style={styles.title}>Create an Account !</Text>
-          <Text style={styles.subtitle}>
-            Sign up to experience everything we have to offer.
-          </Text>
-        </View>
-
-        {/* Error Message */}
-        {error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
+        <ScrollView
+          ref={(r) => {
+            scrollRef.current = r;
+          }}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: Spacing.xl * 2 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          {/* Logo Section */}
+          <View style={styles.logoContainer}>
+            <ClawHeader />
           </View>
-        ) : null}
 
-        {/* Name Input */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>NAME</Text>
-          <View style={styles.inputWithIcon}>
-            <User width={20} height={20} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your name"
-              placeholderTextColor={Colors.placeholder}
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-              editable={!loading}
-            />
+          {/* Welcome Section */}
+          <View style={styles.welcomeContainer}>
+            <Text style={styles.title}>Create an Account !</Text>
+            <Text style={styles.subtitle}>
+              Sign up to experience everything we have to offer.
+            </Text>
           </View>
-        </View>
 
-        {/* Email Input */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>EMAIL</Text>
-          <View style={styles.inputWithIcon}>
-            <Mail width={20} height={20} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              placeholderTextColor={Colors.placeholder}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!loading}
-            />
+          {/* Error Message */}
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {/* Name Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>NAME</Text>
+            <View style={styles.inputWithIcon}>
+              <User width={20} height={20} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your name"
+                placeholderTextColor={Colors.placeholder}
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                editable={!loading}
+              />
+            </View>
           </View>
-        </View>
 
-        {/* Password Input */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>PASSWORD</Text>
-          <View style={styles.passwordInputContainer}>
-            <Lock width={24} height={24} style={styles.inputIcon} />
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Enter your password"
-              placeholderTextColor={Colors.placeholder}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              editable={!loading}
-              onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })}
-            />
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              style={styles.eyeIcon}
-            >
-              {showPassword ? (
-                <EyeOff width={24} height={24} />
-              ) : (
-                <Eye width={24} height={24} />
-              )}
+          {/* Email Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>EMAIL</Text>
+            <View style={styles.inputWithIcon}>
+              <Mail width={20} height={20} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                placeholderTextColor={Colors.placeholder}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!loading}
+              />
+            </View>
+          </View>
+
+          {/* Password Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>PASSWORD</Text>
+            <View style={styles.passwordInputContainer}>
+              <Lock width={24} height={24} style={styles.inputIcon} />
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter your password"
+                placeholderTextColor={Colors.placeholder}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                editable={!loading}
+                onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeIcon}
+              >
+                {showPassword ? (
+                  <EyeOff width={24} height={24} />
+                ) : (
+                  <Eye width={24} height={24} />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* (terms removed) */}
+
+          {/* Sign Up Button */}
+          <TouchableOpacity
+            style={[styles.signupButton, loading && styles.disabledButton]}
+            onPress={handleSignup}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={Colors.background} />
+            ) : (
+              <Text style={styles.signupButtonText}>Sign Up</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Login Link */}
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={styles.loginLink}>Login</Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        {/* (terms removed) */}
-
-        {/* Sign Up Button */}
-        <TouchableOpacity
-          style={[styles.signupButton, loading && styles.disabledButton]}
-          onPress={handleSignup}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={Colors.background} />
-          ) : (
-            <Text style={styles.signupButtonText}>Sign Up</Text>
-          )}
-        </TouchableOpacity>
-
-        {/* Login Link */}
-        <View style={styles.loginContainer}>
-          <Text style={styles.loginText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.loginLink}>Login</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -216,6 +219,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
