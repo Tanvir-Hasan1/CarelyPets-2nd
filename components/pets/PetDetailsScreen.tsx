@@ -1,3 +1,6 @@
+import EditIcon from "@/assets/images/icons/edit.svg";
+import FemaleIcon from "@/assets/images/icons/female.svg";
+import MaleIcon from "@/assets/images/icons/male.svg";
 import Header from "@/components/ui/Header";
 import {
     BorderRadius,
@@ -13,8 +16,6 @@ import {
     Calendar03Icon,
     Delete02Icon,
     Edit02Icon,
-    Female02Icon,
-    Male02Icon,
     Note01Icon,
     Notification02Icon,
     WeightScale01Icon
@@ -62,9 +63,9 @@ export default function PetDetailsScreen({ id }: { id: string }) {
             `Are you sure you want to delete ${pet.name}?`,
             [
                 { text: "Cancel", style: "cancel" },
-                { 
-                    text: "Delete", 
-                    style: "destructive", 
+                {
+                    text: "Delete",
+                    style: "destructive",
                     onPress: () => {
                         deletePet(pet.id);
                         router.back();
@@ -93,7 +94,7 @@ export default function PetDetailsScreen({ id }: { id: string }) {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-            
+
             {/* Header - Absolute Positioned */}
             {/* Header - Absolute Positioned */}
             <Header title="Pet Facts" />
@@ -126,17 +127,19 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                 {/* Content Body */}
                 <View style={styles.body}>
                     <View style={styles.titleRow}>
-                        <View>
-                            <Text style={styles.petName}>{pet.name}</Text>
-                            <Text style={styles.petBreed}>{pet.breed}</Text>
+                        <View style={styles.titleContainer}>
+                            <View>
+                                <Text style={styles.petName}>{pet.name}</Text>
+                                <Text style={styles.petBreed}>{pet.breed}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => router.push({ pathname: "/pets/edit-pet/[id]", params: { id: pet.id } })}>
+                                <EditIcon width={24} height={24} color="#00BCD4" />
+                            </TouchableOpacity>
                         </View>
-                        <TouchableOpacity onPress={() => router.push({ pathname: "/pets/edit-pet/[id]", params: { id: pet.id } })}>
-                            <HugeiconsIcon icon={Edit02Icon} size={24} color="#00BCD4" />
-                        </TouchableOpacity>
                         <View style={{ flex: 1 }} />
                         <View>
-                             <Text style={styles.memoryLabel}>MEMORY START</Text>
-                             <Text style={styles.memoryDate}>Nov 14, 2025</Text>
+                            <Text style={styles.memoryLabel}>MEMORY START</Text>
+                            <Text style={styles.memoryDate}>Nov 14, 2025</Text>
                         </View>
                     </View>
 
@@ -144,7 +147,10 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                     <View style={styles.statsGrid}>
                         <View style={styles.statItem}>
                             <View style={[styles.statIcon, { backgroundColor: '#E3F2FD' }]}>
-                                <HugeiconsIcon icon={pet.gender === 'Female' ? Female02Icon : Male02Icon} size={20} color="#1976D2" />
+                                {pet.gender === 'Female' ?
+                                    <FemaleIcon width={36} height={36} color="#1976D2" /> :
+                                    <MaleIcon width={36} height={34} color="#1976D2" />
+                                }
                             </View>
                             <View>
                                 <Text style={styles.statLabel}>Gender</Text>
@@ -174,13 +180,13 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                     {/* Tags */}
                     <View style={styles.tagRow}>
                         <View style={[styles.tag, { backgroundColor: '#E8F5E9' }]}>
-                             <Text style={[styles.tagText, { color: '#2E7D32' }]}>{pet.vaccinated === 'Yes' ? 'Vaccinated' : 'Not Vaccinated'}</Text>
+                            <Text style={[styles.tagText, { color: '#2E7D32' }]}>{pet.vaccinated === 'Yes' ? 'Vaccinated' : 'Not Vaccinated'}</Text>
                         </View>
                         <View style={[styles.tag, { backgroundColor: '#F3E5F5' }]}>
-                             <Text style={[styles.tagText, { color: '#7B1FA2' }]}>{pet.neutered === 'Yes' ? 'Neutered' : 'Not Neutered'}</Text>
+                            <Text style={[styles.tagText, { color: '#7B1FA2' }]}>{pet.neutered === 'Yes' ? 'Neutered' : 'Not Neutered'}</Text>
                         </View>
                         <View style={[styles.tag, { backgroundColor: '#E0F7FA' }]}>
-                             <Text style={[styles.tagText, { color: '#006064' }]}>{pet.trained === 'Yes' ? 'Trained' : 'Not Trained'}</Text>
+                            <Text style={[styles.tagText, { color: '#006064' }]}>{pet.trained === 'Yes' ? 'Trained' : 'Not Trained'}</Text>
                         </View>
                     </View>
 
@@ -206,31 +212,31 @@ export default function PetDetailsScreen({ id }: { id: string }) {
 
                     {/* Health Records */}
                     <View style={styles.section}>
-                         <View style={styles.healthHeader}>
+                        <View style={styles.healthHeader}>
                             <Text style={styles.sectionTitle}>Health Records</Text>
                             <TouchableOpacity onPress={() => router.push({ pathname: "/pets/add-health-record", params: { petId: pet.id } })}>
                                 <Text style={styles.addHealthText}>+ Add</Text>
                             </TouchableOpacity>
-                         </View>
-                         {healthRecords.map((record) => (
-                             <TouchableOpacity 
-                                key={record.id} 
+                        </View>
+                        {healthRecords.map((record) => (
+                            <TouchableOpacity
+                                key={record.id}
                                 style={styles.healthItem}
                                 onPress={() => router.push({
                                     pathname: "/pets/health-records-list",
                                     params: { petId: pet.id, recordType: record.title }
                                 })}
-                             >
-                                 <View style={[styles.healthIcon, { backgroundColor: record.bg }]}>
-                                     <HugeiconsIcon icon={record.icon} size={20} color={record.color} />
-                                 </View>
-                                 <View style={styles.healthInfo}>
-                                     <Text style={styles.healthTitle}>{record.title}</Text>
-                                     <Text style={styles.healthDate}>{record.date}</Text>
-                                 </View>
-                                 <HugeiconsIcon icon={ArrowLeft02Icon} size={16} color={Colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
-                             </TouchableOpacity>
-                         ))}
+                            >
+                                <View style={[styles.healthIcon, { backgroundColor: record.bg }]}>
+                                    <HugeiconsIcon icon={record.icon} size={20} color={record.color} />
+                                </View>
+                                <View style={styles.healthInfo}>
+                                    <Text style={styles.healthTitle}>{record.title}</Text>
+                                    <Text style={styles.healthDate}>{record.date}</Text>
+                                </View>
+                                <HugeiconsIcon icon={ArrowLeft02Icon} size={16} color={Colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
+                            </TouchableOpacity>
+                        ))}
                     </View>
                 </View>
             </ScrollView>
@@ -242,8 +248,8 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                     <Text style={styles.deleteText}>Delete</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.bookButton}>
-                     <HugeiconsIcon icon={Calendar02Icon} size={20} color="#ffffff" />
-                     <Text style={styles.bookText}>Book a Service</Text>
+                    <HugeiconsIcon icon={Calendar02Icon} size={20} color="#ffffff" />
+                    <Text style={styles.bookText}>Book a Service</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -340,6 +346,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'flex-start',
         marginBottom: Spacing.lg,
+    },
+    titleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.md,
     },
     petName: {
         fontSize: 28,
