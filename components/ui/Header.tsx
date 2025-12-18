@@ -19,14 +19,16 @@ interface HeaderProps {
     title: string;
     onBackPress?: () => void;
     showActions?: boolean;
+    showBackButton?: boolean;
     style?: ViewStyle;
 }
 
-export default function Header({ 
-    title, 
-    onBackPress, 
-    showActions = true, 
-    style 
+export default function Header({
+    title,
+    onBackPress,
+    showActions = true,
+    showBackButton = true,
+    style
 }: HeaderProps) {
     const router = useRouter();
     const insets = useSafeAreaInsets();
@@ -41,14 +43,18 @@ export default function Header({
 
     return (
         <View style={[styles.header, { paddingTop: insets.top }, style]}>
-            <TouchableOpacity onPress={handleBack} style={styles.iconButton}>
-                <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
-            </TouchableOpacity>
-            
+            {showBackButton ? (
+                <TouchableOpacity onPress={handleBack} style={styles.iconButton}>
+                    <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
+                </TouchableOpacity>
+            ) : (
+                <View style={{ width: 44 }} />
+            )}
+
             <View style={styles.titleContainer}>
                 <Text style={styles.headerTitle}>{title}</Text>
             </View>
-            
+
             {showActions ? (
                 <View style={styles.headerActions}>
                     <TouchableOpacity style={styles.iconButton}>

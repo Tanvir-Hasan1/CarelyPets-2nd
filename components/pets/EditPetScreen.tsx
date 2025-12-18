@@ -9,13 +9,10 @@ import { Pet, usePetStore } from "@/store/usePetStore";
 import {
   Add01Icon,
   ArrowDown01Icon,
-  ArrowLeft02Icon,
   Camera01Icon,
   Cancel01Icon,
   MultiplicationSignIcon,
-  Notification02Icon,
   PencilEdit02Icon,
-  ShoppingBag02Icon,
   Upload02Icon,
   ViewIcon
 } from "@hugeicons/core-free-icons";
@@ -37,6 +34,7 @@ import {
   View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Header from "../ui/Header";
 
 // Reusable Components
 const SectionLabel = ({ title }: { title: string }) => (
@@ -333,20 +331,7 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-          <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Pet Facts</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.iconButton}>
-            <HugeiconsIcon icon={ShoppingBag02Icon} size={24} color={Colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <HugeiconsIcon icon={Notification02Icon} size={24} color={Colors.text} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Header title="Edit Pet Facts" />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}

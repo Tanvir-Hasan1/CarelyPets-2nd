@@ -1,15 +1,15 @@
 import {
-    Home01Icon,
+  Home01Icon,
 } from "@hugeicons/core-free-icons";
 
 import ChatIcon from "@/assets/images/icons/chat.svg";
 import PawIcon from "@/assets/images/icons/paw.svg";
 import ProfileIcon from "@/assets/images/icons/profile.svg";
 import {
-    Colors,
-    FontSizes,
-    FontWeights,
-    Spacing
+  Colors,
+  FontSizes,
+  FontWeights,
+  Spacing
 } from "@/constants/colors";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Tabs } from "expo-router";
@@ -36,15 +36,15 @@ export default function TabLayout() {
           title: "Home",
           tabBarIcon: ({ color, size, focused }) => (
             <View style={styles.iconContainer}>
-                {focused && <View style={styles.activeIndicator} />}
-                <HugeiconsIcon icon={Home01Icon} size={size} color={color} />
+              {focused && <View style={styles.activeIndicator} />}
+              <HugeiconsIcon icon={Home01Icon} size={size} color={color} />
             </View>
           ),
         }}
         listeners={{
-            tabPress: () => {
-                console.log("clicked on home");
-            },
+          tabPress: () => {
+            console.log("clicked on home");
+          },
         }}
       />
       <Tabs.Screen
@@ -53,15 +53,15 @@ export default function TabLayout() {
           title: "PetHub",
           tabBarIcon: ({ color, size, focused }) => (
             <View style={styles.iconContainer}>
-                {focused && <View style={styles.activeIndicator} />}
-                <PawIcon width={size} height={size} color={color} />
+              {focused && <View style={styles.activeIndicator} />}
+              <PawIcon width={size} height={size} color={color} />
             </View>
           ),
         }}
         listeners={{
-            tabPress: () => {
-                console.log("clicked on pethub");
-            },
+          tabPress: () => {
+            console.log("clicked on pethub");
+          },
         }}
       />
       <Tabs.Screen
@@ -70,32 +70,32 @@ export default function TabLayout() {
           title: "Chat",
           tabBarIcon: ({ color, size, focused }) => (
             <View style={styles.iconContainer}>
-                {focused && <View style={styles.activeIndicator} />}
-                <ChatIcon width={size} height={size} color={color} />
+              {focused && <View style={styles.activeIndicator} />}
+              <ChatIcon width={size} height={size} color={color} />
             </View>
           ),
         }}
         listeners={{
-            tabPress: () => {
-                console.log("clicked on chat");
-            },
+          tabPress: () => {
+            console.log("clicked on chat");
+          },
         }}
       />
       <Tabs.Screen
-        name="account/index"
+        name="account"
         options={{
           title: "Account",
           tabBarIcon: ({ color, size, focused }) => (
             <View style={styles.iconContainer}>
-                {focused && <View style={styles.activeIndicator} />}
-                <ProfileIcon width={size} height={size} color={color} />
+              {focused && <View style={styles.activeIndicator} />}
+              <ProfileIcon width={size} height={size} color={color} />
             </View>
           ),
         }}
         listeners={{
-            tabPress: () => {
-                console.log("clicked on account");
-            },
+          tabPress: () => {
+            console.log("clicked on account");
+          },
         }}
       />
     </Tabs>

@@ -1,9 +1,17 @@
+import MoreSection from "@/components/accounts/MoreSection";
+import NotificationSection from "@/components/accounts/NotificationSection";
+import ProfileCard from "@/components/accounts/ProfileCard";
+import QuickActionsSection from "@/components/accounts/QuickActionsSection";
+import Header from "@/components/ui/Header";
+import LogoutComponent from "@/components/ui/LogoutComponent";
+import { Colors } from "@/constants/colors";
 import authService, { User } from "@/services/authService";
 import { useRouter } from "expo-router";
+import { LogOut } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,6 +21,8 @@ import {
 export default function AccountScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -30,73 +40,71 @@ export default function AccountScreen() {
     }
   };
 
-  const handleLogout = async () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await authService.logout();
-            router.replace("/login");
-          } catch (error) {
-            console.error("Error logging out:", error);
-            Alert.alert("Error", "Failed to logout. Please try again.");
-          }
-        },
-      },
-    ]);
+  const handleLogout = () => {
+    setLogoutModalVisible(true);
+  };
+
+  const confirmLogout = async () => {
+    try {
+      setLogoutModalVisible(false);
+      await authService.logout();
+      router.replace("/login");
+    } catch (error) {
+      console.error("Error logging out:", error);
+      // Fallback alert if needed, though modal handles flow
+    }
   };
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#1DAFB6" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Account</Text>
-        <Text style={styles.subtitle}>Manage your profile</Text>
-      </View>
+      {/* Header */}
+      <Header title="Account" showBackButton={false} />
 
-      <View style={styles.card}>
-        {user ? (
-          <>
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Name</Text>
-              <Text style={styles.value}>{user.name}</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>{user.email}</Text>
-            </View>
-            {user.role && (
-              <>
-                <View style={styles.divider} />
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Role</Text>
-                  <Text style={styles.value}>{user.role}</Text>
-                </View>
-              </>
-            )}
-          </>
-        ) : (
-          <Text style={styles.noDataText}>No user information available.</Text>
-        )}
-      </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Profile Card */}
+        <ProfileCard
+          user={user}
+          onPress={() => router.push('/(tabs)/account/profile')}
+        />
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Logout</Text>
-      </TouchableOpacity>
+        {/* Notification Section */}
+        <NotificationSection
+          notificationsEnabled={notificationsEnabled}
+          setNotificationsEnabled={setNotificationsEnabled}
+        />
+
+        {/* Quick Actions Section */}
+        <QuickActionsSection />
+
+        {/* More Section */}
+        <MoreSection />
+
+        {/* Logout */}
+        <TouchableOpacity style={styles.logoutCard} onPress={handleLogout}>
+          <View style={styles.menuItemLeft}>
+            <LogOut size={24} color="#EF4444" strokeWidth={1.5} />
+            <Text style={styles.logoutText}>Logout</Text>
+          </View>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Logout Modal */}
+      <LogoutComponent
+        visible={logoutModalVisible}
+        onClose={() => setLogoutModalVisible(false)}
+        onConfirm={confirmLogout}
+      />
     </View>
   );
 }
@@ -104,82 +112,38 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
-    padding: 20,
+    backgroundColor: "#F9FAFB", // Light grayish background
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#F9FAFB",
   },
-  header: {
-    marginBottom: 24,
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 100, // Increased to clear tab bar
     marginTop: 20,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#1F2937",
-    marginBottom: 8,
+  menuItemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#6B7280",
-  },
-  card: {
+  logoutCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
+    marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 24,
+    shadowRadius: 4,
+    elevation: 0.5,
   },
-  infoRow: {
-    paddingVertical: 12,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#F3F4F6",
-  },
-  label: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 4,
-  },
-  value: {
+  logoutText: {
     fontSize: 16,
-    fontWeight: "500",
-    color: "#1F2937",
-  },
-  noDataText: {
-    textAlign: "center",
-    color: "#6B7280",
-    fontSize: 16,
-  },
-  logoutButton: {
-    backgroundColor: "#EF4444",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: "#EF4444",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  logoutButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
+    color: "#EF4444",
   },
 });
