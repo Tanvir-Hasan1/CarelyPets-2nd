@@ -1,5 +1,5 @@
 import Header from '@/components/ui/Header';
-import { Colors } from '@/constants/colors';
+import { BorderRadius, Colors, FontSizes, FontWeights, Spacing } from '@/constants/colors';
 import { useRouter } from 'expo-router';
 import { Camera, Image as ImageIcon } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -13,7 +13,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CreatePostScreen() {
     const router = useRouter();
@@ -25,7 +24,7 @@ export default function CreatePostScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.container}>
             <Header title="Create Post" />
 
             <KeyboardAvoidingView
@@ -68,12 +67,12 @@ export default function CreatePostScreen() {
                 </View>
 
                 {/* Post Button */}
-                <TouchableOpacity style={styles.postButton} onPress={handlePost}>
-                    <Text style={styles.postButtonText}>Post</Text>
+                <TouchableOpacity style={styles.updateButton} onPress={handlePost}>
+                    <Text style={styles.updateButtonText}>Post</Text>
                 </TouchableOpacity>
 
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -84,19 +83,21 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
+        backgroundColor: Colors.lightGray,
         padding: 20,
+        paddingBottom: 100,
     },
     card: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
+        backgroundColor: Colors.background,
+        borderRadius: BorderRadius.md,
         padding: 16,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
         shadowRadius: 4,
-        elevation: 2,
+        elevation: 0.5,
         marginBottom: 20,
-        height: 250, // Minimum height for the card
+        minHeight: 200,
     },
     userInfo: {
         flexDirection: 'row',
@@ -108,48 +109,100 @@ const styles = StyleSheet.create({
         height: 40,
         borderRadius: 20,
         marginRight: 12,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: Colors.primary,
     },
     userName: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#111827',
+        fontSize: FontSizes.md,
+        fontWeight: FontWeights.bold,
+        color: Colors.text,
     },
     userHandle: {
-        fontSize: 14,
-        color: '#6B7280',
+        fontSize: FontSizes.sm,
+        color: Colors.text,
     },
     textInput: {
-        flex: 1,
-        fontSize: 16,
-        color: '#1F2937',
-        marginBottom: 16,
+        paddingHorizontal: Spacing.md,
+        backgroundColor: Colors.lightGray,
+        borderColor: '#E5E7EB',
+        borderWidth: 1,
+        borderRadius: 12,
+        fontSize: FontSizes.md,
+        color: '#374151',
+        minHeight: 120,
     },
     actionsRow: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
         gap: 16,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-        paddingTop: 12,
+        borderTopColor: Colors.lightGray,
     },
     iconButton: {
         padding: 4,
     },
-    postButton: {
+    filesContainer: {
+        backgroundColor: Colors.background,
+        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.sm,
+        borderRadius: BorderRadius.md,
+        gap: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 0.5,
+    },
+    fileCard: {
+        backgroundColor: Colors.lightGray,
+        borderRadius: BorderRadius.md,
+        padding: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    fileIconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#EDE9FE', // Light purple
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    fileInfo: {
+        flex: 1,
+    },
+    fileName: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#111827',
+    },
+    fileMeta: {
+        fontSize: 12,
+        color: '#6B7280',
+        marginTop: 2,
+    },
+    fileActions: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    fileActionBtn: {
+        padding: 4,
+    },
+    footer: {
+        padding: 20,
+        paddingBottom: 100, // Clear tab bar
+        backgroundColor: '#F9FAFB',
+    },
+    updateButton: {
         backgroundColor: Colors.primary,
         borderRadius: 12,
         paddingVertical: 14,
         alignItems: 'center',
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
     },
-    postButtonText: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#FFFFFF',
+    updateButtonText: {
+        fontSize: FontSizes.md,
+        fontWeight: FontWeights.bold,
+        color: Colors.background,
     },
 });
+

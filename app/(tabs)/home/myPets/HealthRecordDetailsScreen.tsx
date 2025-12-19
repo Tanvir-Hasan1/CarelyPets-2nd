@@ -88,28 +88,28 @@ export default function HealthRecordDetailsScreen({ pet, record }: Props) {
     return (
         <SafeAreaView style={styles.safeArea} edges={['right', 'left', 'bottom']}>
             <StatusBar barStyle="dark-content" backgroundColor="transparent" />
-            
+
             {/* Header */}
             <Header title="View Records" />
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {/* Pet Info Card */}
                 <View style={styles.petCard}>
-                    <Image 
-                        source={{ uri: pet.image || "https://images.unsplash.com/photo-1543852786-1cf6624b9987" }} 
-                        style={styles.petImage} 
+                    <Image
+                        source={{ uri: pet.image || "https://images.unsplash.com/photo-1543852786-1cf6624b9987" }}
+                        style={styles.petImage}
                     />
                     <View style={styles.petInfo}>
                         <Text style={styles.petName}>{pet.name}</Text>
                         <Text style={styles.petBreed}>{pet.breed}</Text>
                     </View>
                     <TouchableOpacity onPress={() => {
-                        router.push({ 
-                            pathname: "/pets/add-health-record", 
-                            params: { 
+                        router.push({
+                            pathname: "/(tabs)/home/myPets/add-health-record",
+                            params: {
                                 petId: pet.id,
                                 recordId: record.id
-                            } 
+                            }
                         });
                     }}>
                         <HugeiconsIcon icon={Edit02Icon} size={20} color="#00BCD4" />
@@ -118,7 +118,7 @@ export default function HealthRecordDetailsScreen({ pet, record }: Props) {
 
                 {/* Record Header Card */}
                 <View style={styles.card}>
-                     <View style={styles.recordHeader}>
+                    <View style={styles.recordHeader}>
                         <View style={styles.iconCircle}>
                             <HugeiconsIcon icon={getIconForType(record.recordType)} size={24} color="#4CAF50" />
                         </View>
@@ -126,29 +126,29 @@ export default function HealthRecordDetailsScreen({ pet, record }: Props) {
                             <Text style={styles.recordTypeTitle}>{record.recordType}</Text>
                             <Text style={styles.recordNameSubtitle}>{record.recordName}</Text>
                         </View>
-                     </View>
-                     
-                     <View style={styles.divider} />
-                     
-                     <DataRow label="RECORD NAME" value={record.recordName} />
-                     <View style={styles.divider} />
-                     <DataRow label="BATCH/LOT NO." value={record.batchNumber} />
-                     <View style={styles.divider} />
-                     <DataRow label="OTHER" value={record.otherInfo} />
-                     <View style={styles.divider} />
-                     <DataRow label="COST" value={record.cost ? `$${record.cost}` : undefined} />
-                     <View style={styles.divider} />
-                     <DataRow label="DATE" value={record.date} />
-                     <View style={styles.divider} />
-                     <DataRow label="DUE DATE" value={record.nextDueDate} />
-                     <View style={styles.divider} />
+                    </View>
 
-                     <View style={styles.dataRow}>
+                    <View style={styles.divider} />
+
+                    <DataRow label="RECORD NAME" value={record.recordName} />
+                    <View style={styles.divider} />
+                    <DataRow label="BATCH/LOT NO." value={record.batchNumber} />
+                    <View style={styles.divider} />
+                    <DataRow label="OTHER" value={record.otherInfo} />
+                    <View style={styles.divider} />
+                    <DataRow label="COST" value={record.cost ? `$${record.cost}` : undefined} />
+                    <View style={styles.divider} />
+                    <DataRow label="DATE" value={record.date} />
+                    <View style={styles.divider} />
+                    <DataRow label="DUE DATE" value={record.nextDueDate} />
+                    <View style={styles.divider} />
+
+                    <View style={styles.dataRow}>
                         <Text style={[styles.dataLabel, { color: '#E53935' }]}>REMINDER</Text>
-                         <Text style={[styles.dataValue, { color: '#E53935' }]}>
+                        <Text style={[styles.dataValue, { color: '#E53935' }]}>
                             {record.reminderEnabled ? record.reminderDuration : 'Off'}
                         </Text>
-                     </View>
+                    </View>
                 </View>
 
                 {/* Veterinarian Info */}
@@ -159,16 +159,16 @@ export default function HealthRecordDetailsScreen({ pet, record }: Props) {
                         <Text style={styles.vetDesignation}>{record.vetDesignation || 'Veterinarian'}</Text>
                     </View>
                     <View style={styles.vetDetailsRow}>
-                         <Text style={styles.vetLabel}>Clinic</Text>
-                         <Text style={styles.vetValue}>{record.clinicName || '-'}</Text>
+                        <Text style={styles.vetLabel}>Clinic</Text>
+                        <Text style={styles.vetValue}>{record.clinicName || '-'}</Text>
                     </View>
                     <View style={styles.vetDetailsRow}>
-                         <Text style={styles.vetLabel}>License No.</Text>
-                         <Text style={styles.vetValue}>{record.licenseNumber || '-'}</Text>
+                        <Text style={styles.vetLabel}>License No.</Text>
+                        <Text style={styles.vetValue}>{record.licenseNumber || '-'}</Text>
                     </View>
                     <View style={styles.vetDetailsRow}>
-                         <Text style={styles.vetLabel}>Contact</Text>
-                         <Text style={styles.vetValue}>{record.vetContact || '-'}</Text>
+                        <Text style={styles.vetLabel}>Contact</Text>
+                        <Text style={styles.vetValue}>{record.vetContact || '-'}</Text>
                     </View>
                 </View>
 
@@ -177,28 +177,28 @@ export default function HealthRecordDetailsScreen({ pet, record }: Props) {
                     <Text style={[styles.cardTitle, { marginBottom: Spacing.md }]}>Vital Signs</Text>
                     <View style={styles.grid}>
                         <View style={[styles.gridItem, { backgroundColor: '#FFEBEE' }]}>
-                             <TemperatureIcon width={40} height={40} color="#F44336" /> 
-                             <Text style={styles.gridLabel}>Temperature</Text>
-                             <Text style={styles.gridValue}>{record.temperature+'°C' || '-'}</Text>
-                             <Text style={[styles.gridStatus, { color: '#4CAF50' }]}>{record.temperatureStatus}</Text>
+                            <TemperatureIcon width={40} height={40} color="#F44336" />
+                            <Text style={styles.gridLabel}>Temperature</Text>
+                            <Text style={styles.gridValue}>{record.temperature + '°C' || '-'}</Text>
+                            <Text style={[styles.gridStatus, { color: '#4CAF50' }]}>{record.temperatureStatus}</Text>
                         </View>
-                         <View style={[styles.gridItem, { backgroundColor: '#FCE4EC' }]}>
-                             <HeartBeatIcon width={40} height={40} color="#E91E63" />
-                             <Text style={styles.gridLabel}>Heart Rate</Text>
-                             <Text style={styles.gridValue}>{record.heartRate+' bpm' || '-'}</Text>
-                             <Text style={[styles.gridStatus, { color: '#4CAF50' }]}>{record.heartRateStatus}</Text>
+                        <View style={[styles.gridItem, { backgroundColor: '#FCE4EC' }]}>
+                            <HeartBeatIcon width={40} height={40} color="#E91E63" />
+                            <Text style={styles.gridLabel}>Heart Rate</Text>
+                            <Text style={styles.gridValue}>{record.heartRate + ' bpm' || '-'}</Text>
+                            <Text style={[styles.gridStatus, { color: '#4CAF50' }]}>{record.heartRateStatus}</Text>
                         </View>
-                         <View style={[styles.gridItem, { backgroundColor: '#E1F5FE' }]}>
-                             <LungIcon width={40} height={40} color="#039BE5" />
-                             <Text style={styles.gridLabel}>Respiratory</Text>
-                             <Text style={styles.gridValue}>{record.respiratoryRate+' rpm' || '-'}</Text>
-                             <Text style={[styles.gridStatus, { color: '#4CAF50' }]}>{record.respiratoryRateStatus}</Text>
+                        <View style={[styles.gridItem, { backgroundColor: '#E1F5FE' }]}>
+                            <LungIcon width={40} height={40} color="#039BE5" />
+                            <Text style={styles.gridLabel}>Respiratory</Text>
+                            <Text style={styles.gridValue}>{record.respiratoryRate + ' rpm' || '-'}</Text>
+                            <Text style={[styles.gridStatus, { color: '#4CAF50' }]}>{record.respiratoryRateStatus}</Text>
                         </View>
-                         <View style={[styles.gridItem, { backgroundColor: '#F3E5F5' }]}>
-                             <WeightIcon width={40} height={40} color="#9C27B0" />
-                             <Text style={styles.gridLabel}>Weight</Text>
-                             <Text style={styles.gridValue}>{record.weight+' lbs' || '-'}</Text>
-                             <Text style={[styles.gridStatus, { color: '#4CAF50' }]}>{record.weightStatus}</Text>
+                        <View style={[styles.gridItem, { backgroundColor: '#F3E5F5' }]}>
+                            <WeightIcon width={40} height={40} color="#9C27B0" />
+                            <Text style={styles.gridLabel}>Weight</Text>
+                            <Text style={styles.gridValue}>{record.weight + ' lbs' || '-'}</Text>
+                            <Text style={[styles.gridStatus, { color: '#4CAF50' }]}>{record.weightStatus}</Text>
                         </View>
                     </View>
                 </View>
@@ -207,7 +207,7 @@ export default function HealthRecordDetailsScreen({ pet, record }: Props) {
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Clinical Notes</Text>
                     <Text style={styles.notesText}>
-                        {record.clinicalNotes || "No notes provided."} <Text style={{ color: '#00BCD4', fontWeight:'bold' }}>...See more</Text>
+                        {record.clinicalNotes || "No notes provided."} <Text style={{ color: '#00BCD4', fontWeight: 'bold' }}>...See more</Text>
                     </Text>
                 </View>
 
@@ -222,41 +222,41 @@ export default function HealthRecordDetailsScreen({ pet, record }: Props) {
                             </View>
                         ))
                     ) : (
-                         <Text style={styles.notesText}>No observations recorded.</Text>
+                        <Text style={styles.notesText}>No observations recorded.</Text>
                     )}
                 </View>
 
                 {/* Attachments */}
                 <View style={styles.card}>
-                     <Text style={styles.cardTitle}>Attached Documents</Text>
-                     {record.attachments && record.attachments.length > 0 ? (
-                         record.attachments.map((file, index) => (
-                             <TouchableOpacity key={index} style={styles.fileItem} onPress={() => {
-                                 if (file.mimeType?.startsWith('image/')) {
-                                     setViewedImage(file.uri);
-                                 }
-                             }}>
-                                 <View style={styles.fileIcon}>
-                                     <HugeiconsIcon icon={Note01Icon} size={20} color="#E91E63" />
-                                 </View>
-                                 <View style={styles.fileInfo}>
-                                     <Text style={styles.fileName}>{file.name || `File ${index + 1}`}</Text>
-                                     <Text style={styles.fileSize}>
-                                         {file.mimeType ? file.mimeType.split('/')[1].toUpperCase() : 'FILE'} • {file.size ? (file.size / 1024).toFixed(0) + 'KB' : '?'}
-                                     </Text>
-                                 </View>
-                                 <HugeiconsIcon icon={ViewIcon} size={20} color={Colors.textSecondary} />
-                             </TouchableOpacity>
-                         ))
-                     ) : (
-                         <Text style={styles.notesText}>No documents attached.</Text>
-                     )}
+                    <Text style={styles.cardTitle}>Attached Documents</Text>
+                    {record.attachments && record.attachments.length > 0 ? (
+                        record.attachments.map((file, index) => (
+                            <TouchableOpacity key={index} style={styles.fileItem} onPress={() => {
+                                if (file.mimeType?.startsWith('image/')) {
+                                    setViewedImage(file.uri);
+                                }
+                            }}>
+                                <View style={styles.fileIcon}>
+                                    <HugeiconsIcon icon={Note01Icon} size={20} color="#E91E63" />
+                                </View>
+                                <View style={styles.fileInfo}>
+                                    <Text style={styles.fileName}>{file.name || `File ${index + 1}`}</Text>
+                                    <Text style={styles.fileSize}>
+                                        {file.mimeType ? file.mimeType.split('/')[1].toUpperCase() : 'FILE'} • {file.size ? (file.size / 1024).toFixed(0) + 'KB' : '?'}
+                                    </Text>
+                                </View>
+                                <HugeiconsIcon icon={ViewIcon} size={20} color={Colors.textSecondary} />
+                            </TouchableOpacity>
+                        ))
+                    ) : (
+                        <Text style={styles.notesText}>No documents attached.</Text>
+                    )}
                 </View>
 
-                 {/* Delete Button */}
-                 <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-                     <Text style={styles.deleteButtonText}>Delete Record</Text>
-                 </TouchableOpacity>
+                {/* Delete Button */}
+                <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+                    <Text style={styles.deleteButtonText}>Delete Record</Text>
+                </TouchableOpacity>
 
             </ScrollView>
 
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
         padding: Spacing.md,
         borderRadius: BorderRadius.lg,
         marginBottom: Spacing.lg,
-         shadowColor: "#000",
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
         shadowRadius: 2,
@@ -422,8 +422,8 @@ const styles = StyleSheet.create({
     },
     vetValue: {
         fontSize: FontSizes.sm,
-         color: Colors.text,
-         fontWeight: FontWeights.medium,
+        color: Colors.text,
+        fontWeight: FontWeights.medium,
     },
     grid: {
         flexDirection: 'row',

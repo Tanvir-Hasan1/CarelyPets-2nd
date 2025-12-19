@@ -57,17 +57,17 @@ export default function AllPetsScreen() {
                 {pets.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <Text style={styles.emptyText}>No pets added yet!</Text>
-                        <TouchableOpacity style={styles.addButton} onPress={() => router.push("/pets/add-pet")}>
+                        <TouchableOpacity style={styles.addButton} onPress={() => router.push("/(tabs)/home/myPets/add-pet")}>
                             <Text style={styles.addButtonText}>Add your first pet</Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
                     <View style={styles.grid}>
                         {pets.map((pet) => (
-                            <TouchableOpacity 
-                                key={pet.id} 
+                            <TouchableOpacity
+                                key={pet.id}
                                 style={styles.card}
-                                onPress={() => router.push(`/pets/${pet.id}`)}
+                                onPress={() => router.push(`/(tabs)/home/myPets/${pet.id}`)}
                             >
                                 <Image source={{ uri: pet.image }} style={styles.cardImage} />
                                 <View style={styles.cardContent}>

@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     },
     userHandle: {
         fontSize: FontSizes.sm,
-        color: '#6B7280',
+        color: Colors.text,
     },
     textInput: {
         paddingHorizontal: Spacing.md,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
         gap: 16,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
+        borderTopColor: Colors.lightGray,
     },
     iconButton: {
         padding: 4,

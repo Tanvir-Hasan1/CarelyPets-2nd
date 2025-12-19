@@ -6,6 +6,7 @@ import {
     FontWeights,
     Spacing,
 } from "@/constants/colors";
+import { HealthRecord, usePetStore } from "@/store/usePetStore";
 import {
     BandageIcon,
     Bug02Icon,
@@ -30,7 +31,6 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { HealthRecord, usePetStore } from "../../store/usePetStore";
 import AttachmentsStep from "./health-records/AttachmentsStep";
 import ObservationStep from "./health-records/ObservationStep";
 import RecordDetailsStep from "./health-records/RecordDetailsStep";
@@ -49,10 +49,10 @@ const RECORD_TYPES: RecordType[] = [
     { id: 'vaccination', label: 'Vaccination', icon: InjectionIcon, color: '#4CAF50', bgColor: '#E8F5E9' },
     { id: 'checkup', label: 'Check-up', icon: Stethoscope02Icon, color: '#2196F3', bgColor: '#E3F2FD' },
     { id: 'medication', label: 'Medication', icon: Medicine01Icon, color: '#F44336', bgColor: '#FFEBEE' },
-    { id: 'tick', label: 'Tick', icon: Bug02Icon, color: '#9C27B0', bgColor: '#F3E5F5' }, 
-    { id: 'surgery', label: 'Surgery', icon: BandageIcon, color: '#E91E63', bgColor: '#FCE4EC' }, 
-    { id: 'dental', label: 'Dental', icon: DentalToothIcon, color: '#FF9800', bgColor: '#FFF3E0' }, 
-    { id: 'other', label: 'Other', icon: Note01Icon, color: '#757575', bgColor: '#EEEEEE' }, 
+    { id: 'tick', label: 'Tick', icon: Bug02Icon, color: '#9C27B0', bgColor: '#F3E5F5' },
+    { id: 'surgery', label: 'Surgery', icon: BandageIcon, color: '#E91E63', bgColor: '#FCE4EC' },
+    { id: 'dental', label: 'Dental', icon: DentalToothIcon, color: '#FF9800', bgColor: '#FFF3E0' },
+    { id: 'other', label: 'Other', icon: Note01Icon, color: '#757575', bgColor: '#EEEEEE' },
 ];
 
 const STEPS = [
@@ -84,7 +84,7 @@ export default function AddHealthRecordScreen() {
         nextDueDate: '',
         reminderEnabled: false,
         reminderDuration: '1 week',
-        
+
         // Vet Info
         vetDesignation: '',
         vetName: '',
@@ -131,12 +131,12 @@ export default function AddHealthRecordScreen() {
         if (recordId && petId) {
             const pet = pets.find(p => p.id === petId);
             const record = pet?.healthRecords?.find(r => r.id === recordId);
-            
+
             if (record) {
                 // Pre-fill form
                 setSelectedType(record.recordType.toLowerCase());
                 setCurrentStepIndex(0); // Go to first step directly
-                
+
                 setFormData({
                     recordName: record.recordName,
                     batchNumber: record.batchNumber,
@@ -179,9 +179,9 @@ export default function AddHealthRecordScreen() {
         if (currentStepIndex > 0) {
             setCurrentStepIndex(prev => prev - 1);
         } else if (currentStepIndex === 0 && !type) {
-             // If type wasn't passed initially, go back to selection
-             setCurrentStepIndex(-1);
-             setSelectedType(null);
+            // If type wasn't passed initially, go back to selection
+            setCurrentStepIndex(-1);
+            setSelectedType(null);
         } else {
             router.back();
         }
@@ -189,13 +189,13 @@ export default function AddHealthRecordScreen() {
 
     const handleSubmit = () => {
         if (!petId || !selectedType) return;
-        
+
         const newRecord: HealthRecord = {
             id: recordId || Date.now().toString(),
             recordType: getRecordTypeLabel(),
             recordName: formData.recordName,
             batchNumber: formData.batchNumber,
-            otherInfo: formData.otherInfo, 
+            otherInfo: formData.otherInfo,
             cost: formData.cost,
             date: formData.date,
             nextDueDate: formData.nextDueDate,
@@ -231,7 +231,7 @@ export default function AddHealthRecordScreen() {
 
     const renderStepContent = () => {
         if (currentStepIndex === -1) {
-             return (
+            return (
                 <>
                     <View style={styles.titleSection}>
                         <Text style={styles.mainTitle}>Add your pet's health record</Text>
@@ -266,13 +266,13 @@ export default function AddHealthRecordScreen() {
                         </View>
                     </View>
                 </>
-             );
+            );
         }
 
         const stepWrapper = (Component: React.ElementType, extraData: any = {}) => (
-             <View style={styles.stepContainer}>
+            <View style={styles.stepContainer}>
                 <Component data={{ ...formData, ...extraData }} updateData={updateFormData} />
-             </View>
+            </View>
         );
 
         switch (currentStepIndex) {
@@ -292,8 +292,8 @@ export default function AddHealthRecordScreen() {
 
     return (
         <SafeAreaView style={styles.safeArea} edges={['right', 'left', 'bottom']}>
-            <KeyboardAvoidingView 
-                style={{ flex: 1 }} 
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
                 <StatusBar barStyle="dark-content" />
@@ -302,14 +302,14 @@ export default function AddHealthRecordScreen() {
                     <Header title="Add Health Record" onBackPress={handleBack} />
 
                     {/* Progress Indicator (Optional - simplistic text version) */}
-                     {selectedType && (
+                    {selectedType && (
                         <View style={styles.progressContainer}>
-                             <Text style={styles.progressText}>{getProgressText()}</Text>
+                            <Text style={styles.progressText}>{getProgressText()}</Text>
                         </View>
-                     )}
+                    )}
 
 
-                    <ScrollView 
+                    <ScrollView
                         ref={scrollViewRef}
                         contentContainerStyle={styles.content}
                     >
@@ -317,19 +317,19 @@ export default function AddHealthRecordScreen() {
                     </ScrollView>
 
                     <View style={styles.footer}>
-                         <View style={styles.footerButtons}>
-                            <TouchableOpacity 
-                                style={styles.backButton} 
+                        <View style={styles.footerButtons}>
+                            <TouchableOpacity
+                                style={styles.backButton}
                                 onPress={handleBack}
                             >
                                 <Text style={styles.backButtonText}>Back</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={[
-                                    styles.nextButton, 
+                                    styles.nextButton,
                                     (currentStepIndex === -1 && !selectedType) && styles.disabledButton
-                                ]} 
+                                ]}
                                 disabled={currentStepIndex === -1 && !selectedType}
                                 onPress={handleNext}
                             >
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'flex-start',
-        gap: 0, 
+        gap: 0,
     },
     gridItem: {
         width: '25%', // 4 items per row

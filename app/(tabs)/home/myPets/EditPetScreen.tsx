@@ -1,3 +1,4 @@
+import Header from "@/components/ui/Header";
 import {
   BorderRadius,
   Colors,
@@ -34,7 +35,6 @@ import {
   View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Header from "../ui/Header";
 
 // Reusable Components
 const SectionLabel = ({ title }: { title: string }) => (

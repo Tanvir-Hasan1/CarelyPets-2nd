@@ -1,8 +1,8 @@
-import HealthRecordDetailsScreen from "@/components/pets/HealthRecordDetailsScreen";
 import { usePetStore } from "@/store/usePetStore";
 import { useLocalSearchParams } from "expo-router";
 import React from "react";
 import { Text, View } from "react-native";
+import HealthRecordDetailsScreen from "./HealthRecordDetailsScreen";
 
 export default function HealthRecordDetailsRoute() {
     const { petId, recordId } = useLocalSearchParams<{ petId: string, recordId: string }>();

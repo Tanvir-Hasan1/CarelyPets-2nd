@@ -132,7 +132,7 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                                 <Text style={styles.petName}>{pet.name}</Text>
                                 <Text style={styles.petBreed}>{pet.breed}</Text>
                             </View>
-                            <TouchableOpacity onPress={() => router.push({ pathname: "/pets/edit-pet/[id]", params: { id: pet.id } })}>
+                            <TouchableOpacity onPress={() => router.push({ pathname: "/(tabs)/home/myPets/edit-pet/[id]", params: { id: pet.id } })}>
                                 <EditIcon width={24} height={24} color="#00BCD4" />
                             </TouchableOpacity>
                         </View>
@@ -214,7 +214,7 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                     <View style={styles.section}>
                         <View style={styles.healthHeader}>
                             <Text style={styles.sectionTitle}>Health Records</Text>
-                            <TouchableOpacity onPress={() => router.push({ pathname: "/pets/add-health-record", params: { petId: pet.id } })}>
+                            <TouchableOpacity onPress={() => router.push({ pathname: "/(tabs)/home/myPets/add-health-record", params: { petId: pet.id } })}>
                                 <Text style={styles.addHealthText}>+ Add</Text>
                             </TouchableOpacity>
                         </View>
@@ -223,7 +223,7 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                                 key={record.id}
                                 style={styles.healthItem}
                                 onPress={() => router.push({
-                                    pathname: "/pets/health-records-list",
+                                    pathname: "/(tabs)/home/myPets/health-records-list",
                                     params: { petId: pet.id, recordType: record.title }
                                 })}
                             >
