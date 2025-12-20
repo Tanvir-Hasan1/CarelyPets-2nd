@@ -156,6 +156,7 @@ const styles = StyleSheet.create({
     },
     footer: {
         padding: Spacing.lg,
+        marginBottom: 60,
     },
     addButton: {
         flexDirection: 'row',

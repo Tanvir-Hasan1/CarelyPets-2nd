@@ -41,6 +41,15 @@ class ApiClient {
     }
 
     /**
+     * Build full URL with normalized slashes
+     */
+    private buildUrl(endpoint: string): string {
+        const base = this.baseUrl.replace(/\/$/, '');
+        const path = endpoint.replace(/^\//, '');
+        return `${base}/${path}`;
+    }
+
+    /**
      * Build headers for requests
      */
     private buildHeaders(customHeaders?: HeadersInit): Headers {
@@ -105,7 +114,7 @@ class ApiClient {
      * GET request
      */
     async get<T>(endpoint: string, options?: RequestOptions): Promise<T> {
-        const url = `${this.baseUrl}${endpoint}`;
+        const url = this.buildUrl(endpoint);
         const response = await this.fetchWithTimeout(url, {
             ...options,
             method: 'GET',
@@ -118,7 +127,7 @@ class ApiClient {
      * POST request
      */
     async post<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
-        const url = `${this.baseUrl}${endpoint}`;
+        const url = this.buildUrl(endpoint);
         console.log('[API] POST Request:', url);
         console.log('[API] POST Body:', JSON.stringify(body));
 
@@ -141,7 +150,7 @@ class ApiClient {
      * PUT request
      */
     async put<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
-        const url = `${this.baseUrl}${endpoint}`;
+        const url = this.buildUrl(endpoint);
         const response = await this.fetchWithTimeout(url, {
             ...options,
             method: 'PUT',
@@ -155,7 +164,7 @@ class ApiClient {
      * PATCH request
      */
     async patch<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
-        const url = `${this.baseUrl}${endpoint}`;
+        const url = this.buildUrl(endpoint);
         const response = await this.fetchWithTimeout(url, {
             ...options,
             method: 'PATCH',
@@ -169,7 +178,7 @@ class ApiClient {
      * DELETE request
      */
     async delete<T>(endpoint: string, options?: RequestOptions): Promise<T> {
-        const url = `${this.baseUrl}${endpoint}`;
+        const url = this.buildUrl(endpoint);
         const response = await this.fetchWithTimeout(url, {
             ...options,
             method: 'DELETE',

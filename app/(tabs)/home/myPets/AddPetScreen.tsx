@@ -1,3 +1,5 @@
+import Header from "@/components/ui/Header";
+import ImageSelectionModal from "@/components/ui/ImageSelectionModal";
 import {
   BorderRadius,
   Colors,
@@ -9,12 +11,9 @@ import { usePetStore } from "@/store/usePetStore";
 import {
   Add01Icon,
   ArrowDown01Icon,
-  ArrowLeft02Icon,
   Camera01Icon,
   Cancel01Icon,
   MultiplicationSignIcon,
-  Notification02Icon,
-  ShoppingBag02Icon,
   Upload02Icon,
   ViewIcon
 } from "@hugeicons/core-free-icons";
@@ -114,61 +113,7 @@ const SelectionModal = ({
   </Modal>
 );
 
-const AvatarSelectionModal = ({
-  visible,
-  onClose,
-  onCamera,
-  onGallery,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onCamera: () => void;
-  onGallery: () => void;
-}) => (
-  <Modal
-    animationType="slide"
-    transparent={true}
-    visible={visible}
-    onRequestClose={onClose}
-  >
-    <View style={styles.modalOverlay}>
-      <View style={styles.modalContent}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Update Profile Photo</Text>
-          <TouchableOpacity onPress={onClose}>
-            <HugeiconsIcon icon={Cancel01Icon} size={24} color={Colors.text} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.avatarOptions}>
-          <TouchableOpacity
-            style={styles.avatarOptionItem}
-            onPress={() => {
-              onCamera();
-              onClose();
-            }}
-          >
-            <View style={styles.avatarOptionIcon}>
-              <HugeiconsIcon icon={Camera01Icon} size={24} color="#006064" />
-            </View>
-            <Text style={styles.avatarOptionText}>Take Photo</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.avatarOptionItem}
-            onPress={() => {
-              onGallery();
-              onClose();
-            }}
-          >
-            <View style={styles.avatarOptionIcon}>
-              <HugeiconsIcon icon={ViewIcon} size={24} color="#006064" />
-            </View>
-            <Text style={styles.avatarOptionText}>Choose from Gallery</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  </Modal>
-);
+
 
 const DropdownInput = ({
   placeholder,
@@ -340,20 +285,7 @@ export default function AddPetScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-          <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Pet</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.iconButton}>
-            <HugeiconsIcon icon={ShoppingBag02Icon} size={24} color={Colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <HugeiconsIcon icon={Notification02Icon} size={24} color={Colors.text} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Header title="Add Pet" />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -458,7 +390,7 @@ export default function AddPetScreen() {
               onSelect={setBreed}
             />
 
-            <AvatarSelectionModal
+            <ImageSelectionModal
               visible={avatarModalVisible}
               onClose={() => setAvatarModalVisible(false)}
               onCamera={pickAvatarFromCamera}
@@ -571,18 +503,18 @@ export default function AddPetScreen() {
 
           </View>
 
+          {/* Footer */}
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <Text style={styles.saveText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveText}>Save</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -777,8 +709,8 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   footer: {
-    padding: Spacing.lg,
-    backgroundColor: '#F8F9FA',
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.background,
     flexDirection: 'row',
     gap: Spacing.md,
   },
@@ -925,31 +857,5 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontWeight: FontWeights.medium,
   },
-  avatarOptions: {
-    marginTop: Spacing.sm,
-    gap: Spacing.md,
-  },
-  avatarOptionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-  },
-  avatarOptionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E0F7FA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  avatarOptionText: {
-    fontSize: FontSizes.md,
-    fontWeight: FontWeights.medium,
-    color: Colors.text,
-  },
+
 });

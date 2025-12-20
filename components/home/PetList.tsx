@@ -28,9 +28,9 @@ export default function PetList() {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.listContainer}
       renderItem={({ item }) => (
-        <TouchableOpacity 
-          style={styles.itemContainer} 
-          onPress={() => router.push({ pathname: "/pets/[id]", params: { id: item.id } })}
+        <TouchableOpacity
+          style={styles.itemContainer}
+          onPress={() => router.push({ pathname: "/home/myPets/[id]", params: { id: item.id } })}
         >
           <Image source={{ uri: item.image }} style={styles.image} />
           <Text style={styles.name}>{item.name}</Text>

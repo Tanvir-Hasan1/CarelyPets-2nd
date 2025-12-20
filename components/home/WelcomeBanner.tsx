@@ -13,17 +13,17 @@ export default function WelcomeBanner() {
   return (
     <View style={styles.parentContainer}>
       <View style={styles.container}>
-      <View style={styles.textContainer}>
-        <Text style={styles.greeting}>Welcome back, Sara!</Text>
-        <Text style={styles.subtext}>
-          Transform pet parenting to Care smarter, bond deeper.
-        </Text>
+        <View style={styles.textContainer}>
+          <Text style={styles.greeting}>Welcome back, Sara!</Text>
+          <Text style={styles.subtext}>
+            Transform pet parenting to Care smarter, bond deeper.
+          </Text>
+        </View>
+        <Image
+          source={{ uri: "https://i.pravatar.cc/150?img=32" }} // Mock avatar
+          style={styles.avatar}
+        />
       </View>
-      <Image
-        source={{ uri: "https://i.pravatar.cc/150?img=32" }} // Mock avatar
-        style={styles.avatar}
-      />
-    </View>
     </View>
   );
 }

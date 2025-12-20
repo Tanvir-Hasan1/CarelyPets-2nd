@@ -27,7 +27,7 @@ export default function HomeHeader() {
           <HugeiconsIcon icon={Search01Icon} size={20} color={Colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton}>
-            <HugeiconsIcon icon={ShoppingBag02Icon} size={20} color={Colors.textSecondary} />
+          <HugeiconsIcon icon={ShoppingBag02Icon} size={20} color={Colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton}>
           <HugeiconsIcon icon={Notification02Icon} size={20} color={Colors.textSecondary} />
@@ -39,11 +39,12 @@ export default function HomeHeader() {
 
 const styles = StyleSheet.create({
   container: {
+
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.md,
+    paddingVertical: Spacing.md,
     backgroundColor: Colors.background,
   },
   logoContainer: {

@@ -1,16 +1,12 @@
+import CameraIcon from '@/assets/images/icons/Camera.svg';
+import EditIcon from '@/assets/images/icons/edit.svg';
+import FeedItem from '@/components/accounts/profile/FeedItem';
 import DeleteModal from '@/components/ui/DeleteModal';
 import Header from '@/components/ui/Header';
+import ImageSelectionModal from '@/components/ui/ImageSelectionModal';
 import { Colors } from '@/constants/colors';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import {
-    Camera,
-    Edit2,
-    Edit3,
-    Heart,
-    MessageCircle,
-    MoreVertical,
-    Trash2
-} from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     Image,
@@ -21,87 +17,17 @@ import {
     View
 } from 'react-native';
 
-// Post Options Dropdown Component
-const PostOptionsDropdown = ({
-    visible,
-    onClose,
-    onEdit,
-    onDelete
-}: {
-    visible: boolean;
-    onClose: () => void;
-    onEdit: () => void;
-    onDelete: () => void;
-}) => {
-    if (!visible) return null;
 
-    return (
-        <View style={dropdownStyles.container}>
-            <TouchableOpacity
-                style={dropdownStyles.option}
-                onPress={() => {
-                    onClose();
-                    onDelete();
-                }}
-            >
-                <Trash2 size={18} color="#EF4444" />
-                <Text style={dropdownStyles.deleteText}>Delete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={dropdownStyles.option}
-                onPress={() => {
-                    onClose();
-                    onEdit();
-                }}
-            >
-                <Edit3 size={18} color={Colors.primary} />
-                <Text style={dropdownStyles.editText}>Edit</Text>
-            </TouchableOpacity>
-        </View>
-    );
-};
-
-const dropdownStyles = StyleSheet.create({
-    container: {
-        position: 'absolute',
-        top: 30,
-        right: 0,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        paddingVertical: 8,
-        paddingHorizontal: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 8,
-        zIndex: 100,
-        minWidth: 120,
-    },
-    option: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        gap: 10,
-    },
-    deleteText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#EF4444',
-    },
-    editText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: Colors.primary,
-    },
-});
 
 export default function ProfileScreen() {
     const router = useRouter();
     const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+    const [imageModalVisible, setImageModalVisible] = useState(false);
+    const [imageUpdateMode, setImageUpdateMode] = useState<'avatar' | 'cover' | null>(null);
+    const [avatarUri, setAvatarUri] = useState('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80');
+    const [coverUri, setCoverUri] = useState('https://images.unsplash.com/photo-1549488497-1502dc85c4ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80');
 
     const handleEditProfile = () => {
         router.push('/(tabs)/account/profile/edit');
@@ -127,42 +53,109 @@ export default function ProfileScreen() {
         setSelectedPostId(null);
     };
 
+    const handleViewPost = (postId: number) => {
+        router.push('/(tabs)/account/profile/view-post');
+    };
+
     const toggleDropdown = (postId: number) => {
         setActiveDropdown(activeDropdown === postId ? null : postId);
     };
 
+    const handleUpdateImage = (mode: 'avatar' | 'cover') => {
+        setImageUpdateMode(mode);
+        setImageModalVisible(true);
+    };
+
+    const pickFromGallery = async () => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: imageUpdateMode === 'avatar' ? [1, 1] : [16, 9],
+            quality: 1,
+        });
+
+        if (!result.canceled) {
+            if (imageUpdateMode === 'avatar') {
+                setAvatarUri(result.assets[0].uri);
+            } else {
+                setCoverUri(result.assets[0].uri);
+            }
+        }
+    };
+
+    const pickFromCamera = async () => {
+        try {
+            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+            if (permissionResult.granted === false) {
+                alert("Camera permission denied");
+                return;
+            }
+
+            let result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: imageUpdateMode === 'avatar' ? [1, 1] : [16, 9],
+                quality: 1,
+            });
+
+            if (!result.canceled) {
+                if (imageUpdateMode === 'avatar') {
+                    setAvatarUri(result.assets[0].uri);
+                } else {
+                    setCoverUri(result.assets[0].uri);
+                }
+            }
+        } catch (error) {
+            console.error("Error launching camera:", error);
+        }
+    };
+
     return (
         <View style={styles.container}>
-            <Header title="Profile" style={styles.header} />
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Cover Photo */}
-                <Image
-                    source={{ uri: 'https://images.unsplash.com/photo-1549488497-1502dc85c4ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' }}
-                    style={styles.coverPhoto}
-                />
-
-                <View style={styles.profileContent}>
-                    {/* Header Info */}
-                    <View style={styles.headerInfo}>
-                        <View style={styles.avatarContainer}>
-                            <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' }}
-                                style={styles.avatar}
-                            />
-                            <View style={styles.cameraIconBadge}>
-                                <Camera size={14} color="#555" />
-                            </View>
-                        </View>
-
-                        <View style={styles.nameRow}>
-                            <Text style={styles.name}>Sarah John</Text>
-                            <TouchableOpacity onPress={handleEditProfile}>
-                                <Edit2 size={20} color={Colors.primary} style={styles.editIcon} />
-                            </TouchableOpacity>
-                        </View>
-                        <Text style={styles.location}>Location</Text>
+            <Header title="Profile" />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+                {/* Header Container */}
+                <View style={styles.headerContainer}>
+                    {/* Cover Photo Container */}
+                    <View style={styles.coverContainer}>
+                        <Image
+                            source={{ uri: coverUri }}
+                            style={styles.coverPhoto}
+                        />
+                        <TouchableOpacity
+                            style={styles.coverCameraButton}
+                            onPress={() => handleUpdateImage('cover')}
+                        >
+                            <CameraIcon width={28} height={28} />
+                        </TouchableOpacity>
                     </View>
 
+                    {/* Overlapping Avatar Container */}
+                    <View style={styles.avatarContainer}>
+                        <Image
+                            source={{ uri: avatarUri }}
+                            style={styles.avatar}
+                        />
+                        <TouchableOpacity
+                            style={styles.avatarCameraButton}
+                            onPress={() => handleUpdateImage('avatar')}
+                        >
+                            <CameraIcon width={28} height={28} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* User Info Section */}
+                <View style={styles.userInfoSection}>
+                    <View style={styles.nameRow}>
+                        <Text style={styles.name}>Sarah John</Text>
+                        <TouchableOpacity onPress={handleEditProfile}>
+                            <EditIcon width={20} height={20} />
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={styles.location}>Location</Text>
+                </View>
+
+                <View style={styles.profileContent}>
                     {/* Stats Buttons */}
                     <View style={styles.statsContainer}>
                         <TouchableOpacity style={[styles.statButton, styles.activeStatButton]}>
@@ -191,90 +184,40 @@ export default function ProfileScreen() {
                     </View>
 
                     {/* Feed Item 1 */}
-                    <View style={styles.feedItem}>
-                        <View style={styles.feedHeader}>
-                            <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' }}
-                                style={styles.feedAvatar}
-                            />
-                            <View style={styles.feedMeta}>
-                                <Text style={styles.feedUserText}>
-                                    <Text style={styles.feedUserName}>Sarah John</Text> updated her profile picture
-                                </Text>
-                                <Text style={styles.feedTime}>1h ago</Text>
-                            </View>
-                            <View style={{ position: 'relative' }}>
-                                <TouchableOpacity onPress={() => toggleDropdown(1)}>
-                                    <MoreVertical size={20} color="#6B7280" />
-                                </TouchableOpacity>
-                                <PostOptionsDropdown
-                                    visible={activeDropdown === 1}
-                                    onClose={() => setActiveDropdown(null)}
-                                    onEdit={handleEditPost}
-                                    onDelete={() => handleDeletePost(1)}
-                                />
-                            </View>
-                        </View>
-
-                        <Image
-                            source={{ uri: 'https://images.unsplash.com/photo-1518331483807-f639071f3dd5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' }}
-                            style={styles.feedImage}
-                        />
-
-                        <View style={styles.feedActions}>
-                            <TouchableOpacity style={styles.actionButton}>
-                                <Heart size={20} color={Colors.primary} />
-                                <Text style={styles.actionText}>1.2 K</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.actionButton}>
-                                <MessageCircle size={20} color="#666" />
-                                <Text style={styles.actionText}>1.2 K</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                    <FeedItem
+                        postId={1}
+                        userAvatar="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                        userName="Sarah John"
+                        actionText="updated her profile picture"
+                        timeAgo="1h ago"
+                        contentImage="https://images.unsplash.com/photo-1518331483807-f639071f3dd5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                        likesCount="1.2 K"
+                        commentsCount="1.2 K"
+                        isDropdownVisible={activeDropdown === 1}
+                        onToggleDropdown={() => toggleDropdown(1)}
+                        onCloseDropdown={() => setActiveDropdown(null)}
+                        onEditPost={handleEditPost}
+                        onDeletePost={() => handleDeletePost(1)}
+                        onPress={() => handleViewPost(1)}
+                    />
 
                     {/* Feed Item 2 */}
-                    <View style={styles.feedItem}>
-                        <View style={styles.feedHeader}>
-                            <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' }}
-                                style={styles.feedAvatar}
-                            />
-                            <View style={styles.feedMeta}>
-                                <Text style={styles.feedUserText}>
-                                    <Text style={styles.feedUserName}>Sarah John</Text> updated her cover photo
-                                </Text>
-                                <Text style={styles.feedTime}>1h ago</Text>
-                            </View>
-                            <View style={{ position: 'relative' }}>
-                                <TouchableOpacity onPress={() => toggleDropdown(2)}>
-                                    <MoreVertical size={20} color="#6B7280" />
-                                </TouchableOpacity>
-                                <PostOptionsDropdown
-                                    visible={activeDropdown === 2}
-                                    onClose={() => setActiveDropdown(null)}
-                                    onEdit={handleEditPost}
-                                    onDelete={() => handleDeletePost(2)}
-                                />
-                            </View>
-                        </View>
-
-                        <Image
-                            source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' }}
-                            style={styles.feedImage}
-                        />
-
-                        <View style={styles.feedActions}>
-                            <TouchableOpacity style={styles.actionButton}>
-                                <Heart size={20} color={Colors.primary} />
-                                <Text style={styles.actionText}>1.2 K</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.actionButton}>
-                                <MessageCircle size={20} color="#666" />
-                                <Text style={styles.actionText}>1.2 K</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                    <FeedItem
+                        postId={2}
+                        userAvatar="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                        userName="Sarah John"
+                        actionText="updated her cover photo"
+                        timeAgo="1h ago"
+                        contentImage="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                        likesCount="1.2 K"
+                        commentsCount="1.2 K"
+                        isDropdownVisible={activeDropdown === 2}
+                        onToggleDropdown={() => toggleDropdown(2)}
+                        onCloseDropdown={() => setActiveDropdown(null)}
+                        onEditPost={handleEditPost}
+                        onDeletePost={() => handleDeletePost(2)}
+                        onPress={() => handleViewPost(2)}
+                    />
                 </View>
             </ScrollView>
 
@@ -283,6 +226,14 @@ export default function ProfileScreen() {
                 visible={deleteModalVisible}
                 onClose={() => setDeleteModalVisible(false)}
                 onConfirm={confirmDeletePost}
+            />
+
+            <ImageSelectionModal
+                visible={imageModalVisible}
+                onClose={() => setImageModalVisible(false)}
+                onCamera={pickFromCamera}
+                onGallery={pickFromGallery}
+                title={imageUpdateMode === 'cover' ? "Update Cover Photo" : "Update Profile Photo"}
             />
         </View>
     );
@@ -293,29 +244,26 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F9FAFB',
     },
-    header: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 10,
-        backgroundColor: '#FFFFFF',
+    headerContainer: {
+        position: 'relative',
+        height: 230,
+        backgroundColor: '#F9FAFB',
     },
-    coverPhoto: {
+    coverContainer: {
+        position: 'relative',
         width: '100%',
         height: 180,
     },
-    profileContent: {
-        marginTop: -50,
-        paddingHorizontal: 20,
-    },
-    headerInfo: {
-        marginBottom: 20,
+    coverPhoto: {
+        backgroundColor: Colors.success,
+        width: '100%',
+        height: '100%',
     },
     avatarContainer: {
-        position: 'relative',
-        alignSelf: 'flex-start',
-        marginBottom: 10,
+        position: 'absolute',
+        bottom: 0,
+        left: 20,
+        zIndex: 5,
     },
     avatar: {
         width: 100,
@@ -324,15 +272,27 @@ const styles = StyleSheet.create({
         borderWidth: 4,
         borderColor: '#FFFFFF',
     },
-    cameraIconBadge: {
+    avatarCameraButton: {
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: '#E5E7EB',
-        borderRadius: 12,
-        padding: 6,
-        borderWidth: 2,
-        borderColor: '#FFFFFF',
+        backgroundColor: 'transparent',
+        zIndex: 10,
+    },
+    coverCameraButton: {
+        position: 'absolute',
+        bottom: -14,
+        right: 12,
+        backgroundColor: 'transparent',
+        zIndex: 10,
+    },
+    userInfoSection: {
+        paddingHorizontal: 20,
+        marginTop: 10,
+        paddingBottom: 16,
+    },
+    profileContent: {
+        paddingHorizontal: 20,
     },
     nameRow: {
         flexDirection: 'row',
@@ -344,9 +304,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#111827',
         marginRight: 8,
-    },
-    editIcon: {
-        marginTop: 4,
     },
     location: {
         fontSize: 14,
@@ -409,62 +366,5 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         fontSize: 14,
     },
-    feedItem: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    feedHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    feedAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        marginRight: 12,
-    },
-    feedMeta: {
-        flex: 1,
-    },
-    feedUserText: {
-        fontSize: 14,
-        color: '#374151',
-        lineHeight: 20,
-    },
-    feedUserName: {
-        fontWeight: 'bold',
-        color: '#111827',
-    },
-    feedTime: {
-        fontSize: 12,
-        color: '#9CA3AF',
-        marginTop: 2,
-    },
-    feedImage: {
-        width: '100%',
-        height: 300,
-        borderRadius: 12,
-        marginBottom: 12,
-    },
-    feedActions: {
-        flexDirection: 'row',
-        gap: 20,
-    },
-    actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    actionText: {
-        fontSize: 14,
-        color: '#4B5563',
-    },
+
 });

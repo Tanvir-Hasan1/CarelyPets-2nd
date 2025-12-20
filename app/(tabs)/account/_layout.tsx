@@ -8,6 +8,7 @@ export default function AccountLayout() {
             <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
             <Stack.Screen name="profile/create-post" options={{ headerShown: false }} />
             <Stack.Screen name="profile/edit-post" options={{ headerShown: false }} />
+            <Stack.Screen name="profile/view-post" options={{ headerShown: false }} />
         </Stack>
     );
 }

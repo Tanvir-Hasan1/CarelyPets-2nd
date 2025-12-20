@@ -554,18 +554,20 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
 
           </View>
 
+          {/* Footer */}
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <Text style={styles.saveText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveText}>Save</Text>
-        </TouchableOpacity>
-      </View>
+
     </View>
   );
 }
@@ -760,7 +762,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   footer: {
-    padding: Spacing.lg,
+    paddingVertical: Spacing.lg,
     backgroundColor: '#F8F9FA',
     flexDirection: 'row',
     gap: Spacing.md,

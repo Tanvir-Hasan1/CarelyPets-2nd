@@ -133,17 +133,18 @@ export default function EditProfileScreen() {
                         ))}
                     </View>
                 </View>
+                {/* Footer Buttons */}
+                <View style={styles.footer}>
+                    <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                        <Text style={styles.saveButtonText}>Save</Text>
+                    </TouchableOpacity>
+                </View>
             </ScrollView>
 
-            {/* Footer Buttons */}
-            <View style={styles.footer}>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                    <Text style={styles.saveButtonText}>Save</Text>
-                </TouchableOpacity>
-            </View>
+
         </View>
     );
 }

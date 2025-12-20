@@ -26,10 +26,10 @@ export default function HomeScreen() {
       >
         {/* ... content ... */}
         <WelcomeBanner />
-        
+
         <QuickActions />
 
-        <SectionHeader title="My Pets" onSeeAll={() => router.push("/pets/all-pets")} />
+        <SectionHeader title="My Pets" onSeeAll={() => router.push("/home/myPets/all-pets")} />
         <PetList />
 
         <SectionHeader title="Pet Pals" onSeeAll={() => console.log("See All My Pets")} />
@@ -37,7 +37,7 @@ export default function HomeScreen() {
 
         <SectionHeader title="Available for Adoption" onSeeAll={() => console.log("See All Adoptions")} />
         <AdoptionList />
-        
+
         {/* Bottom padding for tab bar */}
         <View style={{ height: 100 }} />
       </ScrollView>

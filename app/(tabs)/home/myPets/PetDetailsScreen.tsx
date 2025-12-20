@@ -29,7 +29,6 @@ import {
     FlatList,
     Image,
     ScrollView,
-    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -93,13 +92,9 @@ export default function PetDetailsScreen({ id }: { id: string }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-
-            {/* Header - Absolute Positioned */}
-            {/* Header - Absolute Positioned */}
             <Header title="Pet Facts" />
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 70 }}>
                 {/* Image Carousel */}
                 <View style={styles.carouselContainer}>
                     <FlatList
@@ -238,20 +233,20 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                             </TouchableOpacity>
                         ))}
                     </View>
+
+                    {/* Footer */}
+                    <View style={styles.footer}>
+                        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+                            <HugeiconsIcon icon={Delete02Icon} size={20} color="#ffffff" />
+                            <Text style={styles.deleteText}>Delete</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.bookButton}>
+                            <HugeiconsIcon icon={Calendar02Icon} size={20} color="#ffffff" />
+                            <Text style={styles.bookText}>Book a Service</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </ScrollView>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-                <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-                    <HugeiconsIcon icon={Delete02Icon} size={20} color="#ffffff" />
-                    <Text style={styles.deleteText}>Delete</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.bookButton}>
-                    <HugeiconsIcon icon={Calendar02Icon} size={20} color="#ffffff" />
-                    <Text style={styles.bookText}>Book a Service</Text>
-                </TouchableOpacity>
-            </View>
         </View>
     );
 }
@@ -486,16 +481,10 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
     },
     footer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: Colors.background,
         flexDirection: 'row',
-        padding: Spacing.lg,
+        paddingVertical: Spacing.lg,
         gap: Spacing.md,
-        borderTopWidth: 1,
-        borderTopColor: Colors.border,
+        marginTop: Spacing.md,
     },
     deleteButton: {
         backgroundColor: '#E53935',
