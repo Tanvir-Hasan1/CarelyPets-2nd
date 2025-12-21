@@ -4,13 +4,11 @@ import ProfileCard from "@/components/accounts/ProfileCard";
 import QuickActionsSection from "@/components/accounts/QuickActionsSection";
 import Header from "@/components/ui/Header";
 import LogoutComponent from "@/components/ui/LogoutComponent";
-import { Colors } from "@/constants/colors";
-import authService, { User } from "@/services/authService";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "expo-router";
 import { LogOut } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,26 +17,10 @@ import {
 } from "react-native";
 
 export default function AccountScreen() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, logout } = useAuthStore();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const router = useRouter();
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      const userData = await authService.getUser();
-      setUser(userData);
-    } catch (error) {
-      console.error("Error loading user data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLogout = () => {
     setLogoutModalVisible(true);
@@ -47,21 +29,12 @@ export default function AccountScreen() {
   const confirmLogout = async () => {
     try {
       setLogoutModalVisible(false);
-      await authService.logout();
+      await logout();
       router.replace("/login");
     } catch (error) {
       console.error("Error logging out:", error);
-      // Fallback alert if needed, though modal handles flow
     }
   };
-
-  if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>

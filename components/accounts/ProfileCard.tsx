@@ -9,17 +9,17 @@ interface ProfileCardProps {
 }
 
 const ProfileCard = ({ user, onPress }: ProfileCardProps) => {
-    // Generate a handle from name if not available
-    const userHandle = user?.name
-        ? `@${user.name.toLowerCase().replace(/\s+/g, "")}`
-        : "@user";
+    // Generate a handle from username or name if not available
+    const userHandle = user?.username
+        ? `@${user.username}`
+        : (user?.name ? `@${user.name.toLowerCase().replace(/\s+/g, "")}` : "@user");
 
     return (
         <TouchableOpacity style={styles.profileCard} onPress={onPress}>
             <View style={styles.profileRow}>
                 <Image
                     source={{
-                        uri: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+                        uri: user?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
                     }}
                     style={styles.avatar}
                 />

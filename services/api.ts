@@ -55,6 +55,7 @@ class ApiClient {
     private buildHeaders(customHeaders?: HeadersInit): Headers {
         const headers = new Headers(customHeaders);
 
+        // Only set application/json if no Content-Type is specified
         if (!headers.has('Content-Type')) {
             headers.set('Content-Type', 'application/json');
         }
@@ -97,10 +98,11 @@ class ApiClient {
         const isJson = contentType?.includes('application/json');
 
         const data = isJson ? await response.json() : await response.text();
+        console.log('[API] Response Data:', isJson ? JSON.stringify(data, null, 2) : data);
 
         if (!response.ok) {
             const error: ApiError = {
-                message: data?.message || `Request failed with status ${response.status}`,
+                message: (data as any)?.message || `Request failed with status ${response.status}`,
                 status: response.status,
                 data,
             };
@@ -128,15 +130,26 @@ class ApiClient {
      */
     async post<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
         const url = this.buildUrl(endpoint);
+        const isFormData = body instanceof FormData;
+        const headers = this.buildHeaders(options?.headers);
+
+        if (isFormData) {
+            headers.delete('Content-Type');
+        }
+
         console.log('[API] POST Request:', url);
-        console.log('[API] POST Body:', JSON.stringify(body));
+        if (!isFormData) {
+            console.log('[API] POST Body:', JSON.stringify(body));
+        } else {
+            console.log('[API] POST Body: [FormData]');
+        }
 
         try {
             const response = await this.fetchWithTimeout(url, {
                 ...options,
                 method: 'POST',
-                headers: this.buildHeaders(options?.headers),
-                body: body ? JSON.stringify(body) : undefined,
+                headers,
+                body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
             });
             console.log('[API] Response status:', response.status);
             return this.handleResponse<T>(response);
@@ -151,11 +164,18 @@ class ApiClient {
      */
     async put<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
         const url = this.buildUrl(endpoint);
+        const isFormData = body instanceof FormData;
+        const headers = this.buildHeaders(options?.headers);
+
+        if (isFormData) {
+            headers.delete('Content-Type');
+        }
+
         const response = await this.fetchWithTimeout(url, {
             ...options,
             method: 'PUT',
-            headers: this.buildHeaders(options?.headers),
-            body: body ? JSON.stringify(body) : undefined,
+            headers,
+            body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
         });
         return this.handleResponse<T>(response);
     }
@@ -165,11 +185,18 @@ class ApiClient {
      */
     async patch<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
         const url = this.buildUrl(endpoint);
+        const isFormData = body instanceof FormData;
+        const headers = this.buildHeaders(options?.headers);
+
+        if (isFormData) {
+            headers.delete('Content-Type');
+        }
+
         const response = await this.fetchWithTimeout(url, {
             ...options,
             method: 'PATCH',
-            headers: this.buildHeaders(options?.headers),
-            body: body ? JSON.stringify(body) : undefined,
+            headers,
+            body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
         });
         return this.handleResponse<T>(response);
     }

@@ -5,6 +5,7 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -27,15 +28,23 @@ export default function VerifyEmailOTPScreen() {
   const email = (params.email as string) || "example@gmail.com";
 
   const [code, setCode] = useState(["", "", "", ""]);
-  const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(60); // 60 seconds timer for resend
   const [canResend, setCanResend] = useState(false);
 
+  const { verifyEmail, isLoading: authLoading, error: authError, clearError } = useAuthStore();
+
   const inputRefs = useRef<Array<TextInput | null>>([]);
+
+  // Clear error when code changes
+  useEffect(() => {
+    if (authError) {
+      clearError();
+    }
+  }, [code]);
 
   // Timer for resend OTP
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: any;
 
     if (timer > 0 && !canResend) {
       interval = setInterval(() => {
@@ -62,20 +71,11 @@ export default function VerifyEmailOTPScreen() {
     const newCode = [...code];
     newCode[index] = numericText.slice(0, 1); // Take only first character
     setCode(newCode);
-    console.log(newCode);
 
     // Auto-focus next input
     if (numericText && index < 3) {
       inputRefs.current[index + 1]?.focus();
     }
-
-    // If last digit entered, automatically verify
-    // if (numericText && index === 3) {
-    //   const fullCode = newCode.join("");
-    //   if (fullCode.length === 4) {
-    //     handleVerify();
-    //   }
-    // }
   };
 
   const handleKeyPress = (event: any, index: number) => {
@@ -85,37 +85,30 @@ export default function VerifyEmailOTPScreen() {
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const verificationCode = code.join("");
+    if (verificationCode.length !== 4) return;
 
-    setLoading(true);
+    const result = await verifyEmail(email, verificationCode);
 
-    // Simulate API call for verification
-    setTimeout(() => {
-      setLoading(false);
-      // For demo, assume code is valid if it's 1234
-      if (verificationCode === "1234") {
-        router.replace("../emailVerify");
+    if (result.success) {
+      if (result.needsProfileSetup) {
+        router.replace("/(auth)/setupProfile");
       } else {
-        router.push("../emailVerifyError");
+        router.replace("/(tabs)/home");
       }
-    }, 1500);
+    }
   };
 
   const handleResendCode = () => {
     if (!canResend) return;
 
-    setLoading(true);
-
     // Simulate resend API call
-    setTimeout(() => {
-      setLoading(false);
-      setTimer(60);
-      setCanResend(false);
-      setCode(["", "", "", ""]);
-      inputRefs.current[0]?.focus();
-      alert("New verification code has been sent to your email.");
-    }, 1000);
+    // In a real app, you'd call a resend OTP endpoint
+    setTimer(60);
+    setCanResend(false);
+    setCode(["", "", "", ""]);
+    inputRefs.current[0]?.focus();
   };
 
   const dismissKeyboard = () => {
@@ -148,6 +141,13 @@ export default function VerifyEmailOTPScreen() {
               </Text>
             </View>
 
+            {/* Error Message */}
+            {authError ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{authError}</Text>
+              </View>
+            ) : null}
+
             {/* Code Input Container */}
             <View style={styles.codeContainer}>
               {[0, 1, 2, 3].map((index) => (
@@ -157,7 +157,7 @@ export default function VerifyEmailOTPScreen() {
                 >
                   <View style={styles.codeInputWrapper}>
                     <TextInput
-                      ref={(ref) => (inputRefs.current[index] = ref)}
+                      ref={(ref) => { inputRefs.current[index] = ref; }}
                       style={styles.codeInput}
                       value={code[index]}
                       onChangeText={(text) => handleCodeChange(text, index)}
@@ -166,7 +166,7 @@ export default function VerifyEmailOTPScreen() {
                       maxLength={1}
                       textAlign="center"
                       autoFocus={index === 0}
-                      editable={!loading}
+                      editable={!authLoading}
                       selectTextOnFocus
                       caretHidden={false}
                       contextMenuHidden={true}
@@ -178,11 +178,11 @@ export default function VerifyEmailOTPScreen() {
 
             {/* Next Button */}
             <TouchableOpacity
-              style={[styles.nextButton, loading && styles.disabledButton]}
+              style={[styles.nextButton, authLoading && styles.disabledButton]}
               onPress={handleVerify}
-              disabled={loading || code.join("").length !== 4}
+              disabled={authLoading || code.join("").length !== 4}
             >
-              {loading ? (
+              {authLoading ? (
                 <ActivityIndicator color={Colors.background} />
               ) : (
                 <Text style={styles.nextButtonText}>Next</Text>
@@ -194,13 +194,13 @@ export default function VerifyEmailOTPScreen() {
               <Text style={styles.resendText}>Don't receive OTP?</Text>
               <TouchableOpacity
                 onPress={handleResendCode}
-                disabled={!canResend || loading}
+                disabled={!canResend || authLoading}
                 style={styles.resendButton}
               >
                 <Text
                   style={[
                     styles.resendButtonText,
-                    (!canResend || loading) && styles.disabledResendText,
+                    (!canResend || authLoading) && styles.disabledResendText,
                   ]}
                 >
                   Resend again {!canResend && `(${timer}s)`}
@@ -225,6 +225,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.xl,
+  },
+  errorContainer: {
+    backgroundColor: "#FFE0E0",
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    width: "100%",
+  },
+  errorText: {
+    color: Colors.error,
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.regular,
+    textAlign: "center",
   },
   TextContainer: {
     alignItems: "center",

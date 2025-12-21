@@ -17,6 +17,8 @@ export interface User {
     name: string;
     email: string;
     role: string;
+    username?: string;
+    avatarUrl?: string | null;
 }
 
 export interface LoginCredentials {
@@ -34,7 +36,9 @@ export interface LoginResponse {
     message: string;
     data: {
         user: User;
-        tokens: AuthTokens;
+        tokens?: AuthTokens;
+        needsProfileSetup?: boolean;
+        setupToken?: string;
     };
 }
 
@@ -45,6 +49,32 @@ export interface RefreshTokenResponse {
     };
 }
 
+export interface RegisterResponse {
+    success: boolean;
+    message: string;
+    data: {
+        email: string;
+        name: string;
+    };
+}
+
+export interface VerifyEmailResponse {
+    success: boolean;
+    message: string;
+    data: {
+        user: User & { isVerified: boolean; profileCompleted: boolean };
+        needsProfileSetup: boolean;
+        setupToken: string;
+    };
+}
+
+export interface CompleteProfileData {
+    username: string;
+    country: string;
+    favorites: string[];
+    profileImage?: string;
+}
+
 // Auth Service
 export const authService = {
     /**
@@ -53,11 +83,62 @@ export const authService = {
     async login(credentials: LoginCredentials): Promise<LoginResponse> {
         const response = await api.post<LoginResponse>('/auth/login', credentials);
 
-        if (response.success && response.data) {
+        if (response.success && response.data && response.data.tokens) {
             // Store tokens and user data
             await this.saveAuthData(response.data.tokens, response.data.user);
 
             // Set access token for subsequent API calls
+            api.setAuthToken(response.data.tokens.accessToken);
+        }
+
+        return response;
+    },
+
+    /**
+     * Register a new user
+     */
+    async register(name: string, email: string, password: string): Promise<RegisterResponse> {
+        return await api.post<RegisterResponse>('/auth/register', { name, email, password });
+    },
+
+    /**
+     * Verify email with OTP
+     */
+    async verifyEmail(email: string, otp: string): Promise<VerifyEmailResponse> {
+        return await api.post<VerifyEmailResponse>('/auth/verify-email', { email, otp });
+    },
+
+    /**
+     * Complete user profile with optional avatar
+     */
+    async completeProfile(data: CompleteProfileData, setupToken: string): Promise<LoginResponse> {
+        const formData = new FormData();
+        formData.append('username', data.username);
+        formData.append('country', data.country);
+        formData.append('favorites', JSON.stringify(data.favorites));
+
+        if (data.profileImage) {
+            const uriParts = data.profileImage.split('.');
+            const fileType = uriParts[uriParts.length - 1];
+
+            // @ts-ignore
+            formData.append('file', {
+                uri: data.profileImage,
+                name: `profile-image.${fileType}`,
+                type: `image/${fileType}`,
+            });
+        }
+
+        // Use setupToken as Bearer token for this specific request
+        const response = await api.post<LoginResponse>('/auth/complete-profile', formData, {
+            headers: {
+                'Authorization': `Bearer ${setupToken}`,
+            }
+        });
+
+        if (response.success && response.data && response.data.tokens) {
+            // Store final tokens and user data
+            await this.saveAuthData(response.data.tokens, response.data.user);
             api.setAuthToken(response.data.tokens.accessToken);
         }
 

@@ -4,10 +4,11 @@ import FeedItem from '@/components/accounts/profile/FeedItem';
 import DeleteModal from '@/components/ui/DeleteModal';
 import Header from '@/components/ui/Header';
 import ImageSelectionModal from '@/components/ui/ImageSelectionModal';
-import { Colors } from '@/constants/colors';
+import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/colors';
+import { useAuthStore } from '@/store/useAuthStore';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Image,
     ScrollView,
@@ -17,17 +18,22 @@ import {
     View
 } from 'react-native';
 
-
-
 export default function ProfileScreen() {
     const router = useRouter();
+    const { user } = useAuthStore();
     const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
     const [imageModalVisible, setImageModalVisible] = useState(false);
     const [imageUpdateMode, setImageUpdateMode] = useState<'avatar' | 'cover' | null>(null);
-    const [avatarUri, setAvatarUri] = useState('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80');
+    const [avatarUri, setAvatarUri] = useState(user?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80');
     const [coverUri, setCoverUri] = useState('https://images.unsplash.com/photo-1549488497-1502dc85c4ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80');
+
+    useEffect(() => {
+        if (user?.avatarUrl) {
+            setAvatarUri(user.avatarUrl);
+        }
+    }, [user?.avatarUrl]);
 
     const handleEditProfile = () => {
         router.push('/(tabs)/account/profile/edit');
@@ -147,11 +153,12 @@ export default function ProfileScreen() {
                 {/* User Info Section */}
                 <View style={styles.userInfoSection}>
                     <View style={styles.nameRow}>
-                        <Text style={styles.name}>Sarah John</Text>
+                        <Text style={styles.name}>{user?.name || 'Sarah John'}</Text>
                         <TouchableOpacity onPress={handleEditProfile}>
                             <EditIcon width={20} height={20} />
                         </TouchableOpacity>
                     </View>
+                    <Text style={styles.username}>@{user?.username || 'sarahjohn'}</Text>
                     <Text style={styles.location}>Location</Text>
                 </View>
 
@@ -172,7 +179,7 @@ export default function ProfileScreen() {
                     {/* Share Thoughts Input Trigger */}
                     <View style={styles.inputCard}>
                         <Image
-                            source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' }}
+                            source={{ uri: avatarUri }}
                             style={styles.smallAvatar}
                         />
                         <TouchableOpacity
@@ -186,8 +193,8 @@ export default function ProfileScreen() {
                     {/* Feed Item 1 */}
                     <FeedItem
                         postId={1}
-                        userAvatar="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-                        userName="Sarah John"
+                        userAvatar={avatarUri}
+                        userName={user?.name || "Sarah John"}
                         actionText="updated her profile picture"
                         timeAgo="1h ago"
                         contentImage="https://images.unsplash.com/photo-1518331483807-f639071f3dd5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
@@ -204,11 +211,11 @@ export default function ProfileScreen() {
                     {/* Feed Item 2 */}
                     <FeedItem
                         postId={2}
-                        userAvatar="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-                        userName="Sarah John"
-                        actionText="updated her cover photo"
-                        timeAgo="1h ago"
-                        contentImage="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                        userAvatar={avatarUri}
+                        userName={user?.name || "Sarah John"}
+                        actionText="posted a photo"
+                        timeAgo="2h ago"
+                        contentImage="https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
                         likesCount="1.2 K"
                         commentsCount="1.2 K"
                         isDropdownVisible={activeDropdown === 2}
@@ -221,19 +228,25 @@ export default function ProfileScreen() {
                 </View>
             </ScrollView>
 
-            {/* Delete Confirmation Modal */}
+            <ImageSelectionModal
+                visible={imageModalVisible}
+                onClose={() => setImageModalVisible(false)}
+                onGallery={() => {
+                    pickFromGallery();
+                    setImageModalVisible(false);
+                }}
+                onCamera={() => {
+                    pickFromCamera();
+                    setImageModalVisible(false);
+                }}
+            />
+
             <DeleteModal
                 visible={deleteModalVisible}
                 onClose={() => setDeleteModalVisible(false)}
                 onConfirm={confirmDeletePost}
-            />
-
-            <ImageSelectionModal
-                visible={imageModalVisible}
-                onClose={() => setImageModalVisible(false)}
-                onCamera={pickFromCamera}
-                onGallery={pickFromGallery}
-                title={imageUpdateMode === 'cover' ? "Update Cover Photo" : "Update Profile Photo"}
+                title="Delete Post"
+                description="Are you sure you want to delete this post? This action cannot be undone."
             />
         </View>
     );
@@ -242,129 +255,139 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: Colors.background,
     },
     headerContainer: {
         position: 'relative',
-        height: 230,
-        backgroundColor: '#F9FAFB',
+        height: 260,
+        backgroundColor: Colors.background,
     },
     coverContainer: {
         position: 'relative',
         width: '100%',
-        height: 180,
+        height: 200,
     },
     coverPhoto: {
-        backgroundColor: Colors.success,
         width: '100%',
         height: '100%',
+        backgroundColor: 'red',
+    },
+    coverCameraButton: {
+        position: 'absolute',
+        right: Spacing.md,
+        bottom: -18,
+        backgroundColor: 'transparent',
+        width: 35,
+        height: 35,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     avatarContainer: {
         position: 'absolute',
         bottom: 0,
-        left: 20,
-        zIndex: 5,
+        left: Spacing.lg,
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        borderWidth: 4,
+        borderColor: Colors.background,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
     },
     avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        borderWidth: 4,
-        borderColor: '#FFFFFF',
+        width: '100%',
+        height: '100%',
+        borderRadius: 60,
     },
     avatarCameraButton: {
         position: 'absolute',
+        right: -4,
         bottom: 0,
-        right: 0,
         backgroundColor: 'transparent',
-        zIndex: 10,
-    },
-    coverCameraButton: {
-        position: 'absolute',
-        bottom: -14,
-        right: 12,
-        backgroundColor: 'transparent',
-        zIndex: 10,
+        width: 35,
+        height: 35,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     userInfoSection: {
-        paddingHorizontal: 20,
-        marginTop: 10,
-        paddingBottom: 16,
-    },
-    profileContent: {
-        paddingHorizontal: 20,
+        paddingHorizontal: Spacing.lg,
+        marginTop: Spacing.md,
     },
     nameRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4,
+        gap: Spacing.md,
+        marginBottom: 2,
     },
     name: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#111827',
-        marginRight: 8,
+        fontSize: FontSizes.xxl,
+        fontWeight: FontWeights.bold,
+        color: Colors.text,
+    },
+    username: {
+        fontSize: FontSizes.sm,
+        color: Colors.textSecondary,
+        marginBottom: Spacing.xs,
     },
     location: {
-        fontSize: 14,
-        color: '#0B3C5D',
+        fontSize: FontSizes.sm,
+        color: Colors.textSecondary,
+    },
+    profileContent: {
+        paddingHorizontal: Spacing.lg,
     },
     statsContainer: {
         flexDirection: 'row',
-        gap: 12,
-        marginBottom: 24,
+        gap: Spacing.sm,
+        marginVertical: Spacing.lg,
     },
     statButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 20,
+        paddingVertical: Spacing.xs,
+        paddingHorizontal: Spacing.md,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        backgroundColor: '#FFFFFF',
+        borderColor: Colors.border,
     },
     activeStatButton: {
-        backgroundColor: '#A0E7E5',
-        borderColor: '#A0E7E5',
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
     },
     statText: {
-        fontSize: 14,
-        color: '#374151',
-        fontWeight: '500',
+        fontSize: FontSizes.sm,
+        color: Colors.textSecondary,
     },
     activeStatText: {
-        fontSize: 14,
-        color: '#004D40',
-        fontWeight: '600',
+        fontSize: FontSizes.sm,
+        color: Colors.background,
+        fontWeight: FontWeights.semibold,
     },
     inputCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        padding: 12,
-        borderRadius: 12,
-        marginBottom: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
+        backgroundColor: Colors.background,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        padding: Spacing.md,
+        borderRadius: 16,
+        marginBottom: Spacing.xl,
     },
     smallAvatar: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        marginRight: 12,
+        marginRight: Spacing.md,
     },
     inputPlaceholder: {
         flex: 1,
-        backgroundColor: '#F3F4F6',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 20,
+        backgroundColor: Colors.lightGray,
     },
     inputText: {
-        color: '#6B7280',
-        fontSize: 14,
+        fontSize: FontSizes.sm,
+        color: Colors.textSecondary,
     },
-
 });

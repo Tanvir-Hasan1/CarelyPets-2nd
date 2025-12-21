@@ -106,10 +106,6 @@ export default function Step2UploadImage({
   };
 
   const handleNext = () => {
-    if (!previewImage) {
-      alert("Please upload an image first");
-      return;
-    }
     onNext();
   };
 
@@ -199,9 +195,10 @@ export default function Step2UploadImage({
           <TouchableOpacity
             style={[styles.button, styles.nextButton]}
             onPress={handleNext}
-            disabled={!previewImage}
           >
-            <Text style={styles.nextButtonText}>Next</Text>
+            <Text style={styles.nextButtonText}>
+              {previewImage ? "Next" : "Skip"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

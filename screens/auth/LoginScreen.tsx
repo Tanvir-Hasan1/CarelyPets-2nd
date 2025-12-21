@@ -47,14 +47,14 @@ export default function LoginScreen() {
       return;
     }
 
-    const success = await login(email, password);
-    // const success = true;
+    const result = await login(email, password);
 
-    if (success) {
-      console.log("Login successful", success);
-      // Navigate to home on successful login
-
-      router.replace("/(tabs)/home");
+    if (result.success) {
+      if (result.needsProfileSetup) {
+        router.replace("/(auth)/setupProfile");
+      } else {
+        router.replace("/(tabs)/home");
+      }
     }
   };
 

@@ -1,4 +1,4 @@
-import authService from "@/services/authService";
+import { useAuthStore } from "@/store/useAuthStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -8,11 +8,14 @@ export default function Index() {
   const [isReady, setIsReady] = useState(false);
   const router = useRouter();
 
+  const { initializeAuth } = useAuthStore();
+
   useEffect(() => {
     const checkInitialRoute = async () => {
       try {
-        const isAuthenticated = await authService.isAuthenticated();
+        await initializeAuth();
         const hasSeenOnboarding = await AsyncStorage.getItem("hasSeenOnboarding");
+        const { isAuthenticated } = useAuthStore.getState();
 
         if (isAuthenticated) {
           router.replace("/(tabs)/home");

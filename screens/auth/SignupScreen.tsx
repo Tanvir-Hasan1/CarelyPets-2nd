@@ -1,3 +1,4 @@
+import GoogleIcon from "@/assets/images/icons/Google.svg";
 import Lock from "@/assets/images/icons/lock.svg";
 import Mail from "@/assets/images/icons/mail.svg";
 import User from "@/assets/images/icons/user.svg";
@@ -11,8 +12,9 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -33,43 +35,32 @@ export default function SignupScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+
+  const { register, isLoading: authLoading, error: authError, clearError } = useAuthStore();
+
+  // Clear error when inputs change
+  useEffect(() => {
+    if (authError) {
+      clearError();
+    }
+  }, [name, email, password]);
 
   const handleSignup = async () => {
     if (!name || !email || !password) {
-      setError("Please fill in all fields");
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
+      // Local validation could be added here if desired, but register action also handles it
     }
 
-    // no terms checkbox on signup screen
+    const success = await register(name, email, password);
 
-    setLoading(true);
-    setError("");
-
-    try {
-      // Placeholder for signup API call
-      // Replace this with your actual authentication logic
-      console.log("Signup with:", { name, email, password });
-
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // For now, just navigate to login
+    if (success) {
       router.push({
-        pathname: "../verifyEmailOTP",
-        params: { email, redirectTo: "../login" },
+        pathname: "/(auth)/verifyEmailOTP",
+        params: { email },
       });
-    } catch (err) {
-      setError("Signup failed. Please try again.");
-      console.error("Signup error:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -78,7 +69,6 @@ export default function SignupScreen() {
       console.log("Google signup initiated");
       // Implement Google signup logic here
     } catch (err) {
-      setError("Google signup failed");
       console.error("Google signup error:", err);
     }
   };
@@ -118,9 +108,9 @@ export default function SignupScreen() {
           </View>
 
           {/* Error Message */}
-          {error ? (
+          {authError ? (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{authError}</Text>
             </View>
           ) : null}
 
@@ -136,7 +126,7 @@ export default function SignupScreen() {
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
-                editable={!loading}
+                editable={!authLoading}
               />
             </View>
           </View>
@@ -154,7 +144,7 @@ export default function SignupScreen() {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                editable={!loading}
+                editable={!authLoading}
               />
             </View>
           </View>
@@ -171,7 +161,7 @@ export default function SignupScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
-                editable={!loading}
+                editable={!authLoading}
                 onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })}
               />
               <TouchableOpacity
@@ -187,19 +177,34 @@ export default function SignupScreen() {
             </View>
           </View>
 
-          {/* (terms removed) */}
-
           {/* Sign Up Button */}
           <TouchableOpacity
-            style={[styles.signupButton, loading && styles.disabledButton]}
+            style={[styles.signupButton, authLoading && styles.disabledButton]}
             onPress={handleSignup}
-            disabled={loading}
+            disabled={authLoading}
           >
-            {loading ? (
+            {authLoading ? (
               <ActivityIndicator color={Colors.background} />
             ) : (
               <Text style={styles.signupButtonText}>Sign Up</Text>
             )}
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.divider} />
+          </View>
+
+          {/* Google Signup */}
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleSignup}
+            disabled={authLoading}
+          >
+            <GoogleIcon style={styles.googleIcon} width={28} height={28} />
+            <Text style={styles.googleButtonText}>Google</Text>
           </TouchableOpacity>
 
           {/* Login Link */}
@@ -232,17 +237,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: Spacing.md,
     marginBottom: Spacing.lg,
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    resizeMode: "contain",
-    marginBottom: Spacing.md,
-  },
-  logoText: {
-    fontSize: FontSizes.lg,
-    fontWeight: FontWeights.bold,
-    color: Colors.primary,
   },
   welcomeContainer: {
     alignItems: "center",
@@ -297,7 +291,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   inputIcon: {
-    fontSize: FontSizes.lg,
     marginRight: Spacing.sm,
   },
   passwordInputContainer: {
@@ -318,33 +311,6 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     paddingHorizontal: Spacing.md,
-  },
-  termsContainer: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: Spacing.lg,
-  },
-  checkbox: {
-    marginRight: Spacing.sm,
-    marginTop: 2,
-  },
-  checkboxText: {
-    fontSize: FontSizes.lg,
-  },
-  termsText: {
-    flex: 1,
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  termsLabel: {
-    fontSize: FontSizes.sm,
-    fontWeight: FontWeights.regular,
-    color: Colors.textSecondary,
-  },
-  termsLink: {
-    fontSize: FontSizes.sm,
-    fontWeight: FontWeights.semibold,
-    color: Colors.primary,
   },
   signupButton: {
     backgroundColor: Colors.primary,
@@ -388,12 +354,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   googleIcon: {
-    fontSize: FontSizes.lg,
     marginRight: Spacing.sm,
   },
   googleButtonText: {
     fontSize: FontSizes.md,
-    fontWeight: FontWeights.regular,
+    fontWeight: FontWeights.bold,
     color: Colors.text,
   },
   loginContainer: {

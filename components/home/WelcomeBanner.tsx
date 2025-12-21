@@ -5,22 +5,26 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Image } from "expo-image";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function WelcomeBanner() {
+  const { user } = useAuthStore();
+  const firstName = user?.name ? user.name.split(' ')[0] : 'Sara';
+
   return (
     <View style={styles.parentContainer}>
       <View style={styles.container}>
         <View style={styles.textContainer}>
-          <Text style={styles.greeting}>Welcome back, Sara!</Text>
+          <Text style={styles.greeting}>Welcome back, {firstName}!</Text>
           <Text style={styles.subtext}>
             Transform pet parenting to Care smarter, bond deeper.
           </Text>
         </View>
         <Image
-          source={{ uri: "https://i.pravatar.cc/150?img=32" }} // Mock avatar
+          source={{ uri: user?.avatarUrl || "https://i.pravatar.cc/150?img=32" }}
           style={styles.avatar}
         />
       </View>
