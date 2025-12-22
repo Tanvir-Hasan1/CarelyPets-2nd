@@ -1,11 +1,12 @@
 import {
-    BorderRadius,
-    Colors,
-    FontSizes,
-    FontWeights,
-    Spacing,
+  BorderRadius,
+  Colors,
+  FontSizes,
+  FontWeights,
+  Spacing,
 } from "@/constants/colors";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import React from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -17,6 +18,8 @@ const MOCK_PALS = [
 ];
 
 export default function PetPalsList() {
+  const router = useRouter();
+
   return (
     <FlatList
       data={MOCK_PALS}
@@ -29,7 +32,10 @@ export default function PetPalsList() {
           <Image source={{ uri: item.image }} style={styles.image} />
           <Text style={styles.name}>{item.name}</Text>
           <Text style={styles.name}>{item.surname}</Text>
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => router.push(`/(tabs)/home/petPals/${item.id}` as any)}
+          >
             <Text style={styles.buttonText}>Profile</Text>
           </TouchableOpacity>
         </View>

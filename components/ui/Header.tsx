@@ -1,3 +1,5 @@
+import BasketIcon from "@/assets/images/icons/basket.svg";
+import NotificationIcon from "@/assets/images/icons/notification.svg";
 import {
     Colors,
     FontSizes,
@@ -5,15 +7,14 @@ import {
     Spacing,
 } from "@/constants/colors";
 import {
-    ArrowLeft02Icon,
-    Notification02Icon,
-    ShoppingBag02Icon
+    ArrowLeft02Icon
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 
 interface HeaderProps {
     title: string;
@@ -58,10 +59,10 @@ export default function Header({
             {showActions ? (
                 <View style={styles.headerActions}>
                     <TouchableOpacity style={styles.iconButton}>
-                        <HugeiconsIcon icon={ShoppingBag02Icon} size={24} color={Colors.text} />
+                        <BasketIcon width={34} height={34} />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.iconButton}>
-                        <HugeiconsIcon icon={Notification02Icon} size={24} color={Colors.text} />
+                        <NotificationIcon width={34} height={34} />
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -94,7 +95,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         height: 32,
-        marginLeft: Spacing.xl,
+        marginLeft: Spacing.xxl,
     },
     headerActions: {
         flexDirection: 'row',
@@ -103,8 +104,5 @@ const styles = StyleSheet.create({
     iconButton: {
         padding: Spacing.xs,
         borderRadius: 20,
-        backgroundColor: "rgba(255,255,255,0.8)",
-        borderWidth: 1,
-        borderColor: Colors.border,
     },
 });

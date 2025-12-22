@@ -1,3 +1,4 @@
+import Header from "@/components/ui/Header";
 import {
     BorderRadius,
     Colors,
@@ -6,12 +7,6 @@ import {
     Spacing,
 } from "@/constants/colors";
 import { usePetStore } from "@/store/usePetStore";
-import {
-    ArrowLeft02Icon,
-    Notification02Icon,
-    ShoppingBag02Icon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
@@ -34,24 +29,7 @@ export default function AllPetsScreen() {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" />
-            {/* Header */}
-            <View style={[styles.header, { paddingTop: insets.top }]}>
-                <View style={[StyleSheet.absoluteFill, { paddingTop: insets.top, paddingBottom: Spacing.md, justifyContent: 'center', alignItems: 'center' }]} pointerEvents="none">
-                    <Text style={styles.headerTitle}>My Pets</Text>
-                </View>
-
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                    <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
-                </TouchableOpacity>
-                <View style={styles.headerActions}>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <HugeiconsIcon icon={ShoppingBag02Icon} size={24} color={Colors.text} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <HugeiconsIcon icon={Notification02Icon} size={24} color={Colors.text} />
-                    </TouchableOpacity>
-                </View>
-            </View>
+            <Header title="My Pets" showActions />
 
             <ScrollView contentContainerStyle={styles.gridContent} showsVerticalScrollIndicator={false}>
                 {pets.length === 0 ? (
@@ -103,30 +81,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#F8F9FA",
-    },
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: Spacing.lg,
-        paddingBottom: Spacing.md,
-        backgroundColor: Colors.background,
-    },
-    headerTitle: {
-        fontSize: FontSizes.lg,
-        fontWeight: FontWeights.bold,
-        color: "#006064",
-    },
-    headerActions: {
-        flexDirection: 'row',
-        gap: Spacing.xs,
-    },
-    iconButton: {
-        padding: Spacing.xs,
-        borderRadius: 20,
-        backgroundColor: Colors.background,
-        borderWidth: 1,
-        borderColor: Colors.border,
     },
     gridContent: {
         padding: Spacing.lg,

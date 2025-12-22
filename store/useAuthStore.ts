@@ -20,6 +20,7 @@ interface AuthState {
     completeProfile: (data: CompleteProfileData) => Promise<boolean>;
     logout: () => Promise<void>;
     initializeAuth: () => Promise<void>;
+    updateUser: (data: Partial<User>) => Promise<boolean>;
     clearError: () => void;
 }
 
@@ -174,6 +175,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 isAuthenticated: false,
                 isLoading: false,
             });
+        }
+    },
+
+    updateUser: async (data: Partial<User>) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await authService.updateProfile(data);
+            if (response.success && response.data) {
+                set({
+                    user: response.data,
+                    isLoading: false,
+                    error: null,
+                });
+                return true;
+            } else {
+                set({
+                    isLoading: false,
+                    error: response.message || 'Failed to update profile',
+                });
+                return false;
+            }
+        } catch (error: any) {
+            set({
+                isLoading: false,
+                error: error?.message || 'An error occurred during profile update',
+            });
+            return false;
         }
     },
 

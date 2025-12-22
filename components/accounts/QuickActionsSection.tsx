@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import {
     Calendar,
     Heart,
@@ -8,7 +9,9 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import MenuItem from "./MenuItem";
 
+
 const QuickActionsSection = () => {
+    const router = useRouter();
     return (
         <>
             <Text style={styles.sectionTitle}>QUICK ACTIONS</Text>
@@ -17,7 +20,7 @@ const QuickActionsSection = () => {
                     icon={PawPrint}
                     label="Add a Pet"
                     iconColor="#006D77"
-                    onPress={() => { }}
+                    onPress={() => router.push("/(tabs)/account/add-pet")}
                 />
                 <View style={styles.divider} />
                 <MenuItem

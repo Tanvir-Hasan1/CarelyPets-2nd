@@ -1,5 +1,6 @@
 import Header from '@/components/ui/Header';
 import { Colors } from '@/constants/colors';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'expo-router';
 import {
     ChevronDown,
@@ -9,6 +10,7 @@ import {
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     ScrollView,
     StyleSheet,
     Text,
@@ -19,13 +21,13 @@ import {
 
 export default function EditProfileScreen() {
     const router = useRouter();
+    const { user, updateUser, isLoading, error, clearError } = useAuthStore();
 
-    const [name, setName] = useState("Tuval Jane");
-    const [username, setUsername] = useState("tuvaljane");
-    const [country, setCountry] = useState("USA");
-    const [address, setAddress] = useState("43, Jackson Height, NYX");
-    const [phone, setPhone] = useState("124 548 5668");
-    const [selectedPets, setSelectedPets] = useState<string[]>(['Cats', 'Birds']); // Example selected
+    const [name, setName] = useState(user?.name || "");
+    const [country, setCountry] = useState(user?.country || user?.location?.country || "BD");
+    const [address, setAddress] = useState(user?.address || "");
+    const [phone, setPhone] = useState(user?.phone || "");
+    const [selectedPets, setSelectedPets] = useState<string[]>(user?.favorites || []);
 
     const petTypes = ['Dog', 'Cats', 'Small Pets', 'Birds', 'Exotic Pets'];
 
@@ -37,14 +39,32 @@ export default function EditProfileScreen() {
         }
     };
 
-    const handleSave = () => {
-        // Implement save logic here
-        router.back();
+    const handleSave = async () => {
+        const success = await updateUser({
+            name,
+            country,
+            address,
+            phone,
+            favorites: selectedPets
+        });
+
+        if (success) {
+            router.back();
+        }
     };
 
     return (
         <View style={styles.container}>
             <Header title="Edit Profile" />
+
+            {error && (
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error}</Text>
+                    <TouchableOpacity onPress={clearError}>
+                        <Text style={styles.errorClose}>×</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
 
             <ScrollView contentContainerStyle={styles.content}>
                 {/* Form Fields */}
@@ -61,19 +81,6 @@ export default function EditProfileScreen() {
                     </View>
                 </View>
 
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>USERNAME</Text>
-                    <View style={styles.inputContainer}>
-                        <Text style={[styles.inputIcon, { color: Colors.primary, fontSize: 18, fontWeight: 'bold' }]}>@</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={username}
-                            onChangeText={setUsername}
-                            placeholder="Username"
-                        />
-                    </View>
-                    <Text style={styles.helperText}>*small caps, and numbers are allowed</Text>
-                </View>
 
                 <View style={styles.formGroup}>
                     <Text style={styles.label}>COUNTRY</Text>
@@ -135,11 +142,23 @@ export default function EditProfileScreen() {
                 </View>
                 {/* Footer Buttons */}
                 <View style={styles.footer}>
-                    <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+                    <TouchableOpacity
+                        style={styles.cancelButton}
+                        onPress={() => router.back()}
+                        disabled={isLoading}
+                    >
                         <Text style={styles.cancelButtonText}>Cancel</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                        <Text style={styles.saveButtonText}>Save</Text>
+                    <TouchableOpacity
+                        style={styles.saveButton}
+                        onPress={handleSave}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                            <Text style={styles.saveButtonText}>Save</Text>
+                        )}
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -153,6 +172,27 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#FFFFFF', // White background as per mockup
+    },
+    errorContainer: {
+        backgroundColor: '#FEE2E2',
+        marginHorizontal: 20,
+        marginTop: 10,
+        padding: 12,
+        borderRadius: 8,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    errorText: {
+        color: '#DC2626',
+        fontSize: 14,
+        flex: 1,
+    },
+    errorClose: {
+        color: '#DC2626',
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginLeft: 10,
     },
     content: {
         padding: 20,

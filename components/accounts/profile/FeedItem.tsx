@@ -1,8 +1,13 @@
+import ShareIcon from '@/assets/images/icons/share.svg';
 import { Colors } from '@/constants/colors';
 import { Heart, MessageCircle, MoreVertical } from 'lucide-react-native';
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import PostOptionsDropdown from './PostOptionsDropdown';
+import PetPalBlockModal from '../../home/petPals/PetPalBlockModal';
+import PetPalPostDropdown from '../../home/petPals/PetPalPostDropdown';
+import PetPalReportModal from '../../home/petPals/PetPalReportModal';
+import PetPalShareModal from '../../home/petPals/PetPalShareModal';
+import PetPalWriteReportModal from '../../home/petPals/PetPalWriteReportModal';
 
 interface FeedItemProps {
     postId: number;
@@ -13,6 +18,7 @@ interface FeedItemProps {
     contentImage: string;
     likesCount: string;
     commentsCount: string;
+    sharesCount?: string;
     isDropdownVisible: boolean;
     onToggleDropdown: () => void;
     onCloseDropdown: () => void;
@@ -30,6 +36,7 @@ const FeedItem = ({
     contentImage,
     likesCount,
     commentsCount,
+    sharesCount,
     isDropdownVisible,
     onToggleDropdown,
     onCloseDropdown,
@@ -37,6 +44,11 @@ const FeedItem = ({
     onDeletePost,
     onPress,
 }: FeedItemProps) => {
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [showWriteReportModal, setShowWriteReportModal] = useState(false);
+    const [showBlockModal, setShowBlockModal] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
+
     return (
         <TouchableOpacity
             activeOpacity={0.9}
@@ -58,11 +70,11 @@ const FeedItem = ({
                     <TouchableOpacity onPress={onToggleDropdown}>
                         <MoreVertical size={20} color="#6B7280" />
                     </TouchableOpacity>
-                    <PostOptionsDropdown
+                    <PetPalPostDropdown
                         visible={isDropdownVisible}
                         onClose={onCloseDropdown}
-                        onEdit={onEditPost}
-                        onDelete={onDeletePost}
+                        onReport={() => setShowReportModal(true)}
+                        onBlock={() => setShowBlockModal(true)}
                     />
                 </View>
             </View>
@@ -81,7 +93,50 @@ const FeedItem = ({
                     <MessageCircle size={20} color="#666" />
                     <Text style={styles.actionText}>{commentsCount}</Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => setShowShareModal(true)}
+                >
+                    <ShareIcon width={20} height={20} color="#666" />
+                    <Text style={styles.actionText}>{sharesCount || '0'}</Text>
+                </TouchableOpacity>
             </View>
+
+            <PetPalReportModal
+                visible={showReportModal}
+                onClose={() => setShowReportModal(false)}
+                onSelectOther={() => {
+                    setShowReportModal(false);
+                    setShowWriteReportModal(true);
+                }}
+            />
+
+            <PetPalWriteReportModal
+                visible={showWriteReportModal}
+                onClose={() => setShowWriteReportModal(false)}
+                onSend={(text) => {
+                    console.log('Report sent:', text);
+                    setShowWriteReportModal(false);
+                }}
+            />
+
+            <PetPalBlockModal
+                visible={showBlockModal}
+                onClose={() => setShowBlockModal(false)}
+                onConfirm={() => {
+                    console.log('User blocked');
+                    setShowBlockModal(false);
+                }}
+            />
+
+            <PetPalShareModal
+                visible={showShareModal}
+                onClose={() => setShowShareModal(false)}
+                onShare={(text) => {
+                    console.log('Post shared with message:', text);
+                    setShowShareModal(false);
+                }}
+            />
         </TouchableOpacity>
     );
 };

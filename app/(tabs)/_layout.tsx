@@ -34,6 +34,7 @@ export default function TabLayout() {
         name="home"
         options={{
           title: "Home",
+          headerShown: false,
           tabBarIcon: ({ color, size, focused }) => (
             <View style={styles.iconContainer}>
               {focused && <View style={styles.activeIndicator} />}

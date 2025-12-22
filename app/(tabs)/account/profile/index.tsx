@@ -153,13 +153,13 @@ export default function ProfileScreen() {
                 {/* User Info Section */}
                 <View style={styles.userInfoSection}>
                     <View style={styles.nameRow}>
-                        <Text style={styles.name}>{user?.name || 'Sarah John'}</Text>
+                        <Text style={styles.name}>{user?.name || 'User'}</Text>
                         <TouchableOpacity onPress={handleEditProfile}>
                             <EditIcon width={20} height={20} />
                         </TouchableOpacity>
                     </View>
-                    <Text style={styles.username}>@{user?.username || 'sarahjohn'}</Text>
-                    <Text style={styles.location}>Location</Text>
+                    <Text style={styles.username}>@{user?.username || 'username'}</Text>
+                    <Text style={styles.location}>{user?.address || user?.country || user?.location?.country || 'No location set'}</Text>
                 </View>
 
                 <View style={styles.profileContent}>
@@ -194,7 +194,7 @@ export default function ProfileScreen() {
                     <FeedItem
                         postId={1}
                         userAvatar={avatarUri}
-                        userName={user?.name || "Sarah John"}
+                        userName={user?.name || "User"}
                         actionText="updated her profile picture"
                         timeAgo="1h ago"
                         contentImage="https://images.unsplash.com/photo-1518331483807-f639071f3dd5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
@@ -212,7 +212,7 @@ export default function ProfileScreen() {
                     <FeedItem
                         postId={2}
                         userAvatar={avatarUri}
-                        userName={user?.name || "Sarah John"}
+                        userName={user?.name || "User"}
                         actionText="posted a photo"
                         timeAgo="2h ago"
                         contentImage="https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"

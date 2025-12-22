@@ -19,6 +19,14 @@ export interface User {
     role: string;
     username?: string;
     avatarUrl?: string | null;
+    phone?: string;
+    address?: string;
+    country?: string;
+    favorites?: string[];
+    location?: {
+        city?: string;
+        country?: string;
+    };
 }
 
 export interface LoginCredentials {
@@ -145,6 +153,26 @@ export const authService = {
         return response;
     },
 
+
+    /**
+     * Update the user profile
+     */
+    async updateProfile(data: Partial<User>): Promise<{ success: boolean; message: string; data?: User }> {
+        try {
+            const response = await api.patch<{ success: boolean; message: string; data: User }>('/users/me', data);
+            if (response.success && response.data) {
+                // Update local storage with the returned updated user
+                await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.data));
+            }
+            return response;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error?.message || 'Failed to update profile',
+            };
+        }
+    },
+
     /**
      * Logout - clear all auth data
      */
@@ -218,6 +246,7 @@ export const authService = {
 
     /**
      * Initialize auth state (call on app start)
+     * Now refreshes user data from server if token is available.
      */
     async initializeAuth(): Promise<User | null> {
         try {
