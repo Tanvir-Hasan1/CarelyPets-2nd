@@ -1,12 +1,17 @@
+import Header from "@/components/ui/Header";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function ChatScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Chat</Text>
-      <Text style={styles.subtitle}>Your conversations</Text>
-    </View>
+
+    <>
+      <Header title="Chat" showBackButton={false} />
+      <View style={styles.container}>
+        <Text style={styles.title}>Chat</Text>
+        <Text style={styles.subtitle}>Your conversations</Text>
+      </View>
+    </>
   );
 }
 

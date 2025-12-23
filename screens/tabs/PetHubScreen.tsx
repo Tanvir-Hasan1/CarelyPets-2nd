@@ -1,12 +1,16 @@
+import Header from "@/components/ui/Header";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function PetHubScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>PetHub</Text>
-      <Text style={styles.subtitle}>Discover pets and services</Text>
-    </View>
+    <>
+      <Header title="PetHub" showBackButton={false} />
+      <View style={styles.container}>
+        <Text style={styles.title}>PetHub</Text>
+        <Text style={styles.subtitle}>Discover pets and services</Text>
+      </View>
+    </>
   );
 }
 

@@ -41,7 +41,7 @@ const QuickActionsSection = () => {
                     icon={Settings}
                     label="Settings & Policy"
                     iconColor="#006D77"
-                    onPress={() => { }}
+                    onPress={() => { router.push("/(tabs)/account/settings-and-policy/") }}
                 />
             </View>
         </>

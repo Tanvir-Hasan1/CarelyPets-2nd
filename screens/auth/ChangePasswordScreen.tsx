@@ -280,6 +280,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: "center",
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.lg,
     paddingBottom: Platform.OS === "ios" ? 40 : 30,
