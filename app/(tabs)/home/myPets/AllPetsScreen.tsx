@@ -19,11 +19,9 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function AllPetsScreen() {
     const router = useRouter();
-    const insets = useSafeAreaInsets();
     const pets = usePetStore((state) => state.pets);
 
     return (

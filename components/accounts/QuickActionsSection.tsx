@@ -27,7 +27,7 @@ const QuickActionsSection = () => {
                     icon={Heart}
                     label="Adopt a Pet"
                     iconColor="#006D77"
-                    onPress={() => { }}
+                    onPress={() => router.push("/(tabs)/account/pet-adoption")}
                 />
                 <View style={styles.divider} />
                 <MenuItem
@@ -41,7 +41,7 @@ const QuickActionsSection = () => {
                     icon={Settings}
                     label="Settings & Policy"
                     iconColor="#006D77"
-                    onPress={() => { router.push("/(tabs)/account/settings-and-policy/") }}
+                    onPress={() => { router.push("/(tabs)/account/settings-and-policy") }}
                 />
             </View>
         </>

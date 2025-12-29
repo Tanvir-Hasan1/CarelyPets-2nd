@@ -47,6 +47,7 @@ export default function QuickActions() {
           label="Adopt a Pet"
           color="#009688"
           bgColor="#E0F2F1"
+          onPress={() => router.push("/home/adopt-pet")}
         />
         <ActionButton
           icon={Calendar03Icon}

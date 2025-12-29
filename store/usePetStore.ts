@@ -44,6 +44,7 @@ export interface Pet {
     trained: string;
     vaccinated: string;
     neutered: string;
+    status?: "Available" | "Adopted";
     healthRecords: HealthRecord[];
 }
 
