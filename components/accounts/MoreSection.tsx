@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import {
     History,
     Map,
@@ -8,6 +9,7 @@ import { StyleSheet, Text, View } from "react-native";
 import MenuItem from "./MenuItem";
 
 const MoreSection = () => {
+    const router = useRouter();
     return (
         <>
             <Text style={styles.sectionTitle}>MORE</Text>
@@ -23,14 +25,14 @@ const MoreSection = () => {
                     icon={History}
                     label="Service History"
                     iconColor="#006D77"
-                    onPress={() => { }}
+                    onPress={() => router.push("/(tabs)/account/service-history")}
                 />
                 <View style={styles.divider} />
                 <MenuItem
                     icon={PawPrint}
                     label="Adoption History"
                     iconColor="#006D77"
-                    onPress={() => { }}
+                    onPress={() => router.push("/(tabs)/account/adoption-history")}
                 />
             </View>
         </>

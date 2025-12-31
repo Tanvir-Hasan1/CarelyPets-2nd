@@ -1,5 +1,6 @@
 import BasketIcon from "@/assets/images/icons/basket.svg";
 import NotificationIcon from "@/assets/images/icons/notification.svg";
+import SearchIcon from "@/assets/images/icons/search.svg";
 import {
     Colors,
     FontSizes,
@@ -7,20 +8,22 @@ import {
     Spacing,
 } from "@/constants/colors";
 import {
-    ArrowLeft02Icon
+    ArrowLeft02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ClawHeader from "./ClawHeader";
 
 
 interface HeaderProps {
-    title: string;
+    title?: string;
     onBackPress?: () => void;
     showActions?: boolean;
     showBackButton?: boolean;
+    isHome?: boolean;
     style?: ViewStyle;
 }
 
@@ -29,6 +32,7 @@ export default function Header({
     onBackPress,
     showActions = true,
     showBackButton = true,
+    isHome = false,
     style
 }: HeaderProps) {
     const router = useRouter();
@@ -44,65 +48,103 @@ export default function Header({
 
     return (
         <View style={[styles.header, { paddingTop: insets.top }, style]}>
-            {showBackButton ? (
-                <TouchableOpacity onPress={handleBack} style={styles.iconButton}>
-                    <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
-                </TouchableOpacity>
-            ) : (
-                <View style={{ width: 44 }} />
-            )}
-
-            <View style={styles.titleContainer}>
-                <Text style={styles.headerTitle}>{title}</Text>
+            <View style={styles.leftContainer}>
+                {isHome ? (
+                    <ClawHeader size={32} />
+                ) : (
+                    showBackButton && (
+                        <TouchableOpacity onPress={handleBack} style={styles.iconButton}>
+                            <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color={Colors.text} />
+                        </TouchableOpacity>
+                    )
+                )}
             </View>
 
-            {showActions ? (
-                <View style={styles.headerActions}>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <BasketIcon width={34} height={34} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <NotificationIcon width={34} height={34} />
-                    </TouchableOpacity>
+            {!isHome && (
+                <View style={styles.titleContainer}>
+                    <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
                 </View>
-            ) : (
-                <View style={{ width: 44 }} />
             )}
+
+            <View style={styles.rightContainer}>
+                {showActions ? (
+                    <View style={styles.headerActions}>
+                        {isHome && (
+                            <TouchableOpacity
+                                style={styles.iconButton}
+                                onPress={() => router.push("/search")}
+                            >
+                                <SearchIcon width={34} height={34} />
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                            style={styles.iconButton}
+                            onPress={() => router.push("/basket")}
+                        >
+                            <BasketIcon width={36} height={36} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.iconButton}
+                            onPress={() => router.push("/notifications")}
+                        >
+                            <NotificationIcon width={36} height={36} />
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <View style={{ width: 44 }} />
+                )}
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     header: {
-        position: 'relative',
-        backgroundColor: "#F8F9FA",
+        backgroundColor: "#FFFFFF",
         zIndex: 10,
         flexDirection: "row",
-        alignItems: "center",
+        alignItems: "flex-end",
         justifyContent: "space-between",
         paddingHorizontal: Spacing.lg,
         paddingBottom: Spacing.md,
+        minHeight: 60,
+    },
+    leftContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        zIndex: 20,
+    },
+    rightContainer: {
+        zIndex: 20,
+        alignItems: 'flex-end',
+    },
+    titleContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        paddingBottom: Spacing.md,
+        zIndex: 10,
     },
     headerTitle: {
         fontSize: FontSizes.lg,
         fontWeight: FontWeights.bold,
         color: "#006064",
         lineHeight: 32,
-        includeFontPadding: false,
-    },
-    titleContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: 32,
-        marginLeft: Spacing.xxl,
     },
     headerActions: {
         flexDirection: 'row',
         gap: Spacing.xs,
     },
     iconButton: {
-        padding: Spacing.xs,
-        borderRadius: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'transparent',
+        justifyContent: "center",
+        alignItems: "center",
     },
 });

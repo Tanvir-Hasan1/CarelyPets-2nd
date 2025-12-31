@@ -1,5 +1,5 @@
 import ClawIcon from "@/assets/images/icons/Claw-icon.svg";
-import { Colors, FontSizes, FontWeights, Spacing } from "@/constants/colors";
+import { FontSizes, Spacing } from "@/constants/colors";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -30,9 +30,9 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   title: {
-    color: Colors.primary,
-    fontSize: FontSizes.xxxl,
-    fontWeight: FontWeights.bold as any,
+    color: "#006D77", // Specific teal color from design
+    fontSize: FontSizes.lg,
+    fontWeight: "700",
   },
 });
 

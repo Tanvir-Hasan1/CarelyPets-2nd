@@ -1,24 +1,22 @@
 import AdoptionList from "@/components/home/AdoptionList";
-import HomeHeader from "@/components/home/HomeHeader";
 import PetList from "@/components/home/PetList";
 import PetPalsList from "@/components/home/PetPalsList";
 import QuickActions from "@/components/home/QuickActions";
 import SectionHeader from "@/components/home/SectionHeader";
 import WelcomeBanner from "@/components/home/WelcomeBanner";
+import Header from "@/components/ui/Header";
 import { Colors } from "@/constants/colors";
 import { useRouter } from "expo-router";
 import React from "react";
 import { ScrollView, StatusBar, StyleSheet, View } from "react-native";
 
-import { SafeAreaView } from "react-native-safe-area-context";
-
 export default function HomeScreen() {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <HomeHeader />
+      <Header isHome />
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
@@ -41,7 +39,7 @@ export default function HomeScreen() {
         {/* Bottom padding for tab bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
