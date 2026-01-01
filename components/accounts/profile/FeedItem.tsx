@@ -25,6 +25,7 @@ interface FeedItemProps {
     onEditPost: () => void;
     onDeletePost: () => void;
     onPress?: () => void;
+    onCommentPress?: () => void;
 }
 
 const FeedItem = ({
@@ -43,6 +44,7 @@ const FeedItem = ({
     onEditPost,
     onDeletePost,
     onPress,
+    onCommentPress,
 }: FeedItemProps) => {
     const [showReportModal, setShowReportModal] = useState(false);
     const [showWriteReportModal, setShowWriteReportModal] = useState(false);
@@ -89,7 +91,7 @@ const FeedItem = ({
                     <Heart size={20} color={Colors.primary} />
                     <Text style={styles.actionText}>{likesCount}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton}>
+                <TouchableOpacity style={styles.actionButton} onPress={onCommentPress}>
                     <MessageCircle size={20} color="#666" />
                     <Text style={styles.actionText}>{commentsCount}</Text>
                 </TouchableOpacity>

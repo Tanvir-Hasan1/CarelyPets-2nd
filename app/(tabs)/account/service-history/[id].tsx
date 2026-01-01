@@ -1,11 +1,14 @@
+import Paw from "@/assets/images/icons/Paw-solid.svg";
+import GroomingIcon from "@/assets/images/icons/grooming.svg";
+import TrainingIcon from "@/assets/images/icons/training.svg";
+import VetIcon from "@/assets/images/icons/vet.svg";
+import WalkingIcon from "@/assets/images/icons/walking.svg";
 import Header from "@/components/ui/Header";
 import { useLocalSearchParams } from "expo-router";
 import {
     Calendar,
     CheckCircle2,
-    Scissors,
-    Store,
-    Users
+    Store
 } from "lucide-react-native";
 import React from "react";
 import {
@@ -15,8 +18,26 @@ import {
     View,
 } from "react-native";
 
+const SERVICE_ICONS: Record<string, any> = {
+    vet: VetIcon,
+    grooming: GroomingIcon,
+    training: TrainingIcon,
+    walking: WalkingIcon,
+};
+
+const SERVICE_NAMES: Record<string, string> = {
+    vet: 'Vet Visit',
+    grooming: 'Full Grooming Session',
+    training: 'Training Session',
+    walking: 'Walking Session',
+};
+
 export default function ServiceHistoryDetailScreen() {
-    const { id } = useLocalSearchParams();
+    const { id, serviceId = 'grooming' } = useLocalSearchParams();
+
+    const sid = (serviceId as string).toLowerCase();
+    const ServiceIcon = SERVICE_ICONS[sid] || GroomingIcon;
+    const serviceName = SERVICE_NAMES[sid] || 'Full Grooming Session';
 
     return (
         <View style={styles.container}>
@@ -48,17 +69,17 @@ export default function ServiceHistoryDetailScreen() {
                 <View style={styles.card}>
                     <View style={styles.detailRow}>
                         <View style={[styles.iconCircle, { backgroundColor: "#B2EBF2" }]}>
-                            <Scissors size={20} color="#006D77" />
+                            <ServiceIcon width={50} height={50} />
                         </View>
                         <View style={styles.detailText}>
                             <Text style={styles.infoLabel}>SERVICE</Text>
-                            <Text style={styles.infoValue}>Full Grooming Session</Text>
+                            <Text style={styles.infoValue}>{serviceName}</Text>
                         </View>
                     </View>
 
                     <View style={styles.detailRow}>
                         <View style={[styles.iconCircle, { backgroundColor: "#B2EBF2" }]}>
-                            <Calendar size={20} color="#006D77" />
+                            <Calendar size={28} color="#006D77" />
                         </View>
                         <View style={styles.detailText}>
                             <Text style={styles.infoLabel}>DATA & TIME</Text>
@@ -68,7 +89,7 @@ export default function ServiceHistoryDetailScreen() {
 
                     <View style={styles.detailRow}>
                         <View style={[styles.iconCircle, { backgroundColor: "#B2EBF2" }]}>
-                            <Store size={20} color="#006D77" />
+                            <Store size={28} color="#006D77" />
                         </View>
                         <View style={styles.detailText}>
                             <Text style={styles.infoLabel}>WITH</Text>
@@ -78,7 +99,7 @@ export default function ServiceHistoryDetailScreen() {
 
                     <View style={styles.detailRow}>
                         <View style={[styles.iconCircle, { backgroundColor: "#B2EBF2" }]}>
-                            <Users size={20} color="#006D77" />
+                            <Paw height={56} width={56} />
                         </View>
                         <View style={styles.detailText}>
                             <Text style={styles.infoLabel}>FOR</Text>
@@ -183,9 +204,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     iconCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
         justifyContent: "center",
         alignItems: "center",
     },

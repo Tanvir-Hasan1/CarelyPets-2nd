@@ -54,6 +54,7 @@ export default function QuickActions() {
           label="Book a Service"
           color="#FF9800"
           bgColor="#FFF3E0"
+          onPress={() => router.push("/(tabs)/home/booking")}
         />
         <ActionButton
           icon={Add01Icon}

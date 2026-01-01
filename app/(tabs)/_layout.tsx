@@ -49,7 +49,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="pethub/index"
+        name="pethub"
         options={{
           title: "PetHub",
           tabBarIcon: ({ color, size, focused }) => (

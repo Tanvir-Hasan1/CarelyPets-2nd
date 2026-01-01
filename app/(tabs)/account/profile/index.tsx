@@ -1,6 +1,8 @@
 import CameraIcon from '@/assets/images/icons/Camera.svg';
 import EditIcon from '@/assets/images/icons/edit.svg';
 import FeedItem from '@/components/accounts/profile/FeedItem';
+import ShareThoughtsCard from '@/components/pethub/ShareThoughtsCard';
+import CommentModal from '@/components/ui/CommentModal';
 import DeleteModal from '@/components/ui/DeleteModal';
 import Header from '@/components/ui/Header';
 import ImageSelectionModal from '@/components/ui/ImageSelectionModal';
@@ -25,6 +27,13 @@ export default function ProfileScreen() {
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
     const [imageModalVisible, setImageModalVisible] = useState(false);
+    const [commentModalVisible, setCommentModalVisible] = useState(false);
+    const [selectedPost, setSelectedPost] = useState<any>(null);
+
+    const handleCommentPress = (post: any) => {
+        setSelectedPost(post);
+        setCommentModalVisible(true);
+    };
     const [imageUpdateMode, setImageUpdateMode] = useState<'avatar' | 'cover' | null>(null);
     const [avatarUri, setAvatarUri] = useState(user?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80');
     const [coverUri, setCoverUri] = useState('https://images.unsplash.com/photo-1549488497-1502dc85c4ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80');
@@ -176,19 +185,40 @@ export default function ProfileScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Share Thoughts Input Trigger */}
-                    <View style={styles.inputCard}>
-                        <Image
-                            source={{ uri: avatarUri }}
-                            style={styles.smallAvatar}
-                        />
-                        <TouchableOpacity
-                            style={styles.inputPlaceholder}
-                            onPress={handleCreatePost}
-                        >
-                            <Text style={styles.inputText}>Share your pet thougts</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {/* Share Thoughts Card */}
+                    <ShareThoughtsCard
+                        avatarUrl={avatarUri}
+                        onPress={handleCreatePost}
+                        onGallery={async () => {
+                            let result = await ImagePicker.launchImageLibraryAsync({
+                                mediaTypes: ['images'],
+                                allowsMultipleSelection: true,
+                                quality: 1,
+                            });
+
+                            if (!result.canceled) {
+                                const selectedImages = result.assets.map(asset => asset.uri);
+                                router.push({
+                                    pathname: "/(tabs)/account/profile/create-post",
+                                    params: { initialImages: JSON.stringify(selectedImages) }
+                                });
+                            }
+                        }}
+                        onCamera={async () => {
+                            let result = await ImagePicker.launchCameraAsync({
+                                mediaTypes: ['images'],
+                                quality: 1,
+                            });
+
+                            if (!result.canceled) {
+                                const selectedImages = [result.assets[0].uri];
+                                router.push({
+                                    pathname: "/(tabs)/account/profile/create-post",
+                                    params: { initialImages: JSON.stringify(selectedImages) }
+                                });
+                            }
+                        }}
+                    />
 
                     {/* Feed Item 1 */}
                     <FeedItem
@@ -200,12 +230,14 @@ export default function ProfileScreen() {
                         contentImage="https://images.unsplash.com/photo-1518331483807-f639071f3dd5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
                         likesCount="1.2 K"
                         commentsCount="1.2 K"
+                        sharesCount="33"
                         isDropdownVisible={activeDropdown === 1}
                         onToggleDropdown={() => toggleDropdown(1)}
                         onCloseDropdown={() => setActiveDropdown(null)}
                         onEditPost={handleEditPost}
                         onDeletePost={() => handleDeletePost(1)}
                         onPress={() => handleViewPost(1)}
+                        onCommentPress={() => handleCommentPress({ id: 1, likesCount: "1.2 K", sharesCount: "33" })}
                     />
 
                     {/* Feed Item 2 */}
@@ -218,14 +250,26 @@ export default function ProfileScreen() {
                         contentImage="https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
                         likesCount="1.2 K"
                         commentsCount="1.2 K"
+                        sharesCount="12"
                         isDropdownVisible={activeDropdown === 2}
                         onToggleDropdown={() => toggleDropdown(2)}
                         onCloseDropdown={() => setActiveDropdown(null)}
                         onEditPost={handleEditPost}
                         onDeletePost={() => handleDeletePost(2)}
                         onPress={() => handleViewPost(2)}
+                        onCommentPress={() => handleCommentPress({ id: 2, likesCount: "1.2 K", sharesCount: "12" })}
                     />
                 </View>
+
+                {selectedPost && (
+                    <CommentModal
+                        visible={commentModalVisible}
+                        onClose={() => setCommentModalVisible(false)}
+                        postId={selectedPost.id}
+                        likesCount={selectedPost.likesCount}
+                        sharesCount={selectedPost.sharesCount}
+                    />
+                )}
             </ScrollView>
 
             <ImageSelectionModal

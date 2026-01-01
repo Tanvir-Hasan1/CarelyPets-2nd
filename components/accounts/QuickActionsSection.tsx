@@ -34,7 +34,7 @@ const QuickActionsSection = () => {
                     icon={Calendar}
                     label="Book a Service"
                     iconColor="#006D77"
-                    onPress={() => { }}
+                    onPress={() => router.push("/home/booking")}
                 />
                 <View style={styles.divider} />
                 <MenuItem
