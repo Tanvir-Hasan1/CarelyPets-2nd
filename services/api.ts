@@ -97,8 +97,27 @@ class ApiClient {
         const contentType = response.headers.get('content-type');
         const isJson = contentType?.includes('application/json');
 
-        const data = isJson ? await response.json() : await response.text();
-        console.log('[API] Response Data:', isJson ? JSON.stringify(data, null, 2) : data);
+        // Read the body as text first to avoid "Unexpected end of input" errors on empty JSON responses
+        const text = await response.text();
+        let data: any;
+
+        if (isJson && text) {
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error('[API] JSON Parse Error:', e);
+                data = text; // Fallback to raw text if parsing fails
+            }
+        } else {
+            data = text;
+        }
+
+        console.log(`[API] ${response.status} ${response.url}`);
+        if (isJson && typeof data === 'object') {
+            console.log('[API] Response Data:', JSON.stringify(data, null, 2));
+        } else if (text) {
+            console.log('[API] Response Data:', data);
+        }
 
         if (!response.ok) {
             const error: ApiError = {

@@ -17,12 +17,14 @@ const ProfileCard = ({ user, onPress }: ProfileCardProps) => {
     return (
         <TouchableOpacity style={styles.profileCard} onPress={onPress}>
             <View style={styles.profileRow}>
-                <Image
-                    source={{
-                        uri: user?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-                    }}
-                    style={styles.avatar}
-                />
+                <View style={styles.avatarContainer}>
+                    <Image
+                        source={{
+                            uri: user?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+                        }}
+                        style={styles.avatar}
+                    />
+                </View>
                 <View style={styles.profileInfo}>
                     <Text style={styles.profileName}>{user?.name || "Guest User"}</Text>
                     <Text style={styles.profileHandle}>{userHandle}</Text>
@@ -49,12 +51,28 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
     },
+    avatarContainer: {
+        position: 'relative',
+        marginRight: 16,
+    },
     avatar: {
         width: 50,
         height: 50,
         borderRadius: 25,
-        marginRight: 16,
         backgroundColor: "#E5E7EB",
+    },
+    cameraButton: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        backgroundColor: '#00BFA5', // Primary teal color
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1.5,
+        borderColor: '#FFFFFF',
     },
     profileInfo: {
         flex: 1,

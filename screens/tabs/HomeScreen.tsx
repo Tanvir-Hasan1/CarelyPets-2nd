@@ -6,12 +6,21 @@ import SectionHeader from "@/components/home/SectionHeader";
 import WelcomeBanner from "@/components/home/WelcomeBanner";
 import Header from "@/components/ui/Header";
 import { Colors } from "@/constants/colors";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "expo-router";
 import React from "react";
-import { ScrollView, StatusBar, StyleSheet, View } from "react-native";
+import { RefreshControl, ScrollView, StatusBar, StyleSheet, View } from "react-native";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { fetchUser, isLoading } = useAuthStore();
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchUser();
+    setRefreshing(false);
+  }, [fetchUser]);
 
   return (
     <View style={styles.safeArea}>
@@ -21,6 +30,9 @@ export default function HomeScreen() {
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+        }
       >
         {/* ... content ... */}
         <WelcomeBanner />

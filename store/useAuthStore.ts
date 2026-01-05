@@ -25,6 +25,10 @@ interface AuthState {
     forgotPassword: (email: string) => Promise<{ success: boolean; message: string }>;
     verifyResetOtp: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
     resetPassword: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+    changePassword: (passwordData: { currentPassword: string; newPassword: string }) => Promise<{ success: boolean; message: string }>;
+    updateAvatar: (avatarUrl: string) => Promise<{ success: boolean; message: string; data?: User }>;
+    updateCoverPhoto: (coverUrl: string) => Promise<{ success: boolean; message: string; data?: User }>;
+    fetchUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -165,19 +169,57 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isLoading: true });
 
         try {
-            const user = await authService.initializeAuth();
+            // First load from local storage
+            let user = await authService.initializeAuth();
 
-            set({
-                user,
-                isAuthenticated: !!user,
-                isLoading: false,
-            });
+            if (user) {
+                set({
+                    user,
+                    isAuthenticated: true,
+                    isLoading: false,
+                });
+
+                // Then fetch updated data in background
+                try {
+                    const updatedUser = await authService.getCurrentUser();
+                    if (updatedUser) {
+                        set({ user: updatedUser });
+                    }
+                } catch (error: any) {
+                    if (error?.status === 401 || error?.message === 'Invalid or expired token') {
+                        await get().logout();
+                    }
+                }
+            } else {
+                set({
+                    user: null,
+                    isAuthenticated: false,
+                    isLoading: false,
+                });
+            }
         } catch {
             set({
                 user: null,
                 isAuthenticated: false,
                 isLoading: false,
             });
+        }
+    },
+
+    fetchUser: async () => {
+        set({ isLoading: true });
+        try {
+            const user = await authService.getCurrentUser();
+            if (user) {
+                set({ user, isLoading: false });
+            } else {
+                set({ isLoading: false });
+            }
+        } catch (error: any) {
+            set({ isLoading: false });
+            if (error?.status === 401 || error?.message === 'Invalid or expired token') {
+                await get().logout();
+            }
         }
     },
 
@@ -254,6 +296,73 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 error: error?.message || 'Failed to reset password',
             });
             return { success: false, message: error?.message || 'Failed to reset password' };
+        }
+    },
+
+    changePassword: async (passwordData: { currentPassword: string; newPassword: string }) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await authService.changePassword(passwordData);
+            set({ isLoading: false });
+            return response;
+        } catch (error: any) {
+            set({
+                isLoading: false,
+                error: error?.message || 'Failed to change password',
+            });
+            return { success: false, message: error?.message || 'Failed to change password' };
+        }
+    },
+
+    updateAvatar: async (avatarUrl: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await authService.updateAvatar(avatarUrl);
+            if (response.success && response.data) {
+                set({
+                    user: response.data,
+                    isLoading: false,
+                    error: null,
+                });
+            } else {
+                set({
+                    isLoading: false,
+                    error: response.message || 'Failed to update avatar',
+                });
+            }
+            return response;
+        } catch (error: any) {
+            set({
+                isLoading: false,
+                error: error?.message || 'Failed to update avatar',
+            });
+            return { success: false, message: error?.message || 'Failed to update avatar' };
+        }
+    },
+
+    updateCoverPhoto: async (coverUrl: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await authService.updateCoverPhoto(coverUrl);
+            if (response.success && response.data) {
+                set({
+                    user: response.data,
+                    isLoading: false,
+                    error: null,
+                });
+            } else {
+                set({
+                    isLoading: false,
+                    error: response.message || 'Failed to update cover photo',
+                });
+            }
+            return response;
+        } catch (error: any) {
+            set({
+                isLoading: false,
+                error: error?.message || 'Failed to update cover photo',
+            });
+            return { success: false, message: error?.message || 'Failed to update cover photo' };
         }
     },
 }));

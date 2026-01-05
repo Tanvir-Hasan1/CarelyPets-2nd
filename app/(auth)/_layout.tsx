@@ -17,6 +17,7 @@ export default function AuthLayout() {
       <Stack.Screen name="emailVerify/index" />
       <Stack.Screen name="emailVerifyError/index" />
       <Stack.Screen name="setupProfile/index" />
+      <Stack.Screen name="change-password-success/index" />
     </Stack>
   );
 }

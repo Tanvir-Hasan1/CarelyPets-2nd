@@ -19,6 +19,7 @@ export interface User {
     role: string;
     username?: string;
     avatarUrl?: string | null;
+    coverUrl?: string | null;
     phone?: string;
     address?: string;
     country?: string;
@@ -176,10 +177,39 @@ export const authService = {
 
 
     /**
+     * Get current user data from server
+     */
+    async getCurrentUser(): Promise<User | null> {
+        try {
+            const response = await api.get<{ success: boolean; data: User }>('/users/me');
+            if (response.success && response.data) {
+                // Update local storage
+                await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.data));
+                return response.data;
+            }
+            return null;
+        } catch (error: any) {
+            console.error('Failed to fetch current user', error);
+            if (error?.status === 401 || error?.message === 'Invalid or expired token') {
+                throw error;
+            }
+            return null;
+        }
+    },
+
+    /**
+     * Change password
+     */
+    async changePassword(passwordData: { currentPassword: string; newPassword: string }): Promise<{ success: boolean; message: string }> {
+        return await api.patch<{ success: boolean; message: string }>('/users/me/password', passwordData);
+    },
+
+    /**
      * Update the user profile
      */
-    async updateProfile(data: Partial<User>): Promise<{ success: boolean; message: string; data?: User }> {
+    updateProfile: async (data: Partial<User>): Promise<{ success: boolean; message: string; data?: User }> => {
         try {
+            // ... strict check ...
             const response = await api.patch<{ success: boolean; message: string; data: User }>('/users/me', data);
             if (response.success && response.data) {
                 // Update local storage with the returned updated user
@@ -190,6 +220,46 @@ export const authService = {
             return {
                 success: false,
                 message: error?.message || 'Failed to update profile',
+            };
+        }
+    },
+
+    /**
+     * Update user avatar
+     */
+    async updateAvatar(avatarUrl: string): Promise<{ success: boolean; message: string; data?: User }> {
+        try {
+            const response = await api.patch<{ success: boolean; message: string; data: User }>('/users/me/avatar', { avatarUrl });
+            if (response.success && response.data) {
+                // Update local storage with the returned updated user
+                await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.data));
+            }
+            return response;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error?.message || 'Failed to update avatar',
+                data: undefined
+            };
+        }
+    },
+
+    /**
+     * Update user cover photo
+     */
+    async updateCoverPhoto(coverUrl: string): Promise<{ success: boolean; message: string; data?: User }> {
+        try {
+            const response = await api.patch<{ success: boolean; message: string; data: User }>('/users/me/cover', { coverUrl });
+            if (response.success && response.data) {
+                // Update local storage with the returned updated user
+                await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.data));
+            }
+            return response;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error?.message || 'Failed to update cover photo',
+                data: undefined
             };
         }
     },

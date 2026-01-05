@@ -78,7 +78,7 @@ const MOCK_PETS = [
 
 export default function ProfileScreen() {
     const router = useRouter();
-    const { user } = useAuthStore();
+    const { user, updateAvatar, updateCoverPhoto, isLoading } = useAuthStore();
     const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
@@ -93,13 +93,19 @@ export default function ProfileScreen() {
     };
     const [imageUpdateMode, setImageUpdateMode] = useState<'avatar' | 'cover' | null>(null);
     const [avatarUri, setAvatarUri] = useState(user?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80');
-    const [coverUri, setCoverUri] = useState('https://images.unsplash.com/photo-1549488497-1502dc85c4ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80');
+    const [coverUri, setCoverUri] = useState(user?.coverUrl || 'https://images.unsplash.com/photo-1549488497-1502dc85c4ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80');
 
     useEffect(() => {
         if (user?.avatarUrl) {
             setAvatarUri(user.avatarUrl);
         }
     }, [user?.avatarUrl]);
+
+    useEffect(() => {
+        if (user?.coverUrl) {
+            setCoverUri(user.coverUrl);
+        }
+    }, [user?.coverUrl]);
 
     const handleEditProfile = () => {
         router.push('/(tabs)/account/profile/edit');
@@ -138,20 +144,42 @@ export default function ProfileScreen() {
         setImageModalVisible(true);
     };
 
+    const processImageSelection = async (uri: string, base64: string | undefined | null) => {
+        if (!imageUpdateMode) return;
+
+        try {
+            const base64Image = base64 ? `data:image/jpeg;base64,${base64}` : null;
+
+            if (imageUpdateMode === 'avatar') {
+                if (base64Image) {
+                    await updateAvatar(base64Image);
+                } else {
+                    // Fallback to URI if base64 is not available (though we prefer base64 for API)
+                    setAvatarUri(uri);
+                }
+            } else {
+                if (base64Image) {
+                    await updateCoverPhoto(base64Image);
+                } else {
+                    setCoverUri(uri);
+                }
+            }
+        } catch (error) {
+            console.error("Error updating image:", error);
+        }
+    };
+
     const pickFromGallery = async () => {
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
             allowsEditing: true,
             aspect: imageUpdateMode === 'avatar' ? [1, 1] : [16, 9],
-            quality: 1,
+            quality: 0.7,
+            base64: true,
         });
 
-        if (!result.canceled) {
-            if (imageUpdateMode === 'avatar') {
-                setAvatarUri(result.assets[0].uri);
-            } else {
-                setCoverUri(result.assets[0].uri);
-            }
+        if (!result.canceled && result.assets[0]) {
+            await processImageSelection(result.assets[0].uri, result.assets[0].base64);
         }
     };
 
@@ -166,15 +194,12 @@ export default function ProfileScreen() {
             let result = await ImagePicker.launchCameraAsync({
                 allowsEditing: true,
                 aspect: imageUpdateMode === 'avatar' ? [1, 1] : [16, 9],
-                quality: 1,
+                quality: 0.7,
+                base64: true,
             });
 
-            if (!result.canceled) {
-                if (imageUpdateMode === 'avatar') {
-                    setAvatarUri(result.assets[0].uri);
-                } else {
-                    setCoverUri(result.assets[0].uri);
-                }
+            if (!result.canceled && result.assets[0]) {
+                await processImageSelection(result.assets[0].uri, result.assets[0].base64);
             }
         } catch (error) {
             console.error("Error launching camera:", error);
@@ -199,6 +224,11 @@ export default function ProfileScreen() {
                         >
                             <CameraIcon width={28} height={28} />
                         </TouchableOpacity>
+                        {isLoading && imageUpdateMode === 'cover' && (
+                            <View style={styles.loadingOverlay}>
+                                <Text style={styles.loadingText}>...</Text>
+                            </View>
+                        )}
                     </View>
 
                     {/* Overlapping Avatar Container */}
@@ -213,6 +243,11 @@ export default function ProfileScreen() {
                         >
                             <CameraIcon width={28} height={28} />
                         </TouchableOpacity>
+                        {isLoading && imageUpdateMode === 'avatar' && (
+                            <View style={[styles.loadingOverlay, { borderRadius: 60 }]}>
+                                <Text style={styles.loadingText}>...</Text>
+                            </View>
+                        )}
                     </View>
                 </View>
 
@@ -506,4 +541,14 @@ const styles = StyleSheet.create({
         fontSize: FontSizes.sm,
         color: Colors.textSecondary,
     },
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        color: '#FFF',
+        fontWeight: 'bold',
+    }
 });

@@ -27,8 +27,11 @@ import {
   View,
 } from "react-native";
 
+import { useAuthStore } from "@/store/useAuthStore";
+
 export default function ChangePasswordScreen() {
   const router = useRouter();
+  const { changePassword } = useAuthStore();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -70,21 +73,28 @@ export default function ChangePasswordScreen() {
     }
 
     setLoading(true);
+    setError("");
+    setSuccess("");
 
     try {
-      // Simulate API call for password change
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const { success, message } = await changePassword({
+        currentPassword,
+        newPassword
+      });
 
-      // Success - show success message briefly
-      setSuccess("Password has been changed successfully!");
+      if (success) {
+        // Success - show success message briefly
+        setSuccess(message || "Password has been changed successfully!");
 
-      // Navigate to PC-Successful screen after a brief delay
-      setTimeout(() => {
-        router.replace("../PC-Successful");
-      }, 1500);
-    } catch (err) {
-      setError("Failed to change password. Please try again.");
-      console.error("Password change error:", err);
+        // Navigate to success screen after a brief delay
+        setTimeout(() => {
+          router.replace("/PC-Successful");
+        }, 1500);
+      } else {
+        setError(message || "Failed to change password");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to change password. Please try again.");
     } finally {
       setLoading(false);
     }
