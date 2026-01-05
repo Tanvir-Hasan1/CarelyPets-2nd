@@ -41,7 +41,7 @@ export default function PersonalInformationScreen() {
                     <InfoRow label="NAME" value={user?.name} />
                     <InfoRow label="USERNAME" value={user?.username ? `@${user.username}` : undefined} />
                     <InfoRow label="EMAIL" value={user?.email} />
-                    <InfoRow label="COUNTRY" value={user?.country} />
+                    <InfoRow label="COUNTRY" value={user?.country || user?.location?.country} />
                     <InfoRow label="ADDRESS" value={user?.address} />
                     <InfoRow label="PHONE NO." value={user?.phone} />
                     <InfoRow label="FAVORITE PETS" value={user?.favorites?.join(', ')} isLast />

@@ -16,8 +16,10 @@ interface PetPalPhotoGridProps {
     photos: PhotoData[];
 }
 
+import { Spacing } from '@/constants/colors';
+
 const { width } = Dimensions.get('window');
-const COLUMN_WIDTH = Math.floor((width - 40 - 20) / 3); // 40 is total horizontal padding, 20 is total gap (2 * 10)
+const COLUMN_WIDTH = Math.floor((width - (Spacing.lg * 2) - 20) / 3); // Spacing.lg * 2 is total horizontal padding, 20 is total gap
 
 const PetPalPhotoGrid = ({ photos }: PetPalPhotoGridProps) => {
     const [selectedPhoto, setSelectedPhoto] = useState<PhotoData | null>(null);

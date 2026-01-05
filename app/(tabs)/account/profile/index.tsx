@@ -1,6 +1,8 @@
 import CameraIcon from '@/assets/images/icons/Camera.svg';
 import EditIcon from '@/assets/images/icons/edit.svg';
 import FeedItem from '@/components/accounts/profile/FeedItem';
+import PetPalPetList from '@/components/home/petPals/PetPalPetList';
+import PetPalPhotoGrid from '@/components/home/petPals/PetPalPhotoGrid';
 import ShareThoughtsCard from '@/components/pethub/ShareThoughtsCard';
 import CommentModal from '@/components/ui/CommentModal';
 import DeleteModal from '@/components/ui/DeleteModal';
@@ -20,6 +22,60 @@ import {
     View
 } from 'react-native';
 
+const MOCK_PHOTOS = [
+    {
+        uri: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop',
+        userName: 'Tanvir Hasan',
+        dateText: 'MON AT 6:06 PM',
+        caption: 'He is very diligent pet, save you whatever the situation',
+        likesCount: '1.2 K',
+        commentsCount: '1.2 K',
+        sharesCount: '1.2 K'
+    },
+    {
+        uri: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400&auto=format&fit=crop',
+        userName: 'Tanvir Hasan',
+        dateText: 'TUE AT 2:15 PM',
+        caption: 'Playtime at the park is always the best part of the day!',
+        likesCount: '850',
+        commentsCount: '45',
+        sharesCount: '12'
+    },
+    {
+        uri: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=400&auto=format&fit=crop',
+        userName: 'Tanvir Hasan',
+        dateText: 'WED AT 10:30 AM',
+        caption: 'Someone is waiting for treats...',
+        likesCount: '2.1 K',
+        commentsCount: '156',
+        sharesCount: '89'
+    },
+    {
+        uri: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&auto=format&fit=crop',
+        userName: 'Tanvir Hasan',
+        dateText: 'THU AT 4:00 PM',
+        caption: 'Nap time sequence initiated.',
+        likesCount: '1.5 K',
+        commentsCount: '92',
+        sharesCount: '34'
+    },
+    {
+        uri: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=400&auto=format&fit=crop',
+        userName: 'Tanvir Hasan',
+        dateText: 'FRI AT 8:20 PM',
+        caption: 'Gazing at the sunset with my best pal.',
+        likesCount: '3.2 K',
+        commentsCount: '245',
+        sharesCount: '120'
+    },
+];
+
+const MOCK_PETS = [
+    { id: 'p1', name: 'Buddy', gender: 'Female' as const, breed: 'Persian Cat', age: '2 years old', image: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&auto=format&fit=crop' },
+    { id: 'p2', name: 'Max', gender: 'Male' as const, breed: 'Golden Retriever', age: '3 years old', image: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400&auto=format&fit=crop' },
+    { id: 'p3', name: 'Luna', gender: 'Female' as const, breed: 'Siamese Cat', age: '1 year old', image: 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=400&auto=format&fit=crop' },
+];
+
 export default function ProfileScreen() {
     const router = useRouter();
     const { user } = useAuthStore();
@@ -29,6 +85,7 @@ export default function ProfileScreen() {
     const [imageModalVisible, setImageModalVisible] = useState(false);
     const [commentModalVisible, setCommentModalVisible] = useState(false);
     const [selectedPost, setSelectedPost] = useState<any>(null);
+    const [activeTab, setActiveTab] = useState<'Posts' | 'Photos' | 'My Pets'>('Posts');
 
     const handleCommentPress = (post: any) => {
         setSelectedPost(post);
@@ -171,94 +228,109 @@ export default function ProfileScreen() {
                     <Text style={styles.location}>{user?.address || user?.country || user?.location?.country || 'No location set'}</Text>
                 </View>
 
+                {/* Tabs Section */}
                 <View style={styles.profileContent}>
-                    {/* Stats Buttons */}
                     <View style={styles.statsContainer}>
-                        <TouchableOpacity style={[styles.statButton, styles.activeStatButton]}>
-                            <Text style={styles.activeStatText}>Posts</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.statButton}>
-                            <Text style={styles.statText}>Photos</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.statButton}>
-                            <Text style={styles.statText}>My Pets</Text>
-                        </TouchableOpacity>
+                        {(['Posts', 'Photos', 'My Pets'] as const).map((tab) => (
+                            <TouchableOpacity
+                                key={tab}
+                                style={[
+                                    styles.statButton,
+                                    activeTab === tab && styles.activeStatButton
+                                ]}
+                                onPress={() => setActiveTab(tab)}
+                            >
+                                <Text style={[
+                                    styles.statText,
+                                    activeTab === tab && styles.activeStatText
+                                ]}>{tab}</Text>
+                            </TouchableOpacity>
+                        ))}
                     </View>
 
-                    {/* Share Thoughts Card */}
-                    <ShareThoughtsCard
-                        avatarUrl={avatarUri}
-                        onPress={handleCreatePost}
-                        onGallery={async () => {
-                            let result = await ImagePicker.launchImageLibraryAsync({
-                                mediaTypes: ['images'],
-                                allowsMultipleSelection: true,
-                                quality: 1,
-                            });
+                    {/* Content Section */}
+                    {activeTab === 'Posts' ? (
+                        <>
+                            {/* Share Thoughts Card */}
+                            <ShareThoughtsCard
+                                avatarUrl={avatarUri}
+                                onPress={handleCreatePost}
+                                onGallery={async () => {
+                                    let result = await ImagePicker.launchImageLibraryAsync({
+                                        mediaTypes: ['images'],
+                                        allowsMultipleSelection: true,
+                                        quality: 1,
+                                    });
 
-                            if (!result.canceled) {
-                                const selectedImages = result.assets.map(asset => asset.uri);
-                                router.push({
-                                    pathname: "/(tabs)/account/profile/create-post",
-                                    params: { initialImages: JSON.stringify(selectedImages) }
-                                });
-                            }
-                        }}
-                        onCamera={async () => {
-                            let result = await ImagePicker.launchCameraAsync({
-                                mediaTypes: ['images'],
-                                quality: 1,
-                            });
+                                    if (!result.canceled) {
+                                        const selectedImages = result.assets.map(asset => asset.uri);
+                                        router.push({
+                                            pathname: "/(tabs)/account/profile/create-post",
+                                            params: { initialImages: JSON.stringify(selectedImages) }
+                                        });
+                                    }
+                                }}
+                                onCamera={async () => {
+                                    let result = await ImagePicker.launchCameraAsync({
+                                        mediaTypes: ['images'],
+                                        quality: 1,
+                                    });
 
-                            if (!result.canceled) {
-                                const selectedImages = [result.assets[0].uri];
-                                router.push({
-                                    pathname: "/(tabs)/account/profile/create-post",
-                                    params: { initialImages: JSON.stringify(selectedImages) }
-                                });
-                            }
-                        }}
-                    />
+                                    if (!result.canceled) {
+                                        const selectedImages = [result.assets[0].uri];
+                                        router.push({
+                                            pathname: "/(tabs)/account/profile/create-post",
+                                            params: { initialImages: JSON.stringify(selectedImages) }
+                                        });
+                                    }
+                                }}
+                            />
 
-                    {/* Feed Item 1 */}
-                    <FeedItem
-                        postId={1}
-                        userAvatar={avatarUri}
-                        userName={user?.name || "User"}
-                        actionText="updated her profile picture"
-                        timeAgo="1h ago"
-                        contentImage="https://images.unsplash.com/photo-1518331483807-f639071f3dd5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-                        likesCount="1.2 K"
-                        commentsCount="1.2 K"
-                        sharesCount="33"
-                        isDropdownVisible={activeDropdown === 1}
-                        onToggleDropdown={() => toggleDropdown(1)}
-                        onCloseDropdown={() => setActiveDropdown(null)}
-                        onEditPost={handleEditPost}
-                        onDeletePost={() => handleDeletePost(1)}
-                        onPress={() => handleViewPost(1)}
-                        onCommentPress={() => handleCommentPress({ id: 1, likesCount: "1.2 K", sharesCount: "33" })}
-                    />
+                            {/* Feed Item 1 */}
+                            <FeedItem
+                                postId={1}
+                                userAvatar={avatarUri}
+                                userName={user?.name || "User"}
+                                actionText="updated her profile picture"
+                                timeAgo="1h ago"
+                                contentImage="https://images.unsplash.com/photo-1518331483807-f639071f3dd5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                                likesCount="1.2 K"
+                                commentsCount="1.2 K"
+                                sharesCount="33"
+                                isDropdownVisible={activeDropdown === 1}
+                                onToggleDropdown={() => toggleDropdown(1)}
+                                onCloseDropdown={() => setActiveDropdown(null)}
+                                onEditPost={handleEditPost}
+                                onDeletePost={() => handleDeletePost(1)}
+                                onPress={() => handleViewPost(1)}
+                                onCommentPress={() => handleCommentPress({ id: 1, likesCount: "1.2 K", sharesCount: "33" })}
+                            />
 
-                    {/* Feed Item 2 */}
-                    <FeedItem
-                        postId={2}
-                        userAvatar={avatarUri}
-                        userName={user?.name || "User"}
-                        actionText="posted a photo"
-                        timeAgo="2h ago"
-                        contentImage="https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-                        likesCount="1.2 K"
-                        commentsCount="1.2 K"
-                        sharesCount="12"
-                        isDropdownVisible={activeDropdown === 2}
-                        onToggleDropdown={() => toggleDropdown(2)}
-                        onCloseDropdown={() => setActiveDropdown(null)}
-                        onEditPost={handleEditPost}
-                        onDeletePost={() => handleDeletePost(2)}
-                        onPress={() => handleViewPost(2)}
-                        onCommentPress={() => handleCommentPress({ id: 2, likesCount: "1.2 K", sharesCount: "12" })}
-                    />
+                            {/* Feed Item 2 */}
+                            <FeedItem
+                                postId={2}
+                                userAvatar={avatarUri}
+                                userName={user?.name || "User"}
+                                actionText="posted a photo"
+                                timeAgo="2h ago"
+                                contentImage="https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                                likesCount="1.2 K"
+                                commentsCount="1.2 K"
+                                sharesCount="12"
+                                isDropdownVisible={activeDropdown === 2}
+                                onToggleDropdown={() => toggleDropdown(2)}
+                                onCloseDropdown={() => setActiveDropdown(null)}
+                                onEditPost={handleEditPost}
+                                onDeletePost={() => handleDeletePost(2)}
+                                onPress={() => handleViewPost(2)}
+                                onCommentPress={() => handleCommentPress({ id: 2, likesCount: "1.2 K", sharesCount: "12" })}
+                            />
+                        </>
+                    ) : activeTab === 'Photos' ? (
+                        <PetPalPhotoGrid photos={MOCK_PHOTOS} />
+                    ) : (
+                        <PetPalPetList pets={MOCK_PETS} />
+                    )}
                 </View>
 
                 {selectedPost && (

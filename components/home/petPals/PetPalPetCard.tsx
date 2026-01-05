@@ -1,8 +1,10 @@
 import React from 'react';
 import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { Spacing } from '@/constants/colors';
+
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 40 - 15) / 2; // 40 is total horizontal padding, 15 is total gap
+const CARD_WIDTH = (width - (Spacing.lg * 2) - 15) / 2; // Spacing.lg * 2 is total horizontal padding, 15 is total gap
 
 interface PetPalPetCardProps {
     pet: {
@@ -65,6 +67,7 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 12,
+        flex: 1,
     },
     header: {
         flexDirection: 'row',
@@ -108,6 +111,7 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 8,
         alignItems: 'center',
+        marginTop: 'auto',
     },
     factsButtonText: {
         fontSize: 12,

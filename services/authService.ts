@@ -117,6 +117,27 @@ export const authService = {
     },
 
     /**
+     * Request password reset OTP
+     */
+    async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
+        return await api.post<{ success: boolean; message: string }>('/auth/forgot-password', { email });
+    },
+
+    /**
+     * Verify reset password OTP
+     */
+    async verifyResetOtp(email: string, otp: string): Promise<{ success: boolean; message: string }> {
+        return await api.post<{ success: boolean; message: string }>('/auth/verify-reset-otp', { email, otp });
+    },
+
+    /**
+     * Reset password with new password
+     */
+    async resetPassword(email: string, password: string): Promise<{ success: boolean; message: string }> {
+        return await api.post<{ success: boolean; message: string }>('/auth/reset-password', { email, password });
+    },
+
+    /**
      * Complete user profile with optional avatar
      */
     async completeProfile(data: CompleteProfileData, setupToken: string): Promise<LoginResponse> {

@@ -11,8 +11,9 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
-import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -33,12 +34,22 @@ export default function NewPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { resetPassword, isLoading, error: authError, clearError } = useAuthStore();
+  const params = useLocalSearchParams();
+  const email = (params.email as string) || "";
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const confirmPasswordRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Clear error when password changes
+  useEffect(() => {
+    if (authError) {
+      clearError();
+    }
+  }, [newPassword, confirmPassword]);
 
   const handlePasswordReset = async () => {
     // Clear previous messages
@@ -61,24 +72,30 @@ export default function NewPasswordScreen() {
       return;
     }
 
-    setLoading(true);
+    if (!email) {
+      setError("Email not found. Please try again.");
+      return;
+    }
 
-    try {
-      // Simulate API call for password reset
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+    const result = await resetPassword(email, newPassword);
 
+    if (result.success) {
       // Success
       setSuccess("Password has been reset successfully!");
 
       // Navigate to login after a delay
       setTimeout(() => {
-        router.replace("../PC-Successful");
+        // According to user request: "if success load the next page else make a popup"
+        // The successful reset usually leads to login or home. 
+        // User said: "after going to new password page implememt the 3rd api after clicking on done button. if success load the next page else make a popup"
+        // Next page usually means Login in this flow.
+        router.replace("/(auth)/PC-Successful"); // Or login directly? 
+        // Wait, there is a PC-Successful screen? 
+        // Yes, "PC-Successful" directory exists. Let's assume that's the "next page" or success page.
       }, 2000);
-    } catch (err) {
-      setError("Failed to reset password. Please try again.");
-      console.error("Password reset error:", err);
-    } finally {
-      setLoading(false);
+    } else {
+      // Error popup/message
+      setError(result.message || "Failed to reset password");
     }
   };
 
@@ -151,7 +168,7 @@ export default function NewPasswordScreen() {
                     setError(""); // Clear error when user types
                   }}
                   secureTextEntry={!showNewPassword}
-                  editable={!loading}
+                  editable={!isLoading}
                   returnKeyType="next"
                   onSubmitEditing={() => {
                     confirmPasswordRef.current?.focus();
@@ -188,7 +205,7 @@ export default function NewPasswordScreen() {
                     setError(""); // Clear error when user types
                   }}
                   secureTextEntry={!showConfirmPassword}
-                  editable={!loading}
+                  editable={!isLoading}
                   returnKeyType="done"
                   onSubmitEditing={handlePasswordReset}
                   onFocus={handleConfirmPasswordFocus}
@@ -210,11 +227,11 @@ export default function NewPasswordScreen() {
             {/* Button positioned right below input fields */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={[styles.doneButton, loading && styles.disabledButton]}
+                style={[styles.doneButton, isLoading && styles.disabledButton]}
                 onPress={handlePasswordReset}
-                disabled={loading}
+                disabled={isLoading}
               >
-                {loading ? (
+                {isLoading ? (
                   <ActivityIndicator color={Colors.background} />
                 ) : (
                   <Text style={styles.doneButtonText}>Done</Text>

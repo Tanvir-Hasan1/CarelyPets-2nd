@@ -6,6 +6,7 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -23,18 +24,25 @@ import {
 export default function ForgetPasswordScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { forgotPassword, isLoading, error: authError } = useAuthStore();
 
-  const handlePasswordReset = () => {
-    setLoading(true);
-    // Simulate an API call
-    setTimeout(() => {
-      setLoading(false);
-      alert(
-        "If an account with that email exists, a password reset link has been sent."
-      );
-      router.push("../verifyCode");
-    }, 2000);
+  const handlePasswordReset = async () => {
+    if (!email) {
+      alert("Please enter your email");
+      return;
+    }
+
+    const result = await forgotPassword(email);
+
+    if (result.success) {
+      alert(result.message || "An OTP has been sent to your email");
+      router.push({
+        pathname: "../verifyCode",
+        params: { email },
+      });
+    } else {
+      alert(result.message || "Failed to send OTP");
+    }
   };
   return (
     <KeyboardAvoidingView
@@ -64,17 +72,17 @@ export default function ForgetPasswordScreen() {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                editable={!loading}
+                editable={!isLoading}
               />
             </View>
           </View>
           {/* Next Button */}
           <TouchableOpacity
-            style={[styles.nextButton, loading && styles.disabledButton]}
+            style={[styles.nextButton, isLoading && styles.disabledButton]}
             onPress={handlePasswordReset}
-            disabled={loading}
+            disabled={isLoading}
           >
-            {loading ? (
+            {isLoading ? (
               <ActivityIndicator color={Colors.background} />
             ) : (
               <Text style={styles.nextButtonText}>Next</Text>
@@ -84,7 +92,7 @@ export default function ForgetPasswordScreen() {
           <TouchableOpacity
             style={styles.backToLoginContainer}
             onPress={() => router.push("../login")}
-            disabled={loading}
+            disabled={isLoading}
           >
             <Text style={styles.backToLoginText}>&lt; Back to Login</Text>
           </TouchableOpacity>

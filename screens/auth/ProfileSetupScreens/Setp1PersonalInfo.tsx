@@ -2,6 +2,7 @@
 
 import AtIcon from "@/assets/images/icons/at.svg";
 import GlobeIcon from "@/assets/images/icons/globe.svg";
+import CountrySelectModal from "@/components/ui/CountrySelectModal";
 import {
   BorderRadius,
   Colors,
@@ -12,16 +13,14 @@ import {
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 interface Step1PersonalInfoProps {
@@ -114,9 +113,7 @@ export default function Step1PersonalInfo({
     onNext();
   };
 
-  const filteredCountries = COUNTRIES.filter((country) =>
-    country.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+
 
   const handleSelectCountry = (country: string) => {
     onChange({ ...data, country });
@@ -207,58 +204,12 @@ export default function Step1PersonalInfo({
       </ScrollView>
 
       {/* Country Dropdown Modal */}
-      <Modal
+      <CountrySelectModal
         visible={showCountryDropdown}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Country</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowCountryDropdown(false);
-                  setSearchQuery("");
-                }}
-              >
-                <Text style={styles.closeButton}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Search Input */}
-            <View style={styles.searchContainer}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search country..."
-                placeholderTextColor={Colors.placeholder}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCapitalize="none"
-              />
-            </View>
-
-            {/* Country List */}
-            <FlatList
-              data={filteredCountries}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.countryItem}
-                  onPress={() => handleSelectCountry(item)}
-                >
-                  <Text style={styles.countryText}>{item}</Text>
-                  {data.country === item && (
-                    <Text style={styles.selectedIndicator}>✓</Text>
-                  )}
-                </TouchableOpacity>
-              )}
-              contentContainerStyle={styles.countryList}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowCountryDropdown(false)}
+        onSelect={handleSelectCountry}
+        selectedCountry={data.country}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -372,71 +323,5 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
     fontWeight: FontWeights.semibold,
     color: Colors.background,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContainer: {
-    backgroundColor: Colors.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "80%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  modalTitle: {
-    fontSize: FontSizes.lg,
-    fontWeight: FontWeights.bold,
-    color: Colors.text,
-  },
-  closeButton: {
-    fontSize: FontSizes.xl,
-    color: Colors.text,
-    padding: Spacing.xs,
-  },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.lightGray,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    fontSize: FontSizes.md,
-    color: Colors.text,
-  },
-  countryList: {
-    paddingBottom: Spacing.xl,
-  },
-  countryItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  countryText: {
-    fontSize: FontSizes.md,
-    color: Colors.text,
-  },
-  selectedIndicator: {
-    fontSize: FontSizes.md,
-    color: Colors.primary,
-    fontWeight: FontWeights.bold,
   },
 });

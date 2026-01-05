@@ -6,16 +6,19 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
-import { useRouter } from "expo-router";
-import React from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function OtpVerifySuccessScreen() {
+  const { email } = useLocalSearchParams();
   const router = useRouter();
 
   const handleContinue = () => {
     // Navigate to reset password screen
-    router.push("../newPassword");
+    router.push({
+      pathname: "../newPassword",
+      params: { email }
+    });
   };
 
   return (

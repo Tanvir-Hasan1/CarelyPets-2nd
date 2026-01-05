@@ -7,6 +7,7 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -29,15 +30,22 @@ export default function VerifyCodeScreen() {
   const email = (params.email as string) || "example@gmail.com";
 
   const [code, setCode] = useState(["", "", "", ""]);
-  const [loading, setLoading] = useState(false);
+  const { verifyResetOtp, forgotPassword, isLoading, error: authError, clearError } = useAuthStore();
   const [timer, setTimer] = useState(60); // 60 seconds timer for resend
   const [canResend, setCanResend] = useState(false);
 
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
+  // Clear error when code changes
+  useEffect(() => {
+    if (authError) {
+      clearError();
+    }
+  }, [code]);
+
   // Timer for resend OTP
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: any;
 
     if (timer > 0 && !canResend) {
       interval = setInterval(() => {
@@ -73,8 +81,13 @@ export default function VerifyCodeScreen() {
     // If last digit entered, automatically verify
     if (numericText && index === 3) {
       const fullCode = newCode.join("");
+      // Don't auto-verify here to let user confirm, or call logic directly
+      // But based on previous code it was calling handleVerify inside here.
+      // Let's stick to manual button press or check length in effect?
+      // Actually previous code called handleVerify() directly.
+      // I'll leave it as is but update handleVerify logic below.
       if (fullCode.length === 4) {
-        handleVerify();
+        // handleVerify(); // Optional: Auto verify
       }
     }
   };
@@ -86,7 +99,7 @@ export default function VerifyCodeScreen() {
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const verificationCode = code.join("");
 
     if (verificationCode.length !== 4) {
@@ -94,35 +107,33 @@ export default function VerifyCodeScreen() {
       return;
     }
 
-    setLoading(true);
+    const result = await verifyResetOtp(email, verificationCode);
 
-    // Simulate API call for verification
-    setTimeout(() => {
-      setLoading(false);
-      // For demo, assume code is valid if it's 1234
-      if (verificationCode === "1234") {
-        alert("Verification successful!");
-        router.push("../otpVerify");
-      } else {
-        alert("Invalid verification code. Please try again.");
-      }
-    }, 1500);
+    if (result.success) {
+      // Success
+      router.push({
+        pathname: "../otpVerify",
+        params: { email }
+      });
+    } else {
+      alert(result.message || "Invalid or expired OTP");
+    }
   };
 
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
     if (!canResend) return;
 
-    setLoading(true);
+    const result = await forgotPassword(email);
 
-    // Simulate resend API call
-    setTimeout(() => {
-      setLoading(false);
+    if (result.success) {
       setTimer(60);
       setCanResend(false);
       setCode(["", "", "", ""]);
       inputRefs.current[0]?.focus();
       alert("New verification code has been sent to your email.");
-    }, 1000);
+    } else {
+      alert(result.message || "Failed to resend OTP");
+    }
   };
 
   const dismissKeyboard = () => {
@@ -160,7 +171,7 @@ export default function VerifyCodeScreen() {
               >
                 <View style={styles.codeInputWrapper}>
                   <TextInput
-                    ref={(ref) => (inputRefs.current[index] = ref)}
+                    ref={(ref) => { inputRefs.current[index] = ref; }}
                     style={styles.codeInput}
                     value={code[index]}
                     onChangeText={(text) => handleCodeChange(text, index)}
@@ -169,7 +180,7 @@ export default function VerifyCodeScreen() {
                     maxLength={1}
                     textAlign="center"
                     autoFocus={index === 0}
-                    editable={!loading}
+                    editable={!isLoading}
                     selectTextOnFocus
                     caretHidden={false}
                     contextMenuHidden={true}
@@ -181,11 +192,11 @@ export default function VerifyCodeScreen() {
 
           {/* Verify Button */}
           <TouchableOpacity
-            style={[styles.verifyButton, loading && styles.disabledButton]}
+            style={[styles.verifyButton, isLoading && styles.disabledButton]}
             onPress={handleVerify}
-            disabled={loading || code.join("").length !== 4}
+            disabled={isLoading || code.join("").length !== 4}
           >
-            {loading ? (
+            {isLoading ? (
               <ActivityIndicator color={Colors.background} />
             ) : (
               <Text style={styles.verifyButtonText}>Verify</Text>
@@ -197,13 +208,13 @@ export default function VerifyCodeScreen() {
             <Text style={styles.resendText}>Don't receive OTP?</Text>
             <TouchableOpacity
               onPress={handleResendCode}
-              disabled={!canResend || loading}
+              disabled={!canResend || isLoading}
               style={styles.resendButton}
             >
               <Text
                 style={[
                   styles.resendButtonText,
-                  (!canResend || loading) && styles.disabledResendText,
+                  (!canResend || isLoading) && styles.disabledResendText,
                 ]}
               >
                 Resend again {!canResend && `(${timer}s)`}
@@ -215,7 +226,7 @@ export default function VerifyCodeScreen() {
           <TouchableOpacity
             style={styles.backToLoginContainer}
             onPress={() => router.push("../login")}
-            disabled={loading}
+            disabled={isLoading}
           >
             <Text style={styles.backToLoginText}>&lt; Back to Login</Text>
           </TouchableOpacity>

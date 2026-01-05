@@ -1,3 +1,4 @@
+import CountrySelectModal from "@/components/ui/CountrySelectModal";
 import Header from '@/components/ui/Header';
 import { Colors } from '@/constants/colors';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -28,6 +29,7 @@ export default function EditProfileScreen() {
     const [address, setAddress] = useState(user?.address || "");
     const [phone, setPhone] = useState(user?.phone || "");
     const [selectedPets, setSelectedPets] = useState<string[]>(user?.favorites || []);
+    const [showCountryModal, setShowCountryModal] = useState(false);
 
     const petTypes = ['Dog', 'Cats', 'Small Pets', 'Birds', 'Exotic Pets'];
 
@@ -84,12 +86,15 @@ export default function EditProfileScreen() {
 
                 <View style={styles.formGroup}>
                     <Text style={styles.label}>COUNTRY</Text>
-                    <View style={styles.inputContainer}>
+                    <TouchableOpacity
+                        style={styles.inputContainer}
+                        onPress={() => setShowCountryModal(true)}
+                    >
                         {/* Placeholder for globe icon */}
                         <MapPin size={20} color={Colors.primary} style={styles.inputIcon} />
                         <Text style={[styles.input, { paddingVertical: 12 }]}>{country}</Text>
                         <ChevronDown size={20} color={Colors.primary} />
-                    </View>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.formGroup}>
@@ -164,6 +169,12 @@ export default function EditProfileScreen() {
             </ScrollView>
 
 
+            <CountrySelectModal
+                visible={showCountryModal}
+                onClose={() => setShowCountryModal(false)}
+                onSelect={setCountry}
+                selectedCountry={country}
+            />
         </View>
     );
 }

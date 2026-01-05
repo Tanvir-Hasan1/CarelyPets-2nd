@@ -22,6 +22,9 @@ interface AuthState {
     initializeAuth: () => Promise<void>;
     updateUser: (data: Partial<User>) => Promise<boolean>;
     clearError: () => void;
+    forgotPassword: (email: string) => Promise<{ success: boolean; message: string }>;
+    verifyResetOtp: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
+    resetPassword: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -207,5 +210,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     clearError: () => {
         set({ error: null });
+    },
+
+    forgotPassword: async (email: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await authService.forgotPassword(email);
+            set({ isLoading: false });
+            return response;
+        } catch (error: any) {
+            set({
+                isLoading: false,
+                error: error?.message || 'Failed to request password reset',
+            });
+            return { success: false, message: error?.message || 'Failed to request password reset' };
+        }
+    },
+
+    verifyResetOtp: async (email: string, otp: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await authService.verifyResetOtp(email, otp);
+            set({ isLoading: false });
+            return response;
+        } catch (error: any) {
+            set({
+                isLoading: false,
+                error: error?.message || 'Failed to verify OTP',
+            });
+            return { success: false, message: error?.message || 'Failed to verify OTP' };
+        }
+    },
+
+    resetPassword: async (email: string, password: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await authService.resetPassword(email, password);
+            set({ isLoading: false });
+            return response;
+        } catch (error: any) {
+            set({
+                isLoading: false,
+                error: error?.message || 'Failed to reset password',
+            });
+            return { success: false, message: error?.message || 'Failed to reset password' };
+        }
     },
 }));
