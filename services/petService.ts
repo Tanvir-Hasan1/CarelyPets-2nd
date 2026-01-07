@@ -45,8 +45,8 @@ export const petService = {
     /**
      * Create a new pet
      */
-    async createPet(pet: Omit<Pet, 'id' | 'healthRecords'>): Promise<Pet> {
-        const response = await api.post<ApiResponse<Pet>>('/pets', pet);
+    async createPet(petData: FormData): Promise<Pet> {
+        const response = await api.post<ApiResponse<Pet>>('/pets', petData);
         return response.data;
     },
 

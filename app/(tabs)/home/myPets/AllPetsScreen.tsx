@@ -8,8 +8,9 @@ import {
 } from "@/constants/colors";
 import { usePetStore } from "@/store/usePetStore";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import {
+    ActivityIndicator,
     Dimensions,
     Image,
     ScrollView,
@@ -22,55 +23,68 @@ import {
 
 export default function AllPetsScreen() {
     const router = useRouter();
-    const pets = usePetStore((state) => state.pets);
+    const { pets, fetchPets, isLoading } = usePetStore();
+
+    useEffect(() => {
+        fetchPets();
+    }, []);
 
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" />
             <Header title="My Pets" showActions />
 
-            <ScrollView contentContainerStyle={styles.gridContent} showsVerticalScrollIndicator={false}>
-                {pets.length === 0 ? (
-                    <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>No pets added yet!</Text>
-                        <TouchableOpacity style={styles.addButton} onPress={() => router.push("/(tabs)/home/myPets/add-pet")}>
-                            <Text style={styles.addButtonText}>Add your first pet</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <View style={styles.grid}>
-                        {pets.map((pet) => (
-                            <TouchableOpacity
-                                key={pet.id}
-                                style={styles.card}
-                                onPress={() => router.push(`/(tabs)/home/myPets/${pet.id}`)}
-                            >
-                                <Image source={{ uri: pet.image }} style={styles.cardImage} />
-                                <View style={styles.cardContent}>
-                                    <View style={styles.nameRow}>
-                                        <Text style={styles.petName} numberOfLines={1}>{pet.name}</Text>
-                                        <View style={[
-                                            styles.genderBadge,
-                                            { backgroundColor: pet.gender === 'Female' ? '#FFD1DC' : '#BBDEFB' }
-                                        ]}>
-                                            <Text style={[
-                                                styles.genderText,
-                                                { color: pet.gender === 'Female' ? '#C2185B' : '#1976D2' }
-                                            ]}>
-                                                {pet.gender}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    <Text style={styles.petDetails}>{pet.breed} • {pet.age} years old</Text>
-                                    <View style={styles.petFactsButton}>
-                                        <Text style={styles.petFactsText}>Pet Facts</Text>
-                                    </View>
-                                </View>
+            {isLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#006064" />
+                </View>
+            ) : (
+                <ScrollView contentContainerStyle={styles.gridContent} showsVerticalScrollIndicator={false}>
+                    {pets.length === 0 ? (
+                        <View style={styles.emptyContainer}>
+                            <Text style={styles.emptyText}>No pets added yet!</Text>
+                            <TouchableOpacity style={styles.addButton} onPress={() => router.push("/(tabs)/home/myPets/AddPetScreen")}>
+                                <Text style={styles.addButtonText}>Add your first pet</Text>
                             </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-            </ScrollView>
+                        </View>
+                    ) : (
+                        <View style={styles.grid}>
+                            {pets.map((pet) => {
+                                const isFemale = pet.gender?.toLowerCase() === 'female';
+                                return (
+                                    <TouchableOpacity
+                                        key={pet.id}
+                                        style={styles.card}
+                                        onPress={() => router.push(`/(tabs)/home/myPets/${pet.id}`)}
+                                    >
+                                        <Image source={{ uri: pet.avatarUrl || pet.image }} style={styles.cardImage} />
+                                        <View style={styles.cardContent}>
+                                            <View style={styles.nameRow}>
+                                                <Text style={styles.petName} numberOfLines={1}>{pet.name}</Text>
+                                                <View style={[
+                                                    styles.genderBadge,
+                                                    { backgroundColor: isFemale ? '#FFD1DC' : '#BBDEFB' }
+                                                ]}>
+                                                    <Text style={[
+                                                        styles.genderText,
+                                                        { color: isFemale ? '#C2185B' : '#1976D2' }
+                                                    ]}>
+                                                        {pet.gender}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            <Text style={styles.petDetails}>{pet.breed} • {pet.age} years old</Text>
+                                            <View style={styles.petFactsButton}>
+                                                <Text style={styles.petFactsText}>Pet Facts</Text>
+                                            </View>
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                    )}
+                </ScrollView>
+            )}
         </View>
     );
 }
@@ -165,5 +179,10 @@ const styles = StyleSheet.create({
     addButtonText: {
         color: '#ffffff',
         fontWeight: FontWeights.bold,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

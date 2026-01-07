@@ -135,7 +135,7 @@ const DropdownInput = ({
 export default function AddPetScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const addPet = usePetStore((state) => state.addPet);
+  const { createPet, isLoading } = usePetStore();
 
   const [avatar, setAvatar] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -238,15 +238,15 @@ export default function AddPetScreen() {
     setTraits(traits.filter((_, i) => i !== index));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Basic validation
     if (!name) {
       alert("Please enter a pet name");
       return;
     }
 
-    if (!name) {
-      alert("Please enter a pet name");
+    if (!type) {
+      alert("Please select a pet type");
       return;
     }
 
@@ -260,25 +260,76 @@ export default function AddPetScreen() {
       return;
     }
 
-    addPet({
-      id: Date.now().toString(),
-      name,
-      type,
-      breed,
-      age,
-      weight,
-      gender,
-      traits,
-      about,
-      // Use the selected avatar as the main image
-      image: avatar,
-      snaps: snaps.map(s => s.uri),
-      trained,
-      vaccinated,
-      neutered,
-      healthRecords: [],
-    });
-    router.back();
+    try {
+      const formData = new FormData();
+      formData.append("name", name);
+      formData.append("type", type);
+      formData.append("species", type); // Mapping type to species as well for backend
+      formData.append("breed", breed);
+      formData.append("age", age);
+      formData.append("weightLbs", weight);
+      formData.append("gender", gender.toLowerCase());
+      formData.append("trained", (trained.toLowerCase() === "yes") as any);
+      formData.append("vaccinated", (vaccinated.toLowerCase() === "yes") as any);
+      formData.append("neutered", (neutered.toLowerCase() === "yes") as any);
+      formData.append("personality", JSON.stringify(traits));
+      formData.append("about", about);
+      formData.append("bio", about); // Mapping about to bio as well
+
+      // Append Avatar
+      const avatarUri = avatar;
+      const avatarName = avatarUri.split("/").pop() || "avatar.jpg";
+      const avatarType = `image/${avatarName.split(".").pop() || "jpeg"}`;
+
+      formData.append("avatar", {
+        uri: Platform.OS === "android" ? avatarUri : avatarUri.replace("file://", ""),
+        name: avatarName,
+        type: avatarType,
+      } as any);
+
+      // Append Snaps
+      snaps.forEach((snap, index) => {
+        const snapUri = snap.uri;
+        const snapName = snap.fileName || `snap_${index}.jpg`;
+        const snapType = snap.mimeType || "image/jpeg";
+
+        formData.append("files", {
+          uri: Platform.OS === "android" ? snapUri : snapUri.replace("file://", ""),
+          name: snapName,
+          type: snapType,
+        } as any);
+      });
+
+      console.log("Submitting pet form data...");
+
+      // Detailed logging for debugging
+      console.log("--- FormData Content ---");
+      // @ts-ignore
+      if (formData._parts) {
+        // @ts-ignore
+        formData._parts.forEach(([key, value]) => {
+          if (value && typeof value === 'object' && value.uri) {
+            console.log(`${key}: [File] ${value.name} (${value.type})`);
+          } else {
+            console.log(`${key}: ${value} (type: ${typeof value})`);
+          }
+        });
+      } else {
+        console.log("Note: formData._parts not available for logging");
+      }
+      console.log("------------------------");
+
+      const result = await createPet(formData);
+
+      if (result.success) {
+        router.back();
+      } else {
+        alert(result.message);
+      }
+    } catch (error: any) {
+      console.error("Error saving pet:", error);
+      alert(error.message || "An error occurred while saving your pet.");
+    }
   };
 
   return (
@@ -508,8 +559,12 @@ export default function AddPetScreen() {
             <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveText}>Save</Text>
+            <TouchableOpacity
+              style={[styles.saveButton, isLoading && { opacity: 0.7 }]}
+              onPress={handleSave}
+              disabled={isLoading}
+            >
+              <Text style={styles.saveText}>{isLoading ? "Saving..." : "Save"}</Text>
             </TouchableOpacity>
           </View>
 
