@@ -41,26 +41,26 @@ const SectionLabel = ({ title }: { title: string }) => (
   <Text style={styles.sectionLabel}>{title}</Text>
 );
 
-const RadioGroup = ({
+const RadioGroup = <T extends string | boolean>({
   options,
   selected,
   onSelect,
 }: {
-  options: string[];
-  selected: string;
-  onSelect: (val: string) => void;
+  options: { label: string; value: T }[];
+  selected: T;
+  onSelect: (val: T) => void;
 }) => (
   <View style={styles.radioGroup}>
     {options.map((opt) => (
       <TouchableOpacity
-        key={opt}
+        key={String(opt.value)}
         style={styles.radioItem}
-        onPress={() => onSelect(opt)}
+        onPress={() => onSelect(opt.value)}
       >
         <View style={styles.radioCircle}>
-          {selected === opt && <View style={styles.radioInnerCircle} />}
+          {selected === opt.value && <View style={styles.radioInnerCircle} />}
         </View>
-        <Text style={styles.radioText}>{opt}</Text>
+        <Text style={styles.radioText}>{opt.label}</Text>
       </TouchableOpacity>
     ))}
   </View>
@@ -191,21 +191,33 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
   const insets = useSafeAreaInsets();
   const updatePet = usePetStore((state) => state.updatePet);
 
-  const [avatar, setAvatar] = useState<string | null>(initialData.image || null);
+  const [avatar, setAvatar] = useState<string | null>(initialData.avatarUrl || initialData.image || null);
   const [name, setName] = useState(initialData.name);
   const [type, setType] = useState(initialData.type);
   const [breed, setBreed] = useState(initialData.breed);
-  const [age, setAge] = useState(initialData.age);
-  const [weight, setWeight] = useState(initialData.weight);
-  const [gender, setGender] = useState<"Male" | "Female">(initialData.gender);
+  const [age, setAge] = useState(String(initialData.age || ""));
+  const [weight, setWeight] = useState(initialData.weight || String(initialData.weightLbs || ""));
+  const [gender, setGender] = useState<"male" | "female">(
+    initialData.gender?.toLowerCase() === "female" ? "female" : "male"
+  );
   const [trained, setTrained] = useState(initialData.trained);
   const [vaccinated, setVaccinated] = useState(initialData.vaccinated);
   const [neutered, setNeutered] = useState(initialData.neutered);
   const [traitInput, setTraitInput] = useState("");
-  const [traits, setTraits] = useState<string[]>(initialData.traits || []);
-  const [about, setAbout] = useState(initialData.about || "");
+  const [traits, setTraits] = useState<string[]>(initialData.personality || initialData.traits || []);
+  const [about, setAbout] = useState(initialData.bio || initialData.about || "");
   const [snaps, setSnaps] = useState<ImagePicker.ImagePickerAsset[]>(
-    initialData.snaps?.map(uri => ({ uri, width: 0, height: 0, assetId: null, base64: null, exif: null, fileName: "Existing Image", fileSize: 0, mimeType: 'image/jpeg' })) || []
+    (initialData.photos || initialData.snaps)?.map(uri => ({
+      uri,
+      width: 0,
+      height: 0,
+      assetId: null,
+      base64: null,
+      exif: null,
+      fileName: uri.split('/').pop() || "Existing Image",
+      fileSize: 0,
+      mimeType: 'image/jpeg'
+    })) || []
   );
   const [viewedImage, setViewedImage] = useState<string | null>(null);
 
@@ -294,37 +306,79 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
     setTraits(traits.filter((_, i) => i !== index));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Basic validation
     if (!name) {
       alert("Please enter a pet name");
       return;
     }
 
-    if (snaps.length === 0) {
-      alert("Please select at least 1 photo of your pet.");
-      return;
-    }
+    try {
+      const formData = new FormData();
+      // Only append ID if needed by backend in body, usually URL is enough
+      // formData.append("id", initialData.id); 
+      formData.append("name", name);
+      formData.append("type", type);
+      formData.append("species", type);
+      formData.append("breed", breed);
+      formData.append("age", age);
+      formData.append("weightLbs", weight);
+      formData.append("gender", gender);
+      formData.append("trained", JSON.stringify(trained));
+      formData.append("vaccinated", JSON.stringify(vaccinated));
+      formData.append("neutered", JSON.stringify(neutered));
+      formData.append("personality", JSON.stringify(traits));
+      formData.append("bio", about);
+      formData.append("about", about);
 
-    updatePet({
-      id: initialData.id,
-      name,
-      type,
-      breed,
-      age,
-      weight,
-      gender,
-      traits,
-      about,
-      // Use the selected avatar as the main image
-      image: avatar || snaps[0]?.uri,
-      snaps: snaps.map(s => s.uri),
-      trained,
-      vaccinated,
-      neutered,
-      healthRecords: initialData.healthRecords || [],
-    });
-    router.back();
+      console.log("[EditPetScreen] FormData entries:");
+      // @ts-ignore
+      if (formData._parts) {
+        // @ts-ignore
+        formData._parts.forEach(([key, value]) => {
+          console.log(`[EditPetScreen] ${key}:`, typeof value === 'object' ? '[File/Object]' : value);
+        });
+      }
+
+      // Append Avatar if it's new (has file:// scheme)
+      if (avatar && avatar.startsWith('file://')) {
+        const filename = avatar.split('/').pop() || 'avatar.jpg';
+        const type = `image/${filename.split('.').pop() || 'jpeg'}`;
+
+        formData.append('avatar', {
+          uri: Platform.OS === "android" ? avatar : avatar.replace("file://", ""),
+          name: filename,
+          type,
+        } as any);
+      }
+
+      // Append Snaps - align with AddPetScreen field name "files"
+      snaps.forEach((snap, index) => {
+        if (snap.uri.startsWith('file://')) {
+          const filename = snap.uri.split('/').pop() || `snap_${index}.jpg`;
+          const type = `image/${filename.split('.').pop() || 'jpeg'}`;
+
+          formData.append('files', {
+            uri: Platform.OS === "android" ? snap.uri : snap.uri.replace("file://", ""),
+            name: filename,
+            type,
+          } as any);
+        } else {
+          // If it's an existing URL, we send it as a string
+          formData.append('existingPhotos', snap.uri);
+        }
+      });
+
+      const result = await updatePet(formData);
+      if (result.success) {
+        router.back();
+      } else {
+        alert(result.message || "Failed to update pet");
+      }
+    } catch (error: any) {
+      console.error("Update pet error:", error);
+      alert("An error occurred while updating pet information.");
+    }
   };
 
   return (
@@ -492,28 +546,28 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
 
             <SectionLabel title="GENDER" />
             <RadioGroup
-              options={["Male", "Female"]}
+              options={[{ label: "Male", value: "male" }, { label: "Female", value: "female" }]}
               selected={gender}
               onSelect={(val) => setGender(val as any)}
             />
 
             <SectionLabel title="TRAINED" />
             <RadioGroup
-              options={["Yes", "No"]}
+              options={[{ label: "Yes", value: true }, { label: "No", value: false }]}
               selected={trained}
               onSelect={setTrained}
             />
 
             <SectionLabel title="VACCINATED" />
             <RadioGroup
-              options={["Yes", "No"]}
+              options={[{ label: "Yes", value: true }, { label: "No", value: false }]}
               selected={vaccinated}
               onSelect={setVaccinated}
             />
 
             <SectionLabel title="NEUTERED" />
             <RadioGroup
-              options={["Yes", "No"]}
+              options={[{ label: "Yes", value: true }, { label: "No", value: false }]}
               selected={neutered}
               onSelect={setNeutered}
             />

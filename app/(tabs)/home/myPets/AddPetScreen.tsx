@@ -41,26 +41,26 @@ const SectionLabel = ({ title }: { title: string }) => (
   <Text style={styles.sectionLabel}>{title}</Text>
 );
 
-const RadioGroup = ({
+const RadioGroup = <T extends string | boolean>({
   options,
   selected,
   onSelect,
 }: {
-  options: string[];
-  selected: string;
-  onSelect: (val: string) => void;
+  options: { label: string; value: T }[];
+  selected: T;
+  onSelect: (val: T) => void;
 }) => (
   <View style={styles.radioGroup}>
     {options.map((opt) => (
       <TouchableOpacity
-        key={opt}
+        key={String(opt.value)}
         style={styles.radioItem}
-        onPress={() => onSelect(opt)}
+        onPress={() => onSelect(opt.value)}
       >
         <View style={styles.radioCircle}>
-          {selected === opt && <View style={styles.radioInnerCircle} />}
+          {selected === opt.value && <View style={styles.radioInnerCircle} />}
         </View>
-        <Text style={styles.radioText}>{opt}</Text>
+        <Text style={styles.radioText}>{opt.label}</Text>
       </TouchableOpacity>
     ))}
   </View>
@@ -143,10 +143,10 @@ export default function AddPetScreen() {
   const [breed, setBreed] = useState("");
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
-  const [gender, setGender] = useState<"Male" | "Female">("Male");
-  const [trained, setTrained] = useState("Yes");
-  const [vaccinated, setVaccinated] = useState("Yes");
-  const [neutered, setNeutered] = useState("Yes");
+  const [gender, setGender] = useState<"male" | "female">("male");
+  const [trained, setTrained] = useState(true);
+  const [vaccinated, setVaccinated] = useState(true);
+  const [neutered, setNeutered] = useState(false);
   const [traitInput, setTraitInput] = useState("");
   const [traits, setTraits] = useState<string[]>([]);
   const [about, setAbout] = useState("");
@@ -268,10 +268,10 @@ export default function AddPetScreen() {
       formData.append("breed", breed);
       formData.append("age", age);
       formData.append("weightLbs", weight);
-      formData.append("gender", gender.toLowerCase());
-      formData.append("trained", (trained.toLowerCase() === "yes") as any);
-      formData.append("vaccinated", (vaccinated.toLowerCase() === "yes") as any);
-      formData.append("neutered", (neutered.toLowerCase() === "yes") as any);
+      formData.append("gender", gender);
+      formData.append("trained", JSON.stringify(trained));
+      formData.append("vaccinated", JSON.stringify(vaccinated));
+      formData.append("neutered", JSON.stringify(neutered));
       formData.append("personality", JSON.stringify(traits));
       formData.append("about", about);
       formData.append("bio", about); // Mapping about to bio as well
@@ -305,18 +305,14 @@ export default function AddPetScreen() {
       // Detailed logging for debugging
       console.log("--- FormData Content ---");
       // @ts-ignore
-      if (formData._parts) {
-        // @ts-ignore
-        formData._parts.forEach(([key, value]) => {
-          if (value && typeof value === 'object' && value.uri) {
-            console.log(`${key}: [File] ${value.name} (${value.type})`);
-          } else {
-            console.log(`${key}: ${value} (type: ${typeof value})`);
-          }
-        });
-      } else {
-        console.log("Note: formData._parts not available for logging");
-      }
+      const parts = formData._parts || [];
+      parts.forEach(([key, value]: [string, any]) => {
+        if (value && typeof value === 'object' && value.uri) {
+          console.log(`${key}: [File] ${value.name} (${value.type})`);
+        } else {
+          console.log(`${key}: ${value} (type: ${typeof value})`);
+        }
+      });
       console.log("------------------------");
 
       const result = await createPet(formData);
@@ -492,28 +488,28 @@ export default function AddPetScreen() {
 
             <SectionLabel title="GENDER" />
             <RadioGroup
-              options={["Male", "Female"]}
+              options={[{ label: "Male", value: "male" }, { label: "Female", value: "female" }]}
               selected={gender}
               onSelect={(val) => setGender(val as any)}
             />
 
             <SectionLabel title="TRAINED" />
             <RadioGroup
-              options={["Yes", "No"]}
+              options={[{ label: "Yes", value: true }, { label: "No", value: false }]}
               selected={trained}
               onSelect={setTrained}
             />
 
             <SectionLabel title="VACCINATED" />
             <RadioGroup
-              options={["Yes", "No"]}
+              options={[{ label: "Yes", value: true }, { label: "No", value: false }]}
               selected={vaccinated}
               onSelect={setVaccinated}
             />
 
             <SectionLabel title="NEUTERED" />
             <RadioGroup
-              options={["Yes", "No"]}
+              options={[{ label: "Yes", value: true }, { label: "No", value: false }]}
               selected={neutered}
               onSelect={setNeutered}
             />
@@ -914,3 +910,4 @@ const styles = StyleSheet.create({
   },
 
 });
+

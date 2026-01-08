@@ -14,69 +14,69 @@ import {
     View,
 } from "react-native";
 
-export const MOCK_PETS: (Partial<Pet> & { id: string; name: string; breed: string; age: string; gender: "Male" | "Female"; status: string; type: string; image: string; })[] = [
+export const MOCK_PETS: (Partial<Pet> & { id: string; name: string; breed: string; age: number; gender: "Male" | "Female"; status: string; type: string; image: string; })[] = [
     {
         id: "1",
         name: "Midu",
         breed: "Persian Cat",
-        age: "2",
+        age: 2,
         gender: "Female",
         status: "Available",
         type: "Cat",
         image: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=500&auto=format&fit=crop",
         traits: [],
         snaps: [],
-        trained: "Yes",
-        vaccinated: "Yes",
-        neutered: "No",
+        trained: true,
+        vaccinated: true,
+        neutered: false,
         healthRecords: []
     },
     {
         id: "2",
         name: "Bob",
         breed: "Persian Cat",
-        age: "2",
+        age: 2,
         gender: "Male",
         status: "Adopted",
         type: "Cat",
         image: "https://images.unsplash.com/photo-1544568100-847a948585b9?q=80&w=500&auto=format&fit=crop",
         traits: [],
         snaps: [],
-        trained: "Yes",
-        vaccinated: "Yes",
-        neutered: "No",
+        trained: true,
+        vaccinated: true,
+        neutered: false,
         healthRecords: []
     },
     {
         id: "3",
         name: "Bubby",
         breed: "Persian Cat",
-        age: "2",
+        age: 2,
         gender: "Female",
         status: "Available",
         type: "Cat",
         image: "https://images.unsplash.com/photo-1543466835-00a7907e9ef1?q=80&w=500&auto=format&fit=crop",
         traits: [],
         snaps: [],
-        trained: "Yes",
-        vaccinated: "Yes",
-        neutered: "No",
+        trained: true,
+        vaccinated: true,
+        neutered: false,
         healthRecords: []
     },
     {
         id: "4",
         name: "Muku",
         breed: "Golden Retriever",
-        age: "5",
+        age: 5,
         gender: "Male",
         status: "Available",
         type: "Dog",
         image: "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?q=80&w=500&auto=format&fit=crop",
         traits: [],
         snaps: [],
-        trained: "Yes",
-        vaccinated: "Yes",
-        neutered: "No",
+        trained: true,
+        vaccinated: true,
+        neutered: false,
         healthRecords: []
     },
 ];
@@ -114,7 +114,7 @@ export default function Index() {
         const matchesType = activeFilters.petType.length === 0 ||
             activeFilters.petType.includes(pet.type || "");
 
-        const petAge = parseInt(pet.age) || 0;
+        const petAge = Number(pet.age) || 0;
         const matchesAge = petAge >= activeFilters.ageRange[0] && petAge <= activeFilters.ageRange[1];
 
         const matchesAvailability = !activeFilters.availability ||

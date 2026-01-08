@@ -32,7 +32,7 @@ export default function PetList() {
           style={styles.itemContainer}
           onPress={() => router.push({ pathname: "/home/myPets/[id]", params: { id: item.id } })}
         >
-          <Image source={{ uri: item.image }} style={styles.image} />
+          <Image source={{ uri: item.avatarUrl || item.image }} style={styles.image} />
           <Text style={styles.name}>{item.name}</Text>
         </TouchableOpacity>
       )}

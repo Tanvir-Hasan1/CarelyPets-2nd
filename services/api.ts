@@ -19,6 +19,9 @@ class ApiClient {
     private baseUrl: string;
     private defaultTimeout: number;
     private authToken: string | null = null;
+    private refreshHandler: (() => Promise<string | null>) | null = null;
+    private isRefreshing = false;
+    private failedQueue: { resolve: (token: string) => void; reject: (error: any) => void }[] = [];
 
     constructor() {
         this.baseUrl = config.api.baseUrl;
@@ -31,6 +34,13 @@ class ApiClient {
      */
     setAuthToken(token: string | null) {
         this.authToken = token;
+    }
+
+    /**
+     * Set the handler for token refresh
+     */
+    setRefreshHandler(handler: () => Promise<string | null>) {
+        this.refreshHandler = handler;
     }
 
     /**
@@ -113,11 +123,6 @@ class ApiClient {
         }
 
         console.log(`[API] ${response.status} ${response.url}`);
-        if (isJson && typeof data === 'object') {
-            console.log('[API] Response Data:', JSON.stringify(data, null, 2));
-        } else if (text) {
-            console.log('[API] Response Data:', data);
-        }
 
         if (!response.ok) {
             const error: ApiError = {
@@ -125,6 +130,7 @@ class ApiClient {
                 status: response.status,
                 data,
             };
+            console.error(`[API] ${response.status} Error Data:`, JSON.stringify(data, null, 2));
             throw error;
         }
 
@@ -132,105 +138,114 @@ class ApiClient {
     }
 
     /**
+     * Internal request method with retry logic
+     */
+    private async request<T>(
+        endpoint: string,
+        method: string,
+        body?: any,
+        options?: RequestOptions
+    ): Promise<T> {
+        const url = this.buildUrl(endpoint);
+        const isFormData = body instanceof FormData;
+        const headers = this.buildHeaders(options?.headers);
+
+        if (isFormData) {
+            headers.delete('Content-Type');
+            console.log(`[API] ${method} Request with FormData (Content-Type deleted for fetch)`);
+        } else {
+            console.log(`[API] ${method} Request with Headers:`, JSON.stringify(Object.fromEntries(headers as any), null, 2));
+        }
+
+        const fetchOptions: RequestOptions = {
+            ...options,
+            method,
+            headers,
+            body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
+        };
+
+        try {
+            const response = await this.fetchWithTimeout(url, fetchOptions);
+
+            // Handle 401 Unauthorized - trigger refresh
+            if (response.status === 401 && !endpoint.includes('/auth/refresh') && this.refreshHandler) {
+                if (this.isRefreshing) {
+                    // Queue request to retry after refresh finishes
+                    return new Promise((resolve, reject) => {
+                        this.failedQueue.push({
+                            resolve: async (token: string) => {
+                                fetchOptions.headers = this.buildHeaders(options?.headers);
+                                const retryResponse = await this.fetchWithTimeout(url, fetchOptions);
+                                resolve(await this.handleResponse<T>(retryResponse));
+                            },
+                            reject: (err: any) => reject(err),
+                        });
+                    });
+                }
+
+                this.isRefreshing = true;
+
+                try {
+                    const newToken = await this.refreshHandler();
+                    if (newToken) {
+                        this.isRefreshing = false;
+                        // Retry all queued requests
+                        this.failedQueue.forEach((prom) => prom.resolve(newToken));
+                        this.failedQueue = [];
+
+                        // Retry current request
+                        fetchOptions.headers = this.buildHeaders(options?.headers);
+                        const retryResponse = await this.fetchWithTimeout(url, fetchOptions);
+                        return await this.handleResponse<T>(retryResponse);
+                    }
+                } catch (refreshError) {
+                    this.isRefreshing = false;
+                    this.failedQueue.forEach((prom) => prom.reject(refreshError));
+                    this.failedQueue = [];
+                    throw refreshError;
+                }
+            }
+
+            return await this.handleResponse<T>(response);
+        } catch (error) {
+            console.error(`[API] ${method} Request failed:`, url, error);
+            throw error;
+        }
+    }
+
+    /**
      * GET request
      */
     async get<T>(endpoint: string, options?: RequestOptions): Promise<T> {
-        const url = this.buildUrl(endpoint);
-        const response = await this.fetchWithTimeout(url, {
-            ...options,
-            method: 'GET',
-            headers: this.buildHeaders(options?.headers),
-        });
-        return this.handleResponse<T>(response);
+        return this.request<T>(endpoint, 'GET', undefined, options);
     }
 
     /**
      * POST request
      */
     async post<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
-        const url = this.buildUrl(endpoint);
-        const isFormData = body instanceof FormData;
-        const headers = this.buildHeaders(options?.headers);
-
-        if (isFormData) {
-            headers.delete('Content-Type');
-        }
-
-        console.log('[API] POST Request:', url);
-        if (!isFormData) {
-            console.log('[API] POST Body:', JSON.stringify(body));
-        } else {
-            console.log('[API] POST Body: [FormData]');
-        }
-
-        try {
-            const response = await this.fetchWithTimeout(url, {
-                ...options,
-                method: 'POST',
-                headers,
-                body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
-            });
-            console.log('[API] Response status:', response.status);
-            return this.handleResponse<T>(response);
-        } catch (error: any) {
-            console.error('[API] Request failed:', error?.message || error);
-            throw error;
-        }
+        return this.request<T>(endpoint, 'POST', body, options);
     }
 
     /**
      * PUT request
      */
     async put<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
-        const url = this.buildUrl(endpoint);
-        const isFormData = body instanceof FormData;
-        const headers = this.buildHeaders(options?.headers);
-
-        if (isFormData) {
-            headers.delete('Content-Type');
-        }
-
-        const response = await this.fetchWithTimeout(url, {
-            ...options,
-            method: 'PUT',
-            headers,
-            body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
-        });
-        return this.handleResponse<T>(response);
+        return this.request<T>(endpoint, 'PUT', body, options);
     }
 
     /**
      * PATCH request
      */
     async patch<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
-        const url = this.buildUrl(endpoint);
-        const isFormData = body instanceof FormData;
-        const headers = this.buildHeaders(options?.headers);
-
-        if (isFormData) {
-            headers.delete('Content-Type');
-        }
-
-        const response = await this.fetchWithTimeout(url, {
-            ...options,
-            method: 'PATCH',
-            headers,
-            body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
-        });
-        return this.handleResponse<T>(response);
+        return this.request<T>(endpoint, 'PATCH', body, options);
     }
 
     /**
      * DELETE request
      */
     async delete<T>(endpoint: string, options?: RequestOptions): Promise<T> {
-        const url = this.buildUrl(endpoint);
-        const response = await this.fetchWithTimeout(url, {
-            ...options,
-            method: 'DELETE',
-            headers: this.buildHeaders(options?.headers),
-        });
-        return this.handleResponse<T>(response);
+        return this.request<T>(endpoint, 'DELETE', undefined, options);
     }
 }
 

@@ -377,4 +377,7 @@ export const authService = {
     },
 };
 
+// Set the refresh handler for the API client
+api.setRefreshHandler(() => authService.refreshToken());
+
 export default authService;

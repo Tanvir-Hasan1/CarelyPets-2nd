@@ -1,6 +1,7 @@
 import EditIcon from "@/assets/images/icons/edit.svg";
 import FemaleIcon from "@/assets/images/icons/female.svg";
 import MaleIcon from "@/assets/images/icons/male.svg";
+import DeleteModal from "@/components/ui/DeleteModal";
 import Header from "@/components/ui/Header";
 import {
     BorderRadius,
@@ -22,7 +23,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Alert,
     Dimensions,
@@ -41,11 +42,36 @@ const { width } = Dimensions.get("window");
 export default function PetDetailsScreen({ id }: { id: string }) {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { pets, deletePet } = usePetStore();
+    const { pets, deletePet, fetchPetById, isLoading } = usePetStore();
     const pet = pets.find((p) => p.id === id);
     const [activeSlide, setActiveSlide] = useState(0);
+    const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+
+    useEffect(() => {
+        if (id) {
+            fetchPetById(id);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        if (pet) {
+            console.log("[PetDetailsScreen] Pet Data:", pet);
+        }
+    }, [pet]);
 
     if (!pet) {
+        if (isLoading) {
+            return (
+                <View style={styles.center}>
+                    <View style={styles.container}>
+                        <Header title="Pet Facts" />
+                        <View style={styles.center}>
+                            <Text>Loading pet details...</Text>
+                        </View>
+                    </View>
+                </View>
+            );
+        }
         return (
             <View style={styles.center}>
                 <Text>Pet not found</Text>
@@ -57,21 +83,17 @@ export default function PetDetailsScreen({ id }: { id: string }) {
     }
 
     const handleDelete = () => {
-        Alert.alert(
-            "Delete Pet",
-            `Are you sure you want to delete ${pet.name}?`,
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: () => {
-                        deletePet(pet.id);
-                        router.back();
-                    }
-                }
-            ]
-        );
+        setIsDeleteModalVisible(true);
+    };
+
+    const confirmDelete = async () => {
+        const result = await deletePet(pet.id);
+        if (result.success) {
+            setIsDeleteModalVisible(false);
+            router.back();
+        } else {
+            Alert.alert("Error", result.message);
+        }
     };
 
     const healthRecords = [
@@ -84,7 +106,11 @@ export default function PetDetailsScreen({ id }: { id: string }) {
         { id: '7', title: 'Other', date: 'Last updated Jan 6, 2025', icon: Note01Icon, bg: '#FAFAFA', color: '#757575' },
     ];
 
-    const images = pet.snaps && pet.snaps.length > 0 ? pet.snaps : [pet.image || "https://images.unsplash.com/photo-1543852786-1cf6624b9987"];
+    const images = (pet.photos && pet.photos.length > 0)
+        ? pet.photos
+        : (pet.snaps && pet.snaps.length > 0
+            ? pet.snaps
+            : [pet.avatarUrl || pet.image || "https://images.unsplash.com/photo-1543852786-1cf6624b9987"]);
 
     const renderItem = ({ item }: { item: string }) => (
         <Image source={{ uri: item }} style={styles.sliderImage} />
@@ -167,7 +193,7 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                             </View>
                             <View>
                                 <Text style={styles.statLabel}>Weight</Text>
-                                <Text style={styles.statValue}>{pet.weight} lbs</Text>
+                                <Text style={styles.statValue}>{pet.weightLbs} lbs</Text>
                             </View>
                         </View>
                     </View>
@@ -175,13 +201,13 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                     {/* Tags */}
                     <View style={styles.tagRow}>
                         <View style={[styles.tag, { backgroundColor: '#E8F5E9' }]}>
-                            <Text style={[styles.tagText, { color: '#2E7D32' }]}>{pet.vaccinated === 'Yes' ? 'Vaccinated' : 'Not Vaccinated'}</Text>
+                            <Text style={[styles.tagText, { color: '#2E7D32' }]}>{pet.vaccinated ? 'Vaccinated' : 'Not Vaccinated'}</Text>
                         </View>
                         <View style={[styles.tag, { backgroundColor: '#F3E5F5' }]}>
-                            <Text style={[styles.tagText, { color: '#7B1FA2' }]}>{pet.neutered === 'Yes' ? 'Neutered' : 'Not Neutered'}</Text>
+                            <Text style={[styles.tagText, { color: '#7B1FA2' }]}>{pet.neutered ? 'Neutered' : 'Not Neutered'}</Text>
                         </View>
                         <View style={[styles.tag, { backgroundColor: '#E0F7FA' }]}>
-                            <Text style={[styles.tagText, { color: '#006064' }]}>{pet.trained === 'Yes' ? 'Trained' : 'Not Trained'}</Text>
+                            <Text style={[styles.tagText, { color: '#006064' }]}>{pet.trained ? 'Trained' : 'Not Trained'}</Text>
                         </View>
                     </View>
 
@@ -247,6 +273,14 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                     </View>
                 </View>
             </ScrollView>
+
+            <DeleteModal
+                visible={isDeleteModalVisible}
+                onClose={() => setIsDeleteModalVisible(false)}
+                onConfirm={confirmDelete}
+                title="Delete Pet"
+                description={`Are you sure you want to delete ${pet.name}? This action cannot be undone.`}
+            />
         </View>
     );
 }

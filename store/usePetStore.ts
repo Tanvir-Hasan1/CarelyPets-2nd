@@ -37,7 +37,7 @@ export interface Pet {
     type: string;
     species?: string;
     breed: string;
-    age: string | number;
+    age: number;
     weight?: string;
     weightLbs?: number;
     gender: 'Male' | 'Female' | 'male' | 'female';
@@ -49,11 +49,12 @@ export interface Pet {
     bio?: string;
     snaps?: string[];
     photos?: string[];
-    trained: string | boolean;
-    vaccinated: string | boolean;
-    neutered: string | boolean;
+    trained: boolean;
+    vaccinated: boolean;
+    neutered: boolean;
     status?: "Available" | "Adopted";
     healthRecords?: HealthRecord[];
+    medicalRecords?: any[];
     createdAt?: string;
     updatedAt?: string;
 }
@@ -63,10 +64,11 @@ interface PetState {
     isLoading: boolean;
     error: string | null;
     fetchPets: () => Promise<void>;
+    fetchPetById: (id: string) => Promise<void>;
     createPet: (formData: FormData) => Promise<{ success: boolean; message: string; data?: Pet }>;
     addPet: (pet: Pet) => void;
-    deletePet: (id: string) => void;
-    updatePet: (pet: Pet) => void;
+    deletePet: (id: string) => Promise<{ success: boolean; message: string }>;
+    updatePet: (data: FormData | (Partial<Pet> & { id: string })) => Promise<{ success: boolean; message: string; data?: Pet }>;
     addHealthRecord: (petId: string, record: HealthRecord) => void;
     deleteHealthRecord: (petId: string, recordId: string) => void;
     updateHealthRecord: (petId: string, record: HealthRecord) => void;
@@ -88,6 +90,21 @@ export const usePetStore = create<PetState>((set, get) => ({
         }
     },
 
+    fetchPetById: async (id: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const pet = await petService.getPetById(id);
+            set((state) => ({
+                pets: state.pets.find(p => p.id === id)
+                    ? state.pets.map(p => p.id === id ? pet : p)
+                    : [...state.pets, pet],
+                isLoading: false
+            }));
+        } catch (error: any) {
+            set({ error: error.message || 'Failed to fetch pet details', isLoading: false });
+        }
+    },
+
     createPet: async (formData: FormData) => {
         set({ isLoading: true, error: null });
         try {
@@ -105,10 +122,53 @@ export const usePetStore = create<PetState>((set, get) => ({
     },
 
     addPet: (pet) => set((state) => ({ pets: [...state.pets, { ...pet, healthRecords: pet.healthRecords || [] }] })),
-    deletePet: (id) => set((state) => ({ pets: state.pets.filter((p) => p.id !== id) })),
-    updatePet: (pet) => set((state) => ({
-        pets: state.pets.map((p) => p.id === pet.id ? { ...pet, healthRecords: p.healthRecords } : p)
-    })),
+
+    deletePet: async (id) => {
+        set({ isLoading: true, error: null });
+        try {
+            await petService.deletePet(id);
+            set((state) => ({
+                pets: state.pets.filter((p) => p.id !== id),
+                isLoading: false
+            }));
+            return { success: true, message: 'Pet deleted successfully' };
+        } catch (error: any) {
+            const message = error.message || 'Failed to delete pet';
+            set({ error: message, isLoading: false });
+            return { success: false, message };
+        }
+    },
+
+    updatePet: async (data: FormData | (Partial<Pet> & { id: string })) => {
+        set({ isLoading: true, error: null });
+        try {
+            let petId: string;
+            let updateData: FormData | Partial<Pet>;
+
+            if (data instanceof FormData) {
+                // @ts-ignore
+                const parts = data._parts || [];
+                const idPart = parts.find(([key]: [string, any]) => key === 'id');
+                if (!idPart) throw new Error('Pet ID missing from update data');
+                petId = idPart[1];
+                updateData = data;
+            } else {
+                petId = data.id;
+                updateData = data;
+            }
+
+            const updatedPet = await petService.updatePet(petId, updateData);
+            set((state) => ({
+                pets: state.pets.map((p) => p.id === petId ? updatedPet : p),
+                isLoading: false
+            }));
+            return { success: true, message: 'Pet updated successfully', data: updatedPet };
+        } catch (error: any) {
+            const message = error.message || 'Failed to update pet';
+            set({ error: message, isLoading: false });
+            return { success: false, message };
+        }
+    },
     addHealthRecord: (petId, record) => set((state) => ({
         pets: state.pets.map((p) =>
             p.id === petId

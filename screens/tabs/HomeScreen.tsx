@@ -7,20 +7,26 @@ import WelcomeBanner from "@/components/home/WelcomeBanner";
 import Header from "@/components/ui/Header";
 import { Colors } from "@/constants/colors";
 import { useAuthStore } from "@/store/useAuthStore";
+import { usePetStore } from "@/store/usePetStore";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import { RefreshControl, ScrollView, StatusBar, StyleSheet, View } from "react-native";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { fetchUser, isLoading } = useAuthStore();
+  const { fetchUser, isLoading: isAuthLoading } = useAuthStore();
+  const { fetchPets, isLoading: isPetsLoading } = usePetStore();
   const [refreshing, setRefreshing] = React.useState(false);
+
+  useEffect(() => {
+    fetchPets();
+  }, []);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    await fetchUser();
+    await Promise.all([fetchUser(), fetchPets()]);
     setRefreshing(false);
-  }, [fetchUser]);
+  }, [fetchUser, fetchPets]);
 
   return (
     <View style={styles.safeArea}>
