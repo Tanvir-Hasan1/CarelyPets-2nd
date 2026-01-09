@@ -314,66 +314,93 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
     }
 
     try {
-      const formData = new FormData();
-      // Only append ID if needed by backend in body, usually URL is enough
-      // formData.append("id", initialData.id); 
-      formData.append("name", name);
-      formData.append("type", type);
-      formData.append("species", type);
-      formData.append("breed", breed);
-      formData.append("age", age);
-      formData.append("weightLbs", weight);
-      formData.append("gender", gender);
-      formData.append("trained", JSON.stringify(trained));
-      formData.append("vaccinated", JSON.stringify(vaccinated));
-      formData.append("neutered", JSON.stringify(neutered));
-      formData.append("personality", JSON.stringify(traits));
-      formData.append("bio", about);
-      formData.append("about", about);
+      // Check if we have new images to upload
+      const hasNewAvatar = avatar && avatar.startsWith('file://');
+      const hasNewSnaps = snaps.some(snap => snap.uri.startsWith('file://'));
+      const shouldSendFormData = hasNewAvatar || hasNewSnaps;
 
-      console.log("[EditPetScreen] FormData entries:");
-      // @ts-ignore
-      if (formData._parts) {
-        // @ts-ignore
-        formData._parts.forEach(([key, value]) => {
-          console.log(`[EditPetScreen] ${key}:`, typeof value === 'object' ? '[File/Object]' : value);
-        });
-      }
+      if (shouldSendFormData) {
+        const formData = new FormData();
+        // Remove id from FormData body - passed separately to updatePet
+        formData.append("name", name);
+        formData.append("type", type);
+        formData.append("species", type);
+        formData.append("breed", breed);
+        formData.append("age", age);
+        formData.append("weightLbs", weight);
+        formData.append("gender", gender);
+        formData.append("trained", JSON.stringify(trained));
+        formData.append("vaccinated", JSON.stringify(vaccinated));
+        formData.append("neutered", JSON.stringify(neutered));
+        // personality is the correct key in swagger
+        formData.append("personality", JSON.stringify(traits));
+        formData.append("about", about);
+        formData.append("bio", about);
 
-      // Append Avatar if it's new (has file:// scheme)
-      if (avatar && avatar.startsWith('file://')) {
-        const filename = avatar.split('/').pop() || 'avatar.jpg';
-        const type = `image/${filename.split('.').pop() || 'jpeg'}`;
-
-        formData.append('avatar', {
-          uri: Platform.OS === "android" ? avatar : avatar.replace("file://", ""),
-          name: filename,
-          type,
-        } as any);
-      }
-
-      // Append Snaps - align with AddPetScreen field name "files"
-      snaps.forEach((snap, index) => {
-        if (snap.uri.startsWith('file://')) {
-          const filename = snap.uri.split('/').pop() || `snap_${index}.jpg`;
+        // Append Avatar if it's new - use avatarUrl key from swagger
+        if (hasNewAvatar) {
+          const filename = avatar.split('/').pop() || 'avatar.jpg';
           const type = `image/${filename.split('.').pop() || 'jpeg'}`;
 
-          formData.append('files', {
-            uri: Platform.OS === "android" ? snap.uri : snap.uri.replace("file://", ""),
+          formData.append('avatarUrl', {
+            uri: Platform.OS === "android" ? avatar : avatar.replace("file://", ""),
             name: filename,
             type,
           } as any);
-        } else {
-          // If it's an existing URL, we send it as a string
-          formData.append('existingPhotos', snap.uri);
+        } else if (avatar) {
+          formData.append('avatarUrl', avatar);
         }
-      });
 
-      const result = await updatePet(formData);
-      if (result.success) {
-        router.back();
+        // Append Snaps - use photos key from swagger for both files and strings
+        snaps.forEach((snap, index) => {
+          if (snap.uri.startsWith('file://')) {
+            const filename = snap.uri.split('/').pop() || `snap_${index}.jpg`;
+            const type = `image/${filename.split('.').pop() || 'jpeg'}`;
+
+            formData.append('photos', {
+              uri: Platform.OS === "android" ? snap.uri : snap.uri.replace("file://", ""),
+              name: filename,
+              type,
+            } as any);
+          } else {
+            // Existing URL
+            formData.append('photos', snap.uri);
+          }
+        });
+
+        const result = await updatePet(initialData.id, formData);
+        if (result.success) {
+          router.back();
+        } else {
+          alert(result.message || "Failed to update pet");
+        }
       } else {
-        alert(result.message || "Failed to update pet");
+        // Text-only update using JSON
+        const updateData: any = {
+          // id is removed from body, passed separately
+          name,
+          type,
+          species: type,
+          breed,
+          age: Number(age) || 0,
+          weightLbs: Number(weight) || 0,
+          gender,
+          trained,
+          vaccinated,
+          neutered,
+          personality: traits,
+          about,
+          bio: about,
+          avatarUrl: avatar,
+          photos: snaps.map(s => s.uri)
+        };
+
+        const result = await updatePet(initialData.id, updateData);
+        if (result.success) {
+          router.back();
+        } else {
+          alert(result.message || "Failed to update pet");
+        }
       }
     } catch (error: any) {
       console.error("Update pet error:", error);

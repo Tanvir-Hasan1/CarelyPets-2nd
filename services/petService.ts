@@ -53,9 +53,9 @@ export const petService = {
     /**
      * Update an existing pet
      */
-    async updatePet(petId: string, pet: FormData | Partial<Pet>): Promise<Pet> {
+    async updatePet(petId: string, pet: FormData | Partial<Pet>): Promise<ApiResponse<Pet>> {
         const response = await api.patch<ApiResponse<Pet>>(`/pets/${petId}`, pet);
-        return response.data;
+        return response;
     },
 
     /**

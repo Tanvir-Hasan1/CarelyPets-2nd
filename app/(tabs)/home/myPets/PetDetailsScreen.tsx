@@ -167,16 +167,27 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                     {/* Stats Grid */}
                     <View style={styles.statsGrid}>
                         <View style={styles.statItem}>
-                            <View style={[styles.statIcon, { backgroundColor: '#E3F2FD' }]}>
-                                {pet.gender === 'Female' ?
-                                    <FemaleIcon width={36} height={36} color="#1976D2" /> :
-                                    <MaleIcon width={36} height={34} color="#1976D2" />
-                                }
-                            </View>
-                            <View>
-                                <Text style={styles.statLabel}>Gender</Text>
-                                <Text style={styles.statValue}>{pet.gender}</Text>
-                            </View>
+                            {(() => {
+                                const isFemale = pet.gender?.toLowerCase() === 'female';
+                                const theme = isFemale
+                                    ? { bg: '#FCE4EC', color: '#E91E63' }
+                                    : { bg: '#E3F2FD', color: '#1976D2' };
+
+                                return (
+                                    <>
+                                        <View style={[styles.statIcon, { backgroundColor: theme.bg }]}>
+                                            {isFemale ?
+                                                <FemaleIcon width={36} height={36} color={theme.color} /> :
+                                                <MaleIcon width={36} height={34} color={theme.color} />
+                                            }
+                                        </View>
+                                        <View>
+                                            <Text style={styles.statLabel}>Gender</Text>
+                                            <Text style={styles.statValue}>{pet.gender}</Text>
+                                        </View>
+                                    </>
+                                );
+                            })()}
                         </View>
                         <View style={styles.statItem}>
                             <View style={[styles.statIcon, { backgroundColor: '#FFF3E0' }]}>
@@ -223,11 +234,25 @@ export default function PetDetailsScreen({ id }: { id: string }) {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Personality</Text>
                         <View style={styles.personalityRow}>
-                            {pet.traits && pet.traits.length > 0 ? pet.traits.map((trait, i) => (
-                                <View key={i} style={[styles.personalityTag, { backgroundColor: i % 2 === 0 ? '#E3F2FD' : '#FFF3E0' }]}>
-                                    <Text style={styles.personalityText}>{trait}</Text>
-                                </View>
-                            )) : <Text style={styles.aboutText}>No traits added.</Text>}
+                            {(() => {
+                                const traits = pet.personality || pet.traits || [];
+                                const chipColors = [
+                                    { bg: '#E3F2FD', text: '#1976D2' }, // Blue
+                                    { bg: '#FFF3E0', text: '#E65100' }, // Orange
+                                    { bg: '#E8F5E9', text: '#2E7D32' }, // Green
+                                    { bg: '#F3E5F5', text: '#7B1FA2' }, // Purple
+                                    { bg: '#E0F7FA', text: '#006064' }, // Cyan
+                                ];
+
+                                return traits.length > 0 ? traits.map((trait, i) => {
+                                    const style = chipColors[i % chipColors.length];
+                                    return (
+                                        <View key={i} style={[styles.personalityTag, { backgroundColor: style.bg }]}>
+                                            <Text style={[styles.personalityText, { color: style.text }]}>{trait}</Text>
+                                        </View>
+                                    );
+                                }) : <Text style={styles.aboutText}>No traits added.</Text>;
+                            })()}
                         </View>
                     </View>
 
@@ -467,11 +492,11 @@ const styles = StyleSheet.create({
     personalityTag: {
         paddingHorizontal: Spacing.md,
         paddingVertical: 6,
-        borderRadius: 8,
+        borderRadius: 20, // More rounded as per image
     },
     personalityText: {
         fontSize: 12,
-        color: Colors.text,
+        fontWeight: '500', // Medium weight
     },
     healthHeader: {
         flexDirection: 'row',

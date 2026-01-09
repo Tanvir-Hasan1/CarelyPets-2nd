@@ -68,7 +68,7 @@ interface PetState {
     createPet: (formData: FormData) => Promise<{ success: boolean; message: string; data?: Pet }>;
     addPet: (pet: Pet) => void;
     deletePet: (id: string) => Promise<{ success: boolean; message: string }>;
-    updatePet: (data: FormData | (Partial<Pet> & { id: string })) => Promise<{ success: boolean; message: string; data?: Pet }>;
+    updatePet: (id: string, data: FormData | Partial<Pet>) => Promise<{ success: boolean; message: string; data?: Pet }>;
     addHealthRecord: (petId: string, record: HealthRecord) => void;
     deleteHealthRecord: (petId: string, recordId: string) => void;
     updateHealthRecord: (petId: string, record: HealthRecord) => void;
@@ -139,30 +139,17 @@ export const usePetStore = create<PetState>((set, get) => ({
         }
     },
 
-    updatePet: async (data: FormData | (Partial<Pet> & { id: string })) => {
+    updatePet: async (id: string, updateData: FormData | Partial<Pet>) => {
         set({ isLoading: true, error: null });
         try {
-            let petId: string;
-            let updateData: FormData | Partial<Pet>;
+            const response = await petService.updatePet(id, updateData);
+            const updatedPet = response.data;
 
-            if (data instanceof FormData) {
-                // @ts-ignore
-                const parts = data._parts || [];
-                const idPart = parts.find(([key]: [string, any]) => key === 'id');
-                if (!idPart) throw new Error('Pet ID missing from update data');
-                petId = idPart[1];
-                updateData = data;
-            } else {
-                petId = data.id;
-                updateData = data;
-            }
-
-            const updatedPet = await petService.updatePet(petId, updateData);
             set((state) => ({
-                pets: state.pets.map((p) => p.id === petId ? updatedPet : p),
+                pets: state.pets.map((p) => p.id === id ? updatedPet : p),
                 isLoading: false
             }));
-            return { success: true, message: 'Pet updated successfully', data: updatedPet };
+            return { success: true, message: response.message || 'Pet updated successfully', data: updatedPet };
         } catch (error: any) {
             const message = error.message || 'Failed to update pet';
             set({ error: message, isLoading: false });
