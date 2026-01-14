@@ -18,7 +18,7 @@ const MoreSection = () => {
                     icon={Map}
                     label="Map"
                     iconColor="#006D77"
-                    onPress={() => { }}
+                    onPress={() => { router.push("/(tabs)/account/map") }}
                 />
                 <View style={styles.divider} />
                 <MenuItem

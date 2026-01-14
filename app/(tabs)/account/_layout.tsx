@@ -12,6 +12,7 @@ export default function AccountLayout() {
             <Stack.Screen name="service-history/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="adoption-history/index" options={{ headerShown: false }} />
             <Stack.Screen name="adoption-history/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="map" options={{ headerShown: false }} />
         </Stack>
     );
 }
