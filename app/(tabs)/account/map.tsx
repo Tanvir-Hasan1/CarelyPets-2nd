@@ -20,6 +20,7 @@ interface SelectedPlace {
   isOpen?: boolean;
   phoneNumber?: string;
   website?: string;
+  category?: "vet" | "store" | "search";
 }
 
 export default function MapScreen() {
@@ -29,7 +30,22 @@ export default function MapScreen() {
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(
     null
   );
+  const [nearbyPlaces, setNearbyPlaces] = useState<SelectedPlace[]>([]);
+  const [isLoadingNearby, setIsLoadingNearby] = useState<boolean>(false);
   const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+
+  const MAP_STYLE = [
+    {
+      featureType: "poi",
+      elementType: "labels",
+      stylers: [{ visibility: "off" }],
+    },
+    {
+      featureType: "transit",
+      elementType: "labels",
+      stylers: [{ visibility: "off" }],
+    },
+  ];
 
   const INITIAL_REGION: Region = {
     latitude: 40.7128,
@@ -43,9 +59,77 @@ export default function MapScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {
         setLocationPermission(true);
+        const location = await Location.getCurrentPositionAsync({});
+        fetchNearbyPlaces(location.coords.latitude, location.coords.longitude);
       }
     })();
   }, []);
+
+  const fetchNearbyPlaces = async (lat: number, lng: number) => {
+    setIsLoadingNearby(true);
+    console.log(`Fetching nearby places for: ${lat}, ${lng}`);
+
+    if (!googleMapsApiKey) {
+      console.error("Google Maps API Key is missing!");
+      setIsLoadingNearby(false);
+      return;
+    }
+
+    try {
+      // Types: veterinary_care, pet_store (covers feed and services)
+      const types = ["veterinary_care", "pet_store"];
+      const radius = 5000; // 5km
+
+      const allResults: SelectedPlace[] = [];
+
+      for (const type of types) {
+        const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${type}&key=${googleMapsApiKey}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        console.log(`Places API response for ${type}:`, data.status);
+
+        if (data.status === "OK") {
+          const places = data.results.map((item: any) => ({
+            latitude: item.geometry.location.lat,
+            longitude: item.geometry.location.lng,
+            title: item.name,
+            address: item.vicinity,
+            rating: item.rating,
+            userRatingsTotal: item.user_ratings_total,
+            photos: item.photos,
+            isOpen: item.opening_hours?.open_now,
+            placeId: item.place_id, // Added to fetch full details if needed
+            category: type === "veterinary_care" ? "vet" : "store",
+          }));
+          allResults.push(...places);
+        } else if (data.status === "ZERO_RESULTS") {
+          console.log(`No results found for ${type}`);
+        } else {
+          console.error(
+            `Places API Error (${type}):`,
+            data.error_message || data.status
+          );
+        }
+      }
+
+      // Remove duplicates based on latitude/longitude or title
+      const uniquePlaces = allResults.filter(
+        (place, index, self) =>
+          index ===
+          self.findIndex(
+            (t) =>
+              t.latitude === place.latitude && t.longitude === place.longitude
+          )
+      );
+
+      setNearbyPlaces(uniquePlaces);
+    } catch (error) {
+      console.error("Fetch nearby error:", error);
+    } finally {
+      setIsLoadingNearby(false);
+    }
+  };
 
   const handleRecenter = async () => {
     if (!locationPermission) {
@@ -72,6 +156,7 @@ export default function MapScreen() {
       };
 
       mapRef.current?.animateToRegion(region, 500);
+      fetchNearbyPlaces(latitude, longitude);
     } catch (error) {
       Alert.alert("Error", "Could not fetch location.");
     }
@@ -110,6 +195,7 @@ export default function MapScreen() {
           isOpen: result.opening_hours?.open_now,
           phoneNumber: result.formatted_phone_number,
           website: result.website,
+          category: "search",
         });
 
         mapRef.current?.animateToRegion(region, 1000);
@@ -160,7 +246,21 @@ export default function MapScreen() {
           showsUserLocation={locationPermission}
           showsMyLocationButton={false}
           onPoiClick={handlePoiClick}
+          customMapStyle={MAP_STYLE}
         >
+          {nearbyPlaces.map((place, index) => (
+            <Marker
+              key={`${place.latitude}-${place.longitude}-${index}`}
+              coordinate={{
+                latitude: place.latitude,
+                longitude: place.longitude,
+              }}
+              title={place.title}
+              description={place.address}
+              onPress={() => setSelectedPlace(place)}
+              pinColor={place.category === "vet" ? "#EF4444" : "#F59E0B"}
+            />
+          ))}
           {selectedPlace && (
             <Marker
               coordinate={{
@@ -168,6 +268,8 @@ export default function MapScreen() {
                 longitude: selectedPlace.longitude,
               }}
               title={selectedPlace.title}
+              description={selectedPlace.address}
+              pinColor="#3B82F6"
             />
           )}
         </MapView>
