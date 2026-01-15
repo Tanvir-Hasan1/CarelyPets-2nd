@@ -81,14 +81,11 @@ export default function MapScreen() {
     setIsSearchVisible(!isSearchVisible);
   };
 
-  const handlePlaceSelect = async (place: {
-    place_id: string;
-    description: string;
-  }) => {
+  const fetchPlaceDetails = async (placeId: string, description: string) => {
     try {
       const fields =
         "geometry,formatted_address,name,rating,user_ratings_total,photos,opening_hours,formatted_phone_number,website";
-      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=${fields}&key=${googleMapsApiKey}`;
+      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${googleMapsApiKey}`;
       const response = await fetch(url);
       const data = await response.json();
 
@@ -105,7 +102,7 @@ export default function MapScreen() {
         setSelectedPlace({
           latitude: lat,
           longitude: lng,
-          title: result.name || place.description,
+          title: result.name || description,
           address: result.formatted_address,
           rating: result.rating,
           userRatingsTotal: result.user_ratings_total,
@@ -121,6 +118,20 @@ export default function MapScreen() {
     } catch (error) {
       console.error("Place details error:", error);
       Alert.alert("Error", "Could not fetch place details.");
+    }
+  };
+
+  const handlePlaceSelect = async (place: {
+    place_id: string;
+    description: string;
+  }) => {
+    await fetchPlaceDetails(place.place_id, place.description);
+  };
+
+  const handlePoiClick = async (event: any) => {
+    const { placeId, name } = event.nativeEvent;
+    if (placeId) {
+      await fetchPlaceDetails(placeId, name);
     }
   };
 
@@ -148,6 +159,7 @@ export default function MapScreen() {
           initialRegion={INITIAL_REGION}
           showsUserLocation={locationPermission}
           showsMyLocationButton={false}
+          onPoiClick={handlePoiClick}
         >
           {selectedPlace && (
             <Marker

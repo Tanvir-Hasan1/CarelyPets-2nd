@@ -8,10 +8,12 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Image } from "expo-image";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Dimensions,
   Linking,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   ScrollView,
   Share,
   StyleSheet,
@@ -21,6 +23,7 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -61,16 +64,42 @@ export default function MapBottomSheet({
   onClose,
   apiKey,
 }: MapBottomSheetProps) {
+  const horizontalScrollRef = useRef<ScrollView>(null);
   const [activeTab, setActiveTab] = useState("Overview");
+  const tabs = ["Overview", "Reviews", "Photos"];
+  const { width: SCREEN_WIDTH } = Dimensions.get("window");
   const translateY = useSharedValue(MAX_HEIGHT - MIN_HEIGHT);
   const context = useSharedValue(0);
+  const scrollY = useSharedValue(0);
 
-  const gesture = Gesture.Pan()
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
+
+  const panGesture = Gesture.Pan()
     .activeOffsetY([-10, 10])
     .onStart(() => {
       context.value = translateY.value;
     })
     .onUpdate((event) => {
+      // If expanded and scrolling up, allow ScrollView to handle it
+      if (
+        translateY.value === 0 &&
+        scrollY.value > 0 &&
+        event.translationY < 0
+      ) {
+        return;
+      }
+
+      // If expanded and swiping down, only pan if at the top of scroll
+      if (
+        translateY.value === 0 &&
+        scrollY.value > 0 &&
+        event.translationY > 0
+      ) {
+        return;
+      }
+
       translateY.value = event.translationY + context.value;
       translateY.value = Math.max(translateY.value, 0);
       translateY.value = Math.min(translateY.value, MAX_HEIGHT - MIN_HEIGHT);
@@ -82,6 +111,9 @@ export default function MapBottomSheet({
         translateY.value = withSpring(MAX_HEIGHT - MIN_HEIGHT, { damping: 50 });
       }
     });
+
+  const scrollGesture = Gesture.Native();
+  const gesture = Gesture.Simultaneous(panGesture, scrollGesture);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -112,6 +144,24 @@ export default function MapBottomSheet({
     }
   };
 
+  const handleTabPress = (tab: string, index: number) => {
+    setActiveTab(tab);
+    horizontalScrollRef.current?.scrollTo({
+      x: index * SCREEN_WIDTH,
+      animated: true,
+    });
+  };
+
+  const handleHorizontalScroll = (
+    event: NativeSyntheticEvent<NativeScrollEvent>
+  ) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const page = Math.round(offsetX / SCREEN_WIDTH);
+    if (tabs[page] && tabs[page] !== activeTab) {
+      setActiveTab(tabs[page]);
+    }
+  };
+
   const renderPhoto = ({ item }: { item: PlacePhoto }) => (
     <Image
       source={{
@@ -129,10 +179,12 @@ export default function MapBottomSheet({
           <View style={styles.handle} />
         </View>
 
-        <ScrollView
+        <Animated.ScrollView
           showsVerticalScrollIndicator={false}
           style={styles.scrollView}
           stickyHeaderIndices={[2]} // Sticky Tabs
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
         >
           {/* Header Section */}
           <View style={styles.header}>
@@ -219,10 +271,10 @@ export default function MapBottomSheet({
 
           {/* Tabs */}
           <View style={styles.tabsContainer}>
-            {["Overview", "Reviews", "Photos"].map((tab) => (
+            {tabs.map((tab, index) => (
               <TouchableOpacity
                 key={tab}
-                onPress={() => setActiveTab(tab)}
+                onPress={() => handleTabPress(tab, index)}
                 style={[styles.tab, activeTab === tab && styles.activeTab]}
               >
                 <Text
@@ -237,16 +289,21 @@ export default function MapBottomSheet({
             ))}
           </View>
 
-          {/* Content Based on Tab */}
-          <View style={styles.content}>
-            {activeTab === "Overview" && (
-              <>
-                {photos && photos.length > 0 && (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.photoGallery}
-                  >
+          {/* Content Based on Tab - Now Swipeable */}
+          <ScrollView
+            ref={horizontalScrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={handleHorizontalScroll}
+            scrollEventThrottle={16}
+            style={styles.horizontalContent}
+          >
+            {/* Overview Section */}
+            <View style={[styles.tabContent, { width: SCREEN_WIDTH }]}>
+              {photos && photos.length > 0 && (
+                <View style={styles.photoGallery}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {photos.map((item) => (
                       <Image
                         key={item.photo_reference}
@@ -258,9 +315,38 @@ export default function MapBottomSheet({
                       />
                     ))}
                   </ScrollView>
-                )}
+                </View>
+              )}
 
+              <View style={styles.detailItem}>
+                <View style={styles.iconSquare}>
+                  <HugeiconsIcon
+                    icon={Location01Icon}
+                    size={20}
+                    color={Colors.primary}
+                  />
+                </View>
+                <Text style={styles.detailText}>{address}</Text>
+              </View>
+
+              {phoneNumber && (
                 <View style={styles.detailItem}>
+                  <View style={styles.iconSquare}>
+                    <HugeiconsIcon
+                      icon={CallIcon}
+                      size={20}
+                      color={Colors.primary}
+                    />
+                  </View>
+                  <Text style={styles.detailText}>{phoneNumber}</Text>
+                </View>
+              )}
+
+              {website && (
+                <TouchableOpacity
+                  style={styles.detailItem}
+                  onPress={handleWebsite}
+                >
                   <View style={styles.iconSquare}>
                     <HugeiconsIcon
                       icon={Location01Icon}
@@ -268,53 +354,24 @@ export default function MapBottomSheet({
                       color={Colors.primary}
                     />
                   </View>
-                  <Text style={styles.detailText}>{address}</Text>
-                </View>
+                  <Text style={[styles.detailText, { color: Colors.primary }]}>
+                    {website}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
-                {phoneNumber && (
-                  <View style={styles.detailItem}>
-                    <View style={styles.iconSquare}>
-                      <HugeiconsIcon
-                        icon={CallIcon}
-                        size={20}
-                        color={Colors.primary}
-                      />
-                    </View>
-                    <Text style={styles.detailText}>{phoneNumber}</Text>
-                  </View>
-                )}
-
-                {website && (
-                  <TouchableOpacity
-                    style={styles.detailItem}
-                    onPress={handleWebsite}
-                  >
-                    <View style={styles.iconSquare}>
-                      <HugeiconsIcon
-                        icon={Location01Icon}
-                        size={20}
-                        color={Colors.primary}
-                      />
-                    </View>
-                    <Text
-                      style={[styles.detailText, { color: Colors.primary }]}
-                    >
-                      {website}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
-
-            {activeTab === "Reviews" && (
+            {/* Reviews Section */}
+            <View style={[styles.tabContent, { width: SCREEN_WIDTH }]}>
               <View style={styles.reviewsPlaceholder}>
                 <Text style={styles.placeholderText}>
                   Reviews section coming soon...
                 </Text>
               </View>
-            )}
+            </View>
 
-            {activeTab === "Photos" && (
+            {/* Photos Section */}
+            <View style={[styles.tabContent, { width: SCREEN_WIDTH }]}>
               <View style={styles.photosTabContent}>
                 {photos && photos.length > 0 ? (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -335,9 +392,9 @@ export default function MapBottomSheet({
                   </Text>
                 )}
               </View>
-            )}
-          </View>
-        </ScrollView>
+            </View>
+          </ScrollView>
+        </Animated.ScrollView>
       </Animated.View>
     </GestureDetector>
   );
@@ -477,6 +534,12 @@ const styles = StyleSheet.create({
   },
   activeTabLabel: {
     color: Colors.primary,
+  },
+  horizontalContent: {
+    marginTop: Spacing.md,
+  },
+  tabContent: {
+    paddingHorizontal: Spacing.lg,
   },
   content: {
     padding: Spacing.lg,
