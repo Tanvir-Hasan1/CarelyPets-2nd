@@ -54,7 +54,11 @@ export const petService = {
      * Update an existing pet
      */
     async updatePet(petId: string, pet: FormData | Partial<Pet>): Promise<Pet> {
-        const response = await api.patch<ApiResponse<Pet>>(`/pets/${petId}`, pet);
+        // Use a longer timeout for file uploads (60 seconds instead of default 30)
+        const isFormData = pet instanceof FormData;
+        const options = isFormData ? { timeout: 60000 } : undefined;
+        
+        const response = await api.patch<ApiResponse<Pet>>(`/pets/${petId}`, pet, options);
         return response.data;
     },
 

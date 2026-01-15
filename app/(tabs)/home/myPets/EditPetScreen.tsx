@@ -15,13 +15,14 @@ import {
   MultiplicationSignIcon,
   PencilEdit02Icon,
   Upload02Icon,
-  ViewIcon
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -32,7 +33,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -179,24 +180,40 @@ const DropdownInput = ({
   onPress: () => void;
 }) => (
   <TouchableOpacity style={styles.dropdownButton} onPress={onPress}>
-    <Text style={[styles.dropdownText, !value && { color: Colors.placeholder }]}>
+    <Text
+      style={[styles.dropdownText, !value && { color: Colors.placeholder }]}
+    >
       {value || placeholder}
     </Text>
-    <HugeiconsIcon icon={ArrowDown01Icon} size={20} color={Colors.textSecondary} />
+    <HugeiconsIcon
+      icon={ArrowDown01Icon}
+      size={20}
+      color={Colors.textSecondary}
+    />
   </TouchableOpacity>
 );
 
 export default function EditPetScreen({ initialData }: { initialData: Pet }) {
+  console.log(
+    "[EditPetScreen] initialData:",
+    JSON.stringify(initialData, null, 2)
+  );
+
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const updatePet = usePetStore((state) => state.updatePet);
+  const isLoading = usePetStore((state) => state.isLoading);
 
-  const [avatar, setAvatar] = useState<string | null>(initialData.avatarUrl || initialData.image || null);
+  const [avatar, setAvatar] = useState<string | null>(
+    initialData.avatarUrl || initialData.image || null
+  );
   const [name, setName] = useState(initialData.name);
   const [type, setType] = useState(initialData.type);
   const [breed, setBreed] = useState(initialData.breed);
   const [age, setAge] = useState(String(initialData.age || ""));
-  const [weight, setWeight] = useState(initialData.weight || String(initialData.weightLbs || ""));
+  const [weight, setWeight] = useState(
+    initialData.weight || String(initialData.weightLbs || "")
+  );
   const [gender, setGender] = useState<"male" | "female">(
     initialData.gender?.toLowerCase() === "female" ? "female" : "male"
   );
@@ -204,19 +221,46 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
   const [vaccinated, setVaccinated] = useState(initialData.vaccinated);
   const [neutered, setNeutered] = useState(initialData.neutered);
   const [traitInput, setTraitInput] = useState("");
-  const [traits, setTraits] = useState<string[]>(initialData.personality || initialData.traits || []);
-  const [about, setAbout] = useState(initialData.bio || initialData.about || "");
+
+  // Parse personality/traits - handle both JSON string and array formats
+  const parsePersonality = (data: any): string[] => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (typeof data === "string") {
+      try {
+        const parsed = JSON.parse(data);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  const [traits, setTraits] = useState<string[]>(() => {
+    const personalityData = initialData.personality || initialData.traits;
+    console.log("[EditPetScreen] Raw personality data:", personalityData);
+    console.log("[EditPetScreen] Type:", typeof personalityData);
+
+    const parsed = parsePersonality(personalityData);
+    console.log("[EditPetScreen] Parsed traits:", parsed);
+
+    return parsed;
+  });
+  const [about, setAbout] = useState(
+    initialData.bio || initialData.about || ""
+  );
   const [snaps, setSnaps] = useState<ImagePicker.ImagePickerAsset[]>(
-    (initialData.photos || initialData.snaps)?.map(uri => ({
+    (initialData.photos || initialData.snaps)?.map((uri) => ({
       uri,
       width: 0,
       height: 0,
       assetId: null,
       base64: null,
       exif: null,
-      fileName: uri.split('/').pop() || "Existing Image",
+      fileName: uri.split("/").pop() || "Existing Image",
       fileSize: 0,
-      mimeType: 'image/jpeg'
+      mimeType: "image/jpeg",
     })) || []
   );
   const [viewedImage, setViewedImage] = useState<string | null>(null);
@@ -228,8 +272,25 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
 
   // Mock Options
   const PET_TYPES = ["Dog", "Cat", "Bird", "Rabbit", "Hamster", "Other"];
-  const DOG_BREEDS = ["Golden Retriever", "German Shepherd", "Bulldog", "Poodle", "Labrador", "Beagle", "Husky", "Mixed"];
-  const CAT_BREEDS = ["Persian", "Maine Coon", "Siamese", "Ragdoll", "Bengal", "Sphynx", "Mixed"];
+  const DOG_BREEDS = [
+    "Golden Retriever",
+    "German Shepherd",
+    "Bulldog",
+    "Poodle",
+    "Labrador",
+    "Beagle",
+    "Husky",
+    "Mixed",
+  ];
+  const CAT_BREEDS = [
+    "Persian",
+    "Maine Coon",
+    "Siamese",
+    "Ragdoll",
+    "Bengal",
+    "Sphynx",
+    "Mixed",
+  ];
 
   const getBreeds = () => {
     if (type === "Dog") return DOG_BREEDS;
@@ -244,7 +305,7 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
@@ -257,7 +318,7 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
 
   const pickAvatarFromGallery = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
@@ -270,7 +331,8 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
 
   const pickAvatarFromCamera = async () => {
     try {
-      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      const permissionResult =
+        await ImagePicker.requestCameraPermissionsAsync();
 
       if (permissionResult.granted === false) {
         alert("You've refused to allow this app to access your camera!");
@@ -315,8 +377,7 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
 
     try {
       const formData = new FormData();
-      // Only append ID if needed by backend in body, usually URL is enough
-      // formData.append("id", initialData.id); 
+      formData.append("id", initialData.id);
       formData.append("name", name);
       formData.append("type", type);
       formData.append("species", type);
@@ -336,41 +397,52 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
       if (formData._parts) {
         // @ts-ignore
         formData._parts.forEach(([key, value]) => {
-          console.log(`[EditPetScreen] ${key}:`, typeof value === 'object' ? '[File/Object]' : value);
+          console.log(
+            `[EditPetScreen] ${key}:`,
+            typeof value === "object" ? "[File/Object]" : value
+          );
         });
       }
 
       // Append Avatar if it's new (has file:// scheme)
-      if (avatar && avatar.startsWith('file://')) {
-        const filename = avatar.split('/').pop() || 'avatar.jpg';
-        const type = `image/${filename.split('.').pop() || 'jpeg'}`;
+      if (avatar && avatar.startsWith("file://")) {
+        const filename = avatar.split("/").pop() || "avatar.jpg";
+        const fileType = `image/${filename.split(".").pop() || "jpeg"}`;
 
-        formData.append('avatar', {
-          uri: Platform.OS === "android" ? avatar : avatar.replace("file://", ""),
+        formData.append("avatar", {
+          uri:
+            Platform.OS === "android" ? avatar : avatar.replace("file://", ""),
           name: filename,
-          type,
+          type: fileType,
         } as any);
+
+        console.log("[EditPetScreen] Adding avatar file:", filename);
       }
 
-      // Append Snaps - align with AddPetScreen field name "files"
-      snaps.forEach((snap, index) => {
-        if (snap.uri.startsWith('file://')) {
-          const filename = snap.uri.split('/').pop() || `snap_${index}.jpg`;
-          const type = `image/${filename.split('.').pop() || 'jpeg'}`;
+      // Append new image files (snaps with file:// scheme)
+      const newFiles = snaps.filter((snap) => snap.uri.startsWith("file://"));
+      newFiles.forEach((snap, index) => {
+        const filename = snap.uri.split("/").pop() || `snap_${index}.jpg`;
+        const fileType = `image/${filename.split(".").pop() || "jpeg"}`;
 
-          formData.append('files', {
-            uri: Platform.OS === "android" ? snap.uri : snap.uri.replace("file://", ""),
-            name: filename,
-            type,
-          } as any);
-        } else {
-          // If it's an existing URL, we send it as a string
-          formData.append('existingPhotos', snap.uri);
-        }
+        formData.append("files", {
+          uri:
+            Platform.OS === "android"
+              ? snap.uri
+              : snap.uri.replace("file://", ""),
+          name: filename,
+          type: fileType,
+        } as any);
+
+        console.log(`[EditPetScreen] Adding file ${index + 1}:`, filename);
       });
+
+      console.log(`[EditPetScreen] Total new files: ${newFiles.length}`);
+      console.log(`[EditPetScreen] Updating pet with ID: ${initialData.id}`);
 
       const result = await updatePet(formData);
       if (result.success) {
+        alert("Pet updated successfully!");
         router.back();
       } else {
         alert(result.message || "Failed to update pet");
@@ -382,247 +454,338 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      {/* Header */}
-      <Header title="Edit Pet Facts" />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Avatar Selection */}
-          <View style={styles.avatarContainer}>
-            <TouchableOpacity style={styles.avatarButton} onPress={() => setAvatarModalVisible(true)}>
-              {avatar ? (
-                <View>
-                  <Image source={{ uri: avatar }} style={styles.avatarImage} />
-                  <View style={styles.editIconBadge}>
-                    <HugeiconsIcon icon={PencilEdit02Icon} size={14} color="#ffffff" />
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <HugeiconsIcon icon={Camera01Icon} size={32} color={Colors.primary} />
-                  <View style={styles.addIconBadge}>
-                    <HugeiconsIcon icon={Add01Icon} size={12} color="#ffffff" />
-                  </View>
-                </View>
-              )}
-            </TouchableOpacity>
-            <Text style={styles.avatarLabel}>Update Profile Photo</Text>
+    <>
+      {/* Loading Modal */}
+      <Modal visible={isLoading} transparent={true} animationType="fade">
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContent}>
+            <ActivityIndicator size="large" color="#00BCD4" />
+            <Text style={styles.loadingText}>Updating pet information...</Text>
           </View>
+        </View>
+      </Modal>
 
-          {/* Pet Snaps */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <View>
-                <Text style={styles.sectionTitle}>Pet Snaps</Text>
-                <Text style={styles.sectionSubtitle}>(You can upload maximum 3 snaps)</Text>
-              </View>
-              <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-                <HugeiconsIcon icon={Upload02Icon} size={16} color="#006064" />
-                <Text style={styles.uploadButtonText}>Upload snaps</Text>
-              </TouchableOpacity>
-            </View>
+      {/* Main Content */}
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        {/* Header */}
+        <Header title="Edit Pet Facts" />
 
-            {snaps.map((snap, i) => (
-              <View key={i} style={styles.fileItem}>
-                <Image source={{ uri: snap.uri }} style={styles.fileIcon} />
-                <View style={styles.fileInfo}>
-                  <Text style={styles.fileName}>{snap.fileName || `Snap ${i + 1}`}</Text>
-                  <Text style={styles.fileType}>{snap.mimeType || 'image/jpeg'} • {snap.fileSize ? (snap.fileSize / 1024).toFixed(0) + 'KB' : 'Unknown size'}</Text>
-                </View>
-                <View style={styles.fileActions}>
-                  <TouchableOpacity onPress={() => setViewedImage(snap.uri)}>
-                    <HugeiconsIcon icon={ViewIcon} size={20} color={Colors.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => removeSnap(i)}>
-                    <HugeiconsIcon icon={MultiplicationSignIcon} size={20} color={Colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          {/* Pet Information */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Pet Information</Text>
-
-            <SectionLabel title="NAME" />
-            <TextInput
-              style={styles.input}
-              placeholder="Pet name"
-              placeholderTextColor={Colors.placeholder}
-              value={name}
-              onChangeText={setName}
-            />
-
-            <SectionLabel title="TYPE" />
-            <DropdownInput
-              placeholder="Pet type"
-              value={type}
-              onPress={() => setTypeModalVisible(true)}
-            />
-
-            <SectionLabel title="BREED" />
-            <DropdownInput
-              placeholder="Choose breed"
-              value={breed}
-              onPress={() => setBreedModalVisible(true)}
-            />
-
-            <SelectionModal
-              visible={typeModalVisible}
-              onClose={() => setTypeModalVisible(false)}
-              title="Select Pet Type"
-              options={PET_TYPES}
-              onSelect={(val) => {
-                if (val !== type) {
-                  setType(val);
-                  setBreed("");
-                }
-              }}
-            />
-
-            <SelectionModal
-              visible={breedModalVisible}
-              onClose={() => setBreedModalVisible(false)}
-              title="Select Breed"
-              options={getBreeds()}
-              onSelect={setBreed}
-            />
-
-            <AvatarSelectionModal
-              visible={avatarModalVisible}
-              onClose={() => setAvatarModalVisible(false)}
-              onCamera={pickAvatarFromCamera}
-              onGallery={pickAvatarFromGallery}
-            />
-
-            {/* Image Preview Modal */}
-            <Modal
-              visible={!!viewedImage}
-              transparent={true}
-              animationType="fade"
-              onRequestClose={() => setViewedImage(null)}
-            >
-              <View style={styles.previewModalOverlay}>
-                <TouchableOpacity style={styles.previewCloseButton} onPress={() => setViewedImage(null)}>
-                  <HugeiconsIcon icon={Cancel01Icon} size={32} color="#ffffff" />
-                </TouchableOpacity>
-                {viewedImage && (
-                  <Image source={{ uri: viewedImage }} style={styles.previewImage} resizeMode="contain" />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Avatar Selection */}
+            <View style={styles.avatarContainer}>
+              <TouchableOpacity
+                style={styles.avatarButton}
+                onPress={() => setAvatarModalVisible(true)}
+              >
+                {avatar ? (
+                  <View>
+                    <Image
+                      source={{ uri: avatar }}
+                      style={styles.avatarImage}
+                    />
+                    <View style={styles.editIconBadge}>
+                      <HugeiconsIcon
+                        icon={PencilEdit02Icon}
+                        size={14}
+                        color="#ffffff"
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <HugeiconsIcon
+                      icon={Camera01Icon}
+                      size={32}
+                      color={Colors.primary}
+                    />
+                    <View style={styles.addIconBadge}>
+                      <HugeiconsIcon
+                        icon={Add01Icon}
+                        size={12}
+                        color="#ffffff"
+                      />
+                    </View>
+                  </View>
                 )}
-              </View>
-            </Modal>
-
-            <View style={styles.row}>
-              <View style={[styles.flex1, { marginRight: Spacing.sm }]}>
-                <SectionLabel title="YEAR" />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Pet age"
-                  placeholderTextColor={Colors.placeholder}
-                  value={age}
-                  onChangeText={setAge}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={[styles.flex1, { marginLeft: Spacing.sm }]}>
-                <SectionLabel title="WEIGHT (lbs)" />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Pet weight"
-                  placeholderTextColor={Colors.placeholder}
-                  value={weight}
-                  onChangeText={setWeight}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            <SectionLabel title="GENDER" />
-            <RadioGroup
-              options={[{ label: "Male", value: "male" }, { label: "Female", value: "female" }]}
-              selected={gender}
-              onSelect={(val) => setGender(val as any)}
-            />
-
-            <SectionLabel title="TRAINED" />
-            <RadioGroup
-              options={[{ label: "Yes", value: true }, { label: "No", value: false }]}
-              selected={trained}
-              onSelect={setTrained}
-            />
-
-            <SectionLabel title="VACCINATED" />
-            <RadioGroup
-              options={[{ label: "Yes", value: true }, { label: "No", value: false }]}
-              selected={vaccinated}
-              onSelect={setVaccinated}
-            />
-
-            <SectionLabel title="NEUTERED" />
-            <RadioGroup
-              options={[{ label: "Yes", value: true }, { label: "No", value: false }]}
-              selected={neutered}
-              onSelect={setNeutered}
-            />
-
-            <SectionLabel title="PERSONALITY (max 5)" />
-            <View style={styles.traitInputRow}>
-              <TextInput
-                style={[styles.input, styles.flex1]}
-                placeholder="Type trait and press add"
-                placeholderTextColor={Colors.placeholder}
-                value={traitInput}
-                onChangeText={setTraitInput}
-              />
-              <TouchableOpacity style={styles.addButton} onPress={handleAddTrait}>
-                <HugeiconsIcon icon={Add01Icon} size={20} color={Colors.text} />
               </TouchableOpacity>
+              <Text style={styles.avatarLabel}>Update Profile Photo</Text>
             </View>
-            <View style={styles.traitsContainer}>
-              {traits.map((t, index) => (
-                <View key={index} style={styles.traitChip}>
-                  <Text style={styles.traitText}>{t}</Text>
-                  <TouchableOpacity onPress={() => removeTrait(index)}>
-                    <HugeiconsIcon icon={MultiplicationSignIcon} size={14} color={Colors.text} />
-                  </TouchableOpacity>
+
+            {/* Pet Snaps */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <View>
+                  <Text style={styles.sectionTitle}>Pet Snaps</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    (You can upload maximum 3 snaps)
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.uploadButton}
+                  onPress={pickImage}
+                >
+                  <HugeiconsIcon
+                    icon={Upload02Icon}
+                    size={16}
+                    color="#006064"
+                  />
+                  <Text style={styles.uploadButtonText}>Upload snaps</Text>
+                </TouchableOpacity>
+              </View>
+
+              {snaps.map((snap, i) => (
+                <View key={i} style={styles.fileItem}>
+                  <Image source={{ uri: snap.uri }} style={styles.fileIcon} />
+                  <View style={styles.fileInfo}>
+                    <Text style={styles.fileName}>
+                      {snap.fileName || `Snap ${i + 1}`}
+                    </Text>
+                    <Text style={styles.fileType}>
+                      {snap.mimeType || "image/jpeg"} •{" "}
+                      {snap.fileSize
+                        ? (snap.fileSize / 1024).toFixed(0) + "KB"
+                        : "Unknown size"}
+                    </Text>
+                  </View>
+                  <View style={styles.fileActions}>
+                    <TouchableOpacity onPress={() => setViewedImage(snap.uri)}>
+                      <HugeiconsIcon
+                        icon={ViewIcon}
+                        size={20}
+                        color={Colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => removeSnap(i)}>
+                      <HugeiconsIcon
+                        icon={MultiplicationSignIcon}
+                        size={20}
+                        color={Colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
             </View>
 
-            <SectionLabel title="ABOUT PET" />
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Write about your pet"
-              placeholderTextColor={Colors.placeholder}
-              value={about}
-              onChangeText={setAbout}
-              multiline
-            />
+            {/* Pet Information */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Pet Information</Text>
 
-          </View>
+              <SectionLabel title="NAME" />
+              <TextInput
+                style={styles.input}
+                placeholder="Pet name"
+                placeholderTextColor={Colors.placeholder}
+                value={name}
+                onChangeText={setName}
+              />
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveText}>Save</Text>
-            </TouchableOpacity>
-          </View>
+              <SectionLabel title="TYPE" />
+              <DropdownInput
+                placeholder="Pet type"
+                value={type}
+                onPress={() => setTypeModalVisible(true)}
+              />
 
-        </ScrollView>
-      </KeyboardAvoidingView>
+              <SectionLabel title="BREED" />
+              <DropdownInput
+                placeholder="Choose breed"
+                value={breed}
+                onPress={() => setBreedModalVisible(true)}
+              />
 
+              <SelectionModal
+                visible={typeModalVisible}
+                onClose={() => setTypeModalVisible(false)}
+                title="Select Pet Type"
+                options={PET_TYPES}
+                onSelect={(val) => {
+                  if (val !== type) {
+                    setType(val);
+                    setBreed("");
+                  }
+                }}
+              />
 
-    </View>
+              <SelectionModal
+                visible={breedModalVisible}
+                onClose={() => setBreedModalVisible(false)}
+                title="Select Breed"
+                options={getBreeds()}
+                onSelect={setBreed}
+              />
+
+              <AvatarSelectionModal
+                visible={avatarModalVisible}
+                onClose={() => setAvatarModalVisible(false)}
+                onCamera={pickAvatarFromCamera}
+                onGallery={pickAvatarFromGallery}
+              />
+
+              {/* Image Preview Modal */}
+              <Modal
+                visible={!!viewedImage}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setViewedImage(null)}
+              >
+                <View style={styles.previewModalOverlay}>
+                  <TouchableOpacity
+                    style={styles.previewCloseButton}
+                    onPress={() => setViewedImage(null)}
+                  >
+                    <HugeiconsIcon
+                      icon={Cancel01Icon}
+                      size={32}
+                      color="#ffffff"
+                    />
+                  </TouchableOpacity>
+                  {viewedImage && (
+                    <Image
+                      source={{ uri: viewedImage }}
+                      style={styles.previewImage}
+                      resizeMode="contain"
+                    />
+                  )}
+                </View>
+              </Modal>
+
+              <View style={styles.row}>
+                <View style={[styles.flex1, { marginRight: Spacing.sm }]}>
+                  <SectionLabel title="YEAR" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Pet age"
+                    placeholderTextColor={Colors.placeholder}
+                    value={age}
+                    onChangeText={setAge}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={[styles.flex1, { marginLeft: Spacing.sm }]}>
+                  <SectionLabel title="WEIGHT (lbs)" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Pet weight"
+                    placeholderTextColor={Colors.placeholder}
+                    value={weight}
+                    onChangeText={setWeight}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+
+              <SectionLabel title="GENDER" />
+              <RadioGroup
+                options={[
+                  { label: "Male", value: "male" },
+                  { label: "Female", value: "female" },
+                ]}
+                selected={gender}
+                onSelect={(val) => setGender(val as any)}
+              />
+
+              <SectionLabel title="TRAINED" />
+              <RadioGroup
+                options={[
+                  { label: "Yes", value: true },
+                  { label: "No", value: false },
+                ]}
+                selected={trained}
+                onSelect={setTrained}
+              />
+
+              <SectionLabel title="VACCINATED" />
+              <RadioGroup
+                options={[
+                  { label: "Yes", value: true },
+                  { label: "No", value: false },
+                ]}
+                selected={vaccinated}
+                onSelect={setVaccinated}
+              />
+
+              <SectionLabel title="NEUTERED" />
+              <RadioGroup
+                options={[
+                  { label: "Yes", value: true },
+                  { label: "No", value: false },
+                ]}
+                selected={neutered}
+                onSelect={setNeutered}
+              />
+
+              <SectionLabel title="PERSONALITY (max 5)" />
+              <View style={styles.traitInputRow}>
+                <TextInput
+                  style={[styles.input, styles.flex1]}
+                  placeholder="Type trait and press add"
+                  placeholderTextColor={Colors.placeholder}
+                  value={traitInput}
+                  onChangeText={setTraitInput}
+                />
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={handleAddTrait}
+                >
+                  <HugeiconsIcon
+                    icon={Add01Icon}
+                    size={20}
+                    color={Colors.text}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.traitsContainer}>
+                {traits.map((t, index) => (
+                  <View key={index} style={styles.traitChip}>
+                    <Text style={styles.traitText}>{t}</Text>
+                    <TouchableOpacity onPress={() => removeTrait(index)}>
+                      <HugeiconsIcon
+                        icon={MultiplicationSignIcon}
+                        size={14}
+                        color={Colors.text}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+
+              <SectionLabel title="ABOUT PET" />
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Write about your pet"
+                placeholderTextColor={Colors.placeholder}
+                value={about}
+                onChangeText={setAbout}
+                multiline
+              />
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => router.back()}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                <Text style={styles.saveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    </>
   );
 }
 
@@ -645,7 +808,7 @@ const styles = StyleSheet.create({
     color: "#006064",
   },
   headerActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.xs,
   },
   iconButton: {
@@ -674,15 +837,15 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: Spacing.md,
   },
   uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#B2EBF2',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#B2EBF2",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
@@ -690,12 +853,12 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: {
     fontSize: FontSizes.xs,
-    color: '#006064',
+    color: "#006064",
     fontWeight: FontWeights.medium,
   },
   fileItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.background,
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
@@ -704,7 +867,7 @@ const styles = StyleSheet.create({
   fileIcon: {
     width: 32,
     height: 32,
-    backgroundColor: '#E1BEE7', // Light purple
+    backgroundColor: "#E1BEE7", // Light purple
     borderRadius: BorderRadius.sm,
     marginRight: Spacing.md,
   },
@@ -721,7 +884,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   fileActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.md,
   },
   sectionLabel: {
@@ -777,34 +940,34 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   traitInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
   },
   addButton: {
-    backgroundColor: '#B2EBF2',
+    backgroundColor: "#B2EBF2",
     width: 48,
     height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: BorderRadius.md,
   },
   traitsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: Spacing.sm,
     marginTop: Spacing.sm,
   },
   traitChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EEEEEE',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EEEEEE",
     borderRadius: 20,
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
     gap: 6,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: "#E0E0E0",
   },
   traitText: {
     fontSize: FontSizes.xs,
@@ -813,22 +976,22 @@ const styles = StyleSheet.create({
   },
   textArea: {
     height: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   footer: {
     paddingVertical: Spacing.lg,
-    backgroundColor: '#F8F9FA',
-    flexDirection: 'row',
+    backgroundColor: "#F8F9FA",
+    flexDirection: "row",
     gap: Spacing.md,
   },
   cancelButton: {
     flex: 1,
     paddingVertical: Spacing.md,
-    backgroundColor: '#EEEEEE',
+    backgroundColor: "#EEEEEE",
     borderRadius: BorderRadius.md,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: "#E0E0E0",
   },
   cancelText: {
     fontSize: FontSizes.md,
@@ -838,19 +1001,19 @@ const styles = StyleSheet.create({
   saveButton: {
     flex: 1,
     paddingVertical: Spacing.md,
-    backgroundColor: '#00BCD4',
+    backgroundColor: "#00BCD4",
     borderRadius: BorderRadius.md,
-    alignItems: 'center',
+    alignItems: "center",
   },
   saveText: {
     fontSize: FontSizes.md,
     fontWeight: FontWeights.bold,
-    color: '#ffffff',
+    color: "#ffffff",
   },
   dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -863,20 +1026,20 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: Colors.background,
     borderTopLeftRadius: BorderRadius.lg,
     borderTopRightRadius: BorderRadius.lg,
     padding: Spacing.lg,
-    maxHeight: '50%',
+    maxHeight: "50%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: Spacing.md,
   },
   modalTitle: {
@@ -914,7 +1077,7 @@ const styles = StyleSheet.create({
     height: "80%",
   },
   avatarContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: Spacing.xl,
   },
   avatarButton: {
@@ -940,24 +1103,24 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E0F7FA', // Light cyan bg
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#E0F7FA", // Light cyan bg
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: '#B2EBF2',
+    borderColor: "#B2EBF2",
   },
   addIconBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: '#00BCD4',
+    backgroundColor: "#00BCD4",
     width: 24,
     height: 24,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: "#ffffff",
   },
   avatarLabel: {
     fontSize: FontSizes.sm,
@@ -969,8 +1132,8 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   avatarOptionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: Spacing.md,
     backgroundColor: Colors.background,
     borderWidth: 1,
@@ -981,9 +1144,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E0F7FA',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#E0F7FA",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: Spacing.md,
   },
   avatarOptionText: {
@@ -992,16 +1155,35 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   editIconBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: '#00BCD4',
+    backgroundColor: "#00BCD4",
     width: 28,
     height: 28,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: "#ffffff",
+  },
+  loadingOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingContent: {
+    backgroundColor: Colors.background,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    alignItems: "center",
+    minWidth: 200,
+  },
+  loadingText: {
+    marginTop: Spacing.md,
+    fontSize: FontSizes.md,
+    color: Colors.text,
+    fontWeight: FontWeights.medium,
   },
 });

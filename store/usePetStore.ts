@@ -146,11 +146,21 @@ export const usePetStore = create<PetState>((set, get) => ({
             let updateData: FormData | Partial<Pet>;
 
             if (data instanceof FormData) {
-                // @ts-ignore
+                // @ts-ignore - Access React Native FormData internal structure
                 const parts = data._parts || [];
+                
+                console.log('[usePetStore] FormData parts count:', parts.length);
+                console.log('[usePetStore] Looking for id field in FormData...');
+                
                 const idPart = parts.find(([key]: [string, any]) => key === 'id');
-                if (!idPart) throw new Error('Pet ID missing from update data');
+                
+                if (!idPart) {
+                    console.error('[usePetStore] Available FormData keys:', parts.map(([key]: [string, any]) => key));
+                    throw new Error('Pet ID missing from update data. Make sure to append "id" to FormData.');
+                }
+                
                 petId = idPart[1];
+                console.log('[usePetStore] Extracted pet ID:', petId);
                 updateData = data;
             } else {
                 petId = data.id;
@@ -165,6 +175,7 @@ export const usePetStore = create<PetState>((set, get) => ({
             return { success: true, message: 'Pet updated successfully', data: updatedPet };
         } catch (error: any) {
             const message = error.message || 'Failed to update pet';
+            console.error('[usePetStore] Update pet error:', error);
             set({ error: message, isLoading: false });
             return { success: false, message };
         }
