@@ -1,8 +1,8 @@
 import Header from "@/components/ui/Header";
 import { Spacing } from "@/constants/colors";
 import * as Location from "expo-location";
-import { LocateFixed, Search } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import { LocateFixed } from "lucide-react-native";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -17,6 +17,7 @@ const { width } = Dimensions.get("window");
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   const [locationPermission, setLocationPermission] = useState<boolean>(false);
+  const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   const INITIAL_REGION: Region = {
     latitude: 40.7128,
@@ -28,7 +29,6 @@ export default function MapScreen() {
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-
       if (status === "granted") {
         setLocationPermission(true);
       }
@@ -38,7 +38,6 @@ export default function MapScreen() {
   const handleRecenter = async () => {
     if (!locationPermission) {
       const { status } = await Location.requestForegroundPermissionsAsync();
-
       if (status !== "granted") {
         Alert.alert(
           "Permission Denied",
@@ -46,13 +45,11 @@ export default function MapScreen() {
         );
         return;
       }
-
       setLocationPermission(true);
     }
 
     try {
       const location = await Location.getCurrentPositionAsync({});
-
       const { latitude, longitude } = location.coords;
 
       const region: Region = {
@@ -70,18 +67,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <Header
-        title="Map"
-        showBackButton
-        rightAction={
-          <TouchableOpacity
-            onPress={() => console.log("Search pressed")}
-            style={styles.iconButton}
-          >
-            <Search size={24} color="#1F2937" />
-          </TouchableOpacity>
-        }
-      />
+      <Header title="Map" showBackButton />
 
       <View style={styles.mapContainer}>
         <MapView
@@ -89,7 +75,7 @@ export default function MapScreen() {
           provider={PROVIDER_GOOGLE}
           style={styles.map}
           initialRegion={INITIAL_REGION}
-          showsUserLocation
+          showsUserLocation={locationPermission}
           showsMyLocationButton={false}
         />
 
@@ -113,30 +99,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-
   mapContainer: {
     flex: 1,
     position: "relative",
   },
-
   map: {
     width,
     height: "100%",
   },
-
-  iconButton: {
-    width: 44,
-    height: 44,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
   fabContainer: {
     position: "absolute",
-    bottom: Spacing.xl + Spacing.xxl,
+    bottom: Spacing.xxl + Spacing.xl,
     right: Spacing.md,
   },
-
   fab: {
     width: 56,
     height: 56,
