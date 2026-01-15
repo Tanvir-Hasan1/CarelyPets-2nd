@@ -1,20 +1,11 @@
 import { Colors, Spacing } from "@/constants/colors";
-import {
-  CallIcon,
-  Cancel01Icon,
-  Location01Icon,
-  Share01Icon,
-  StarIcon,
-} from "@hugeicons/core-free-icons";
+import { CallIcon, Share01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import { Image } from "expo-image";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
+  Alert,
   Dimensions,
   Linking,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  ScrollView,
   Share,
   StyleSheet,
   Text,
@@ -28,8 +19,12 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
+import MapSheetContent from "./MapSheetContent";
+import MapSheetHeader from "./MapSheetHeader";
+import MapSheetPhotoModal from "./MapSheetPhotoModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+
 const MIN_HEIGHT = 180;
 const MAX_HEIGHT = SCREEN_HEIGHT * 0.9;
 
@@ -64,358 +59,151 @@ export default function MapBottomSheet({
   onClose,
   apiKey,
 }: MapBottomSheetProps) {
-  const horizontalScrollRef = useRef<ScrollView>(null);
-  const [activeTab, setActiveTab] = useState("Overview");
-  const tabs = ["Overview", "Reviews", "Photos"];
-  const { width: SCREEN_WIDTH } = Dimensions.get("window");
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const translateY = useSharedValue(MAX_HEIGHT - MIN_HEIGHT);
   const context = useSharedValue(0);
   const scrollY = useSharedValue(0);
 
-  const scrollHandler = useAnimatedScrollHandler((event) => {
-    scrollY.value = event.contentOffset.y;
+  /* ---------------- Scroll Handler ---------------- */
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
   });
 
+  /* ---------------- Pan Gesture ---------------- */
   const panGesture = Gesture.Pan()
-    .activeOffsetY([-10, 10])
+    .activeOffsetY([-15, 15]) // require clear vertical intent
+    .failOffsetX([-10, 10]) // allow horizontal scroll
     .onStart(() => {
       context.value = translateY.value;
     })
     .onUpdate((event) => {
-      // If expanded and scrolling up, allow ScrollView to handle it
-      if (
-        translateY.value === 0 &&
-        scrollY.value > 0 &&
-        event.translationY < 0
-      ) {
-        return;
-      }
+      // Prevent dragging sheet when scrolling content
+      if (translateY.value === 0 && scrollY.value > 0) return;
 
-      // If expanded and swiping down, only pan if at the top of scroll
-      if (
-        translateY.value === 0 &&
-        scrollY.value > 0 &&
-        event.translationY > 0
-      ) {
-        return;
-      }
+      let nextTranslateY = context.value + event.translationY;
 
-      translateY.value = event.translationY + context.value;
-      translateY.value = Math.max(translateY.value, 0);
-      translateY.value = Math.min(translateY.value, MAX_HEIGHT - MIN_HEIGHT);
+      nextTranslateY = Math.max(0, nextTranslateY);
+      nextTranslateY = Math.min(MAX_HEIGHT - MIN_HEIGHT, nextTranslateY);
+
+      translateY.value = nextTranslateY;
     })
     .onEnd(() => {
-      if (translateY.value < (MAX_HEIGHT - MIN_HEIGHT) / 2) {
-        translateY.value = withSpring(0, { damping: 50 });
-      } else {
-        translateY.value = withSpring(MAX_HEIGHT - MIN_HEIGHT, { damping: 50 });
-      }
+      const midpoint = (MAX_HEIGHT - MIN_HEIGHT) / 2;
+
+      translateY.value =
+        translateY.value < midpoint
+          ? withSpring(0, { damping: 50 })
+          : withSpring(MAX_HEIGHT - MIN_HEIGHT, { damping: 50 });
     });
 
-  const scrollGesture = Gesture.Native();
-  const gesture = Gesture.Simultaneous(panGesture, scrollGesture);
+  /* ---------------- Animated Style ---------------- */
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }],
-    };
-  });
-
+  /* ---------------- Actions ---------------- */
   const handleCall = () => {
-    if (phoneNumber) {
-      Linking.openURL(`tel:${phoneNumber}`);
-    }
+    if (!phoneNumber) return;
+    const sanitized = phoneNumber.replace(/[^\d+]/g, "");
+    Linking.openURL(`tel:${sanitized}`).catch(() =>
+      Alert.alert("Error", "Could not open phone app.")
+    );
   };
 
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out ${title} at ${address}\n\n${website || ""}`,
-        title: title,
+        title,
+        message: `Check out ${title}\n${address || ""}\n${website || ""}`,
       });
-    } catch (error) {
-      console.error("Error sharing:", error);
-    }
+    } catch {}
   };
 
   const handleWebsite = () => {
-    if (website) {
-      Linking.openURL(website);
-    }
+    if (!website) return;
+    const url = website.startsWith("http") ? website : `https://${website}`;
+    Linking.openURL(url).catch(() => {});
   };
 
-  const handleTabPress = (tab: string, index: number) => {
-    setActiveTab(tab);
-    horizontalScrollRef.current?.scrollTo({
-      x: index * SCREEN_WIDTH,
-      animated: true,
-    });
-  };
-
-  const handleHorizontalScroll = (
-    event: NativeSyntheticEvent<NativeScrollEvent>
-  ) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const page = Math.round(offsetX / SCREEN_WIDTH);
-    if (tabs[page] && tabs[page] !== activeTab) {
-      setActiveTab(tabs[page]);
-    }
-  };
-
-  const renderPhoto = ({ item }: { item: PlacePhoto }) => (
-    <Image
-      source={{
-        uri: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${item.photo_reference}&key=${apiKey}`,
-      }}
-      style={styles.galleryImage}
-      contentFit="cover"
-    />
-  );
-
+  /* ---------------- Render ---------------- */
   return (
-    <GestureDetector gesture={gesture}>
+    <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.container, animatedStyle]}>
+        {/* Handle */}
         <View style={styles.handleContainer}>
           <View style={styles.handle} />
         </View>
 
         <Animated.ScrollView
-          showsVerticalScrollIndicator={false}
           style={styles.scrollView}
-          stickyHeaderIndices={[2]} // Sticky Tabs
+          showsVerticalScrollIndicator={false}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
         >
-          {/* Header Section */}
-          <View style={styles.header}>
-            <View style={styles.headerTop}>
-              <View style={styles.titleContainer}>
-                <Text style={styles.title} numberOfLines={2}>
-                  {title}
-                </Text>
-                <Text style={styles.categoryText}>
-                  Animal Service • Pet Care
-                </Text>
-              </View>
-              <View style={styles.headerActions}>
-                <TouchableOpacity style={styles.iconCircle}>
-                  <HugeiconsIcon
-                    icon={Share01Icon}
-                    size={20}
-                    color={Colors.text}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.iconCircle} onPress={onClose}>
-                  <HugeiconsIcon
-                    icon={Cancel01Icon}
-                    size={20}
-                    color={Colors.text}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
+          {/* Header */}
+          <MapSheetHeader
+            title={title}
+            rating={rating}
+            userRatingsTotal={userRatingsTotal}
+            isOpen={isOpen}
+            onShare={handleShare}
+            onClose={onClose}
+          />
 
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingText}>
-                {rating?.toFixed(1) || "N/A"}
-              </Text>
-              <View style={styles.stars}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <HugeiconsIcon
-                    key={star}
-                    icon={StarIcon}
-                    size={14}
-                    color={star <= (rating || 0) ? "#FFB800" : "#E5E7EB"}
-                    variant="solid"
-                  />
-                ))}
-              </View>
-              <Text style={styles.reviewCount}>({userRatingsTotal || 0})</Text>
-            </View>
-
-            <Text
-              style={[
-                styles.statusText,
-                { color: isOpen ? "#10B981" : "#EF4444" },
-              ]}
-            >
-              {isOpen ? "Open" : "Closed"} •{" "}
-              {isOpen ? "Closes 6 PM" : "Opens 9 AM"}
-            </Text>
-          </View>
-
-          {/* Action Buttons */}
+          {/* Actions */}
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.actionButton} onPress={handleCall}>
-              <View style={styles.btnRow}>
-                <HugeiconsIcon
-                  icon={CallIcon}
-                  size={20}
-                  color={Colors.primary}
-                />
-                <Text style={styles.actionLabel}>Call</Text>
-              </View>
+              <HugeiconsIcon icon={CallIcon} size={20} color={Colors.primary} />
+              <Text style={styles.actionLabel}>Call</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-              <View style={styles.btnRow}>
-                <HugeiconsIcon
-                  icon={Share01Icon}
-                  size={20}
-                  color={Colors.primary}
-                />
-                <Text style={styles.actionLabel}>Share</Text>
-              </View>
+              <HugeiconsIcon
+                icon={Share01Icon}
+                size={20}
+                color={Colors.primary}
+              />
+              <Text style={styles.actionLabel}>Share</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Tabs */}
-          <View style={styles.tabsContainer}>
-            {tabs.map((tab, index) => (
-              <TouchableOpacity
-                key={tab}
-                onPress={() => handleTabPress(tab, index)}
-                style={[styles.tab, activeTab === tab && styles.activeTab]}
-              >
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    activeTab === tab && styles.activeTabLabel,
-                  ]}
-                >
-                  {tab}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Content Based on Tab - Now Swipeable */}
-          <ScrollView
-            ref={horizontalScrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={handleHorizontalScroll}
-            scrollEventThrottle={16}
-            style={styles.horizontalContent}
-          >
-            {/* Overview Section */}
-            <View style={[styles.tabContent, { width: SCREEN_WIDTH }]}>
-              {photos && photos.length > 0 && (
-                <View style={styles.photoGallery}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {photos.map((item) => (
-                      <Image
-                        key={item.photo_reference}
-                        source={{
-                          uri: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${item.photo_reference}&key=${apiKey}`,
-                        }}
-                        style={styles.galleryImage}
-                        contentFit="cover"
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-
-              <View style={styles.detailItem}>
-                <View style={styles.iconSquare}>
-                  <HugeiconsIcon
-                    icon={Location01Icon}
-                    size={20}
-                    color={Colors.primary}
-                  />
-                </View>
-                <Text style={styles.detailText}>{address}</Text>
-              </View>
-
-              {phoneNumber && (
-                <View style={styles.detailItem}>
-                  <View style={styles.iconSquare}>
-                    <HugeiconsIcon
-                      icon={CallIcon}
-                      size={20}
-                      color={Colors.primary}
-                    />
-                  </View>
-                  <Text style={styles.detailText}>{phoneNumber}</Text>
-                </View>
-              )}
-
-              {website && (
-                <TouchableOpacity
-                  style={styles.detailItem}
-                  onPress={handleWebsite}
-                >
-                  <View style={styles.iconSquare}>
-                    <HugeiconsIcon
-                      icon={Location01Icon}
-                      size={20}
-                      color={Colors.primary}
-                    />
-                  </View>
-                  <Text style={[styles.detailText, { color: Colors.primary }]}>
-                    {website}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Reviews Section */}
-            <View style={[styles.tabContent, { width: SCREEN_WIDTH }]}>
-              <View style={styles.reviewsPlaceholder}>
-                <Text style={styles.placeholderText}>
-                  Reviews section coming soon...
-                </Text>
-              </View>
-            </View>
-
-            {/* Photos Section */}
-            <View style={[styles.tabContent, { width: SCREEN_WIDTH }]}>
-              <View style={styles.photosTabContent}>
-                {photos && photos.length > 0 ? (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {photos.map((item) => (
-                      <Image
-                        key={item.photo_reference}
-                        source={{
-                          uri: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${item.photo_reference}&key=${apiKey}`,
-                        }}
-                        style={styles.fullGalleryImage}
-                        contentFit="cover"
-                      />
-                    ))}
-                  </ScrollView>
-                ) : (
-                  <Text style={styles.placeholderText}>
-                    No photos available
-                  </Text>
-                )}
-              </View>
-            </View>
-          </ScrollView>
+          {/* Content */}
+          <MapSheetContent
+            photos={photos}
+            address={address}
+            phoneNumber={phoneNumber}
+            website={website}
+            apiKey={apiKey}
+            onPhotoPress={setSelectedPhoto}
+            onCall={handleCall}
+            onWebsite={handleWebsite}
+          />
         </Animated.ScrollView>
+
+        <MapSheetPhotoModal
+          visible={!!selectedPhoto}
+          photoUrl={selectedPhoto}
+          onClose={() => setSelectedPhoto(null)}
+        />
       </Animated.View>
     </GestureDetector>
   );
 }
 
+/* ---------------- Styles ---------------- */
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#FFFFFF",
+    height: MAX_HEIGHT,
+    backgroundColor: "#fff",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    height: MAX_HEIGHT,
     elevation: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    zIndex: 1000,
   },
   handleContainer: {
     alignItems: "center",
@@ -424,170 +212,27 @@ const styles = StyleSheet.create({
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: "#E5E7EB",
     borderRadius: 2,
+    backgroundColor: "#E5E7EB",
   },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xs,
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  titleContainer: {
-    flex: 1,
-    marginRight: Spacing.sm,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: Colors.text,
-  },
-  headerActions: {
-    flexDirection: "row",
-  },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: Spacing.xs,
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: Spacing.xs,
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginRight: 4,
-  },
-  stars: {
-    flexDirection: "row",
-    marginRight: 4,
-  },
-  reviewCount: {
-    fontSize: 14,
-    color: "#666",
-  },
-  categoryText: {
-    fontSize: 16,
-    color: "#666",
-    marginTop: 2,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginTop: 4,
-  },
+  scrollView: { flex: 1 },
   actionRow: {
     flexDirection: "row",
     paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.lg,
-  },
-  actionButton: {
-    backgroundColor: "#E0F2F1",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 10,
-    borderRadius: 24,
-    marginRight: Spacing.sm,
-  },
-  btnRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  actionLabel: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  tabsContainer: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: "#fff",
-  },
-  tab: {
-    paddingVertical: Spacing.md,
-    marginRight: Spacing.xl,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  activeTab: {
-    borderBottomColor: Colors.primary,
-  },
-  tabLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#666",
-  },
-  activeTabLabel: {
-    color: Colors.primary,
-  },
-  horizontalContent: {
     marginTop: Spacing.md,
   },
-  tabContent: {
-    paddingHorizontal: Spacing.lg,
-  },
-  content: {
-    padding: Spacing.lg,
-  },
-  photoGallery: {
-    marginBottom: Spacing.lg,
-  },
-  galleryImage: {
-    width: 200,
-    height: 150,
-    borderRadius: 12,
-    marginRight: Spacing.sm,
-  },
-  detailItem: {
+  actionButton: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: Spacing.lg,
+    backgroundColor: "#E0F2F1",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    marginRight: 12,
   },
-  iconSquare: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: Spacing.md,
-  },
-  detailText: {
-    fontSize: 15,
-    color: Colors.text,
-    lineHeight: 22,
-    flex: 1,
-  },
-  reviewsPlaceholder: {
-    paddingVertical: Spacing.xl,
-    alignItems: "center",
-  },
-  photosTabContent: {
-    marginTop: Spacing.sm,
-  },
-  placeholderText: {
-    color: "#999",
-    fontSize: 16,
-  },
-  fullGalleryImage: {
-    width: 300,
-    height: 400,
-    borderRadius: 16,
-    marginRight: Spacing.md,
+  actionLabel: {
+    marginLeft: 8,
+    fontWeight: "600",
+    color: Colors.primary,
   },
 });
