@@ -24,6 +24,10 @@ interface HeaderProps {
   isHome?: boolean;
   style?: ViewStyle;
   rightAction?: React.ReactNode;
+  showSearch?: boolean;
+  showBasket?: boolean;
+  showNotifications?: boolean;
+  onSearchPress?: () => void;
 }
 
 export default function Header({
@@ -34,6 +38,10 @@ export default function Header({
   isHome = false,
   style,
   rightAction,
+  showSearch = false,
+  showBasket = true,
+  showNotifications = true,
+  onSearchPress,
 }: HeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -78,26 +86,30 @@ export default function Header({
             rightAction
           ) : showActions ? (
             <View style={styles.headerActions}>
-              {isHome && (
+              {(isHome || showSearch) && (
                 <TouchableOpacity
                   style={styles.iconButton}
-                  onPress={() => router.push("/search")}
+                  onPress={onSearchPress || (() => router.push("/search"))}
                 >
-                  <SearchIcon width={34} height={34} />
+                  <SearchIcon width={36} height={36} />
                 </TouchableOpacity>
               )}
-              <TouchableOpacity
-                style={styles.iconButton}
-                onPress={() => router.push("/basket")}
-              >
-                <BasketIcon width={36} height={36} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.iconButton}
-                onPress={() => router.push("/notifications")}
-              >
-                <NotificationIcon width={36} height={36} />
-              </TouchableOpacity>
+              {showBasket && (
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  onPress={() => router.push("/basket")}
+                >
+                  <BasketIcon width={36} height={36} />
+                </TouchableOpacity>
+              )}
+              {showNotifications && (
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  onPress={() => router.push("/notifications")}
+                >
+                  <NotificationIcon width={36} height={36} />
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             <View style={{ width: 44 }} />

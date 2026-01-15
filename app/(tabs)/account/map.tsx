@@ -1,15 +1,9 @@
+import MapFAB from "@/components/accounts/map/MapFAB";
+import MapSearch from "@/components/accounts/map/MapSearch";
 import Header from "@/components/ui/Header";
-import { Spacing } from "@/constants/colors";
 import * as Location from "expo-location";
-import { LocateFixed } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Dimensions,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, Dimensions, StyleSheet, View } from "react-native";
 import MapView, { PROVIDER_GOOGLE, Region } from "react-native-maps";
 
 const { width } = Dimensions.get("window");
@@ -17,6 +11,8 @@ const { width } = Dimensions.get("window");
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   const [locationPermission, setLocationPermission] = useState<boolean>(false);
+  const [isSearchVisible, setIsSearchVisible] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   const INITIAL_REGION: Region = {
@@ -65,11 +61,25 @@ export default function MapScreen() {
     }
   };
 
+  const toggleSearch = () => {
+    setIsSearchVisible(!isSearchVisible);
+  };
+
   return (
     <View style={styles.container}>
-      <Header title="Map" showBackButton />
+      <Header
+        title="Map"
+        showBackButton
+        showSearch
+        showBasket={false}
+        showNotifications={false}
+        onSearchPress={toggleSearch}
+      />
 
       <View style={styles.mapContainer}>
+        {isSearchVisible && (
+          <MapSearch value={searchQuery} onChangeText={setSearchQuery} />
+        )}
         <MapView
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
@@ -79,16 +89,7 @@ export default function MapScreen() {
           showsMyLocationButton={false}
         />
 
-        {/* Custom Recenter Button (FAB) */}
-        <View style={styles.fabContainer}>
-          <TouchableOpacity
-            style={styles.fab}
-            onPress={handleRecenter}
-            activeOpacity={0.8}
-          >
-            <LocateFixed size={24} color="#006D77" />
-          </TouchableOpacity>
-        </View>
+        <MapFAB onPress={handleRecenter} />
       </View>
     </View>
   );
@@ -106,23 +107,5 @@ const styles = StyleSheet.create({
   map: {
     width,
     height: "100%",
-  },
-  fabContainer: {
-    position: "absolute",
-    bottom: Spacing.xxl + Spacing.xl,
-    right: Spacing.md,
-  },
-  fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
 });
