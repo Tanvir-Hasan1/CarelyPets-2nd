@@ -265,6 +265,11 @@ export default function AddHealthRecordScreen() {
       attachments: formData.attachments,
     };
 
+    console.log(
+      "[AddHealthRecord] Final Data Payload:",
+      JSON.stringify(newRecord, null, 2)
+    );
+
     if (recordId) {
       updateHealthRecord(petId, newRecord);
       console.log("Health Record Updated:", newRecord);

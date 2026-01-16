@@ -10,6 +10,7 @@ import { usePetStore } from "@/store/usePetStore";
 import { ArrowRight01Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import React from "react";
 import {
   FlatList,
   StyleSheet,
@@ -30,6 +31,14 @@ export default function HealthRecordsListScreen() {
   const pet = pets.find((p) => p.id === petId);
   const records =
     pet?.healthRecords?.filter((r) => r.recordType === recordType) || [];
+
+  // Log records on mount
+  React.useEffect(() => {
+    console.log(
+      `[HealthRecordsList] Loaded ${recordType} records:`,
+      JSON.stringify(records, null, 2)
+    );
+  }, [records, recordType]);
 
   const renderItem = ({ item, index }: { item: any; index: number }) => (
     <TouchableOpacity
