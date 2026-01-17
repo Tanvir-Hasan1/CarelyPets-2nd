@@ -113,7 +113,13 @@ export default function AddHealthRecordScreen() {
     recordId: string;
   }>();
   const scrollViewRef = useRef<ScrollView>(null);
-  const { pets, addHealthRecord, updateHealthRecord } = usePetStore();
+  const {
+    pets,
+    addHealthRecord,
+    updateHealthRecord,
+    createHealthRecord,
+    isLoading,
+  } = usePetStore();
 
   // If type is passed, pre-select it and start at step 0
   const [selectedType, setSelectedType] = useState<string | null>(type || null);
@@ -176,38 +182,41 @@ export default function AddHealthRecordScreen() {
   useEffect(() => {
     if (recordId && petId) {
       const pet = pets.find((p) => p.id === petId);
-      const record = pet?.healthRecords?.find((r) => r.id === recordId);
+      const record = pet?.healthRecords?.find(
+        (r) => r._id === recordId || r.id === recordId
+      );
 
       if (record) {
         // Pre-fill form
-        setSelectedType(record.recordType.toLowerCase());
+        setSelectedType(record.type?.toLowerCase());
         setCurrentStepIndex(0); // Go to first step directly
 
         setFormData({
-          recordName: record.recordName,
-          batchNumber: record.batchNumber,
-          otherInfo: record.otherInfo,
-          cost: record.cost,
-          date: record.date,
-          nextDueDate: record.nextDueDate,
-          reminderEnabled: record.reminderEnabled,
-          reminderDuration: record.reminderDuration,
-          vetDesignation: record.vetDesignation,
-          vetName: record.vetName,
-          clinicName: record.clinicName,
-          licenseNumber: record.licenseNumber,
-          vetContact: record.vetContact,
-          weight: record.weight,
-          weightStatus: record.weightStatus,
-          temperature: record.temperature,
-          temperatureStatus: record.temperatureStatus,
-          heartRate: record.heartRate,
-          heartRateStatus: record.heartRateStatus,
-          respiratoryRate: record.respiratoryRate,
-          respiratoryRateStatus: record.respiratoryRateStatus,
-          observations: record.observations,
-          clinicalNotes: record.clinicalNotes,
-          attachments: record.attachments,
+          recordName: record.recordDetails?.recordName || "",
+          batchNumber: record.recordDetails?.batchLotNo || "",
+          otherInfo: record.recordDetails?.otherInfo || "",
+          cost: record.recordDetails?.cost || "",
+          date: record.recordDetails?.date || "",
+          nextDueDate: record.recordDetails?.nextDueDate || "",
+          reminderEnabled: record.recordDetails?.reminder?.enabled || false,
+          reminderDuration: record.recordDetails?.reminder?.offset || "1 week",
+          vetDesignation: record.veterinarian?.designation || "",
+          vetName: record.veterinarian?.name || "",
+          clinicName: record.veterinarian?.clinicName || "",
+          licenseNumber: record.veterinarian?.licenseNo || "",
+          vetContact: record.veterinarian?.contact || "",
+          weight: record.vitalSigns?.weight || "",
+          weightStatus: record.vitalSigns?.weightStatus || "Normal",
+          temperature: record.vitalSigns?.temperature || "",
+          temperatureStatus: record.vitalSigns?.temperatureStatus || "Normal",
+          heartRate: record.vitalSigns?.heartRate || "",
+          heartRateStatus: record.vitalSigns?.heartRateStatus || "Normal",
+          respiratoryRate: record.vitalSigns?.respiratory || "", // map respiratory to respiratoryRate
+          respiratoryRateStatus:
+            record.vitalSigns?.respiratoryRateStatus || "Normal",
+          observations: record.observation?.lookupObservations || [],
+          clinicalNotes: record.observation?.clinicalNotes || "",
+          attachments: record.attachments || [],
         });
       }
     }
@@ -233,51 +242,135 @@ export default function AddHealthRecordScreen() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!petId || !selectedType) return;
 
-    const newRecord: HealthRecord = {
-      id: recordId || Date.now().toString(),
-      recordType: getRecordTypeLabel(),
+    if (recordId) {
+      // Keep existing logic for updates (simplified) but ideally should use API too
+      // Since the user focused on "Add", we verify "Add" specifically.
+      const newRecord: HealthRecord = {
+        _id: recordId,
+        type: selectedType,
+        recordDetails: {
+          recordName: formData.recordName,
+          batchLotNo: formData.batchNumber,
+          otherInfo: formData.otherInfo,
+          cost: formData.cost,
+          date: formData.date,
+          nextDueDate: formData.nextDueDate,
+          reminder: {
+            enabled: formData.reminderEnabled,
+            offset: formData.reminderDuration,
+          },
+        },
+        veterinarian: {
+          designation: formData.vetDesignation,
+          name: formData.vetName,
+          clinicName: formData.clinicName,
+          licenseNo: formData.licenseNumber,
+          contact: formData.vetContact,
+        },
+        vitalSigns: {
+          weight: formData.weight,
+          weightStatus: formData.weightStatus,
+          temperature: formData.temperature,
+          temperatureStatus: formData.temperatureStatus,
+          heartRate: formData.heartRate,
+          heartRateStatus: formData.heartRateStatus,
+          respiratory: formData.respiratoryRate, // map respiratory to respiratoryRate
+          respiratoryRate: formData.respiratoryRate,
+          respiratoryRateStatus: formData.respiratoryRateStatus,
+          status: "normal",
+        },
+        observation: {
+          lookupObservations: formData.observations as string[],
+          clinicalNotes: formData.clinicalNotes,
+        },
+        attachments: formData.attachments.map((a) =>
+          typeof a === "string" ? a : a.uri
+        ),
+      };
+      updateHealthRecord(petId, newRecord);
+      router.back();
+      return;
+    }
+
+    // Construct nested objects for FormData
+    const recordDetails = {
       recordName: formData.recordName,
-      batchNumber: formData.batchNumber,
+      batchLotNo: formData.batchNumber,
       otherInfo: formData.otherInfo,
       cost: formData.cost,
       date: formData.date,
       nextDueDate: formData.nextDueDate,
-      reminderEnabled: formData.reminderEnabled,
-      reminderDuration: formData.reminderDuration,
-      vetDesignation: formData.vetDesignation,
-      vetName: formData.vetName,
+      reminder: {
+        enabled: formData.reminderEnabled,
+        offset: formData.reminderDuration,
+      },
+      // Include recordType if needed by backend inside details or keep separate?
+      // Usually type is separate but let's check.
+      // The backend URL has :type, so maybe not needed in body, but let's keep specific logging.
+    };
+
+    const veterinarian = {
+      designation: formData.vetDesignation,
+      name: formData.vetName,
       clinicName: formData.clinicName,
-      licenseNumber: formData.licenseNumber,
-      vetContact: formData.vetContact,
+      licenseNo: formData.licenseNumber,
+      contact: formData.vetContact,
+    };
+
+    const vitalSigns = {
       weight: formData.weight,
       weightStatus: formData.weightStatus,
       temperature: formData.temperature,
       temperatureStatus: formData.temperatureStatus,
       heartRate: formData.heartRate,
       heartRateStatus: formData.heartRateStatus,
+      respiratory: formData.respiratoryRate, // assuming 'respiratory' corresponds to respiratoryRate
       respiratoryRate: formData.respiratoryRate,
       respiratoryRateStatus: formData.respiratoryRateStatus,
-      observations: formData.observations as string[],
-      clinicalNotes: formData.clinicalNotes,
-      attachments: formData.attachments,
     };
 
-    console.log(
-      "[AddHealthRecord] Final Data Payload:",
-      JSON.stringify(newRecord, null, 2)
-    );
+    // CREATE Logic with FormData
+    const data = new FormData();
+    // data.append("recordType", getRecordTypeLabel()); // URL param likely sufficient or handled by backend
 
-    if (recordId) {
-      updateHealthRecord(petId, newRecord);
-      console.log("Health Record Updated:", newRecord);
+    data.append("recordDetails", JSON.stringify(recordDetails));
+    data.append("veterinarian", JSON.stringify(veterinarian));
+    data.append("vitalSigns", JSON.stringify(vitalSigns));
+
+    // Backend expects "observation" to be a JSON object string containing lookupObservations and clinicalNotes
+    const observationData = {
+      lookupObservations: formData.observations,
+      clinicalNotes: formData.clinicalNotes,
+    };
+    data.append("observation", JSON.stringify(observationData));
+
+    // Files
+    formData.attachments.forEach((file: any) => {
+      if (file && typeof file !== "string") {
+        // @ts-ignore
+        data.append("files", {
+          uri: file.uri,
+          type: file.mimeType || "image/jpeg",
+          name: file.name || "upload.jpg",
+        });
+      }
+    });
+
+    // Determine API type (map UI "tick" to backend "tick-flea")
+    // User specified endpoint utilizes "tick-flea"
+    const apiType = selectedType === "tick" ? "tick-flea" : selectedType;
+    console.log("[AddHealthRecord] Submitting FormData for type:", apiType);
+
+    const result = await createHealthRecord(petId, apiType, data);
+    if (result.success) {
+      router.back();
     } else {
-      addHealthRecord(petId, newRecord);
-      console.log("Health Record Added:", newRecord);
+      // Handle error (maybe show alert)
+      console.error("Failed to add record");
     }
-    router.back();
   };
 
   const renderStepContent = () => {
@@ -401,22 +494,32 @@ export default function AddHealthRecordScreen() {
 
           <View style={styles.footer}>
             <View style={styles.footerButtons}>
-              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleBack}
+                disabled={isLoading}
+              >
                 <Text style={styles.backButtonText}>Back</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[
                   styles.nextButton,
-                  currentStepIndex === -1 &&
-                    !selectedType &&
-                    styles.disabledButton,
+                  (currentStepIndex === -1 && !selectedType) || isLoading
+                    ? styles.disabledButton
+                    : null,
                 ]}
-                disabled={currentStepIndex === -1 && !selectedType}
+                disabled={
+                  (currentStepIndex === -1 && !selectedType) || isLoading
+                }
                 onPress={handleNext}
               >
                 <Text style={styles.nextButtonText}>
-                  {currentStepIndex === STEPS.length - 1 ? "Save" : "Next"}
+                  {isLoading
+                    ? "Processing..."
+                    : currentStepIndex === STEPS.length - 1
+                    ? "Save"
+                    : "Next"}
                 </Text>
               </TouchableOpacity>
             </View>

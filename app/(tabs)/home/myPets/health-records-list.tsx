@@ -9,6 +9,7 @@ import {
 import { usePetStore } from "@/store/usePetStore";
 import { ArrowRight01Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import {
@@ -20,22 +21,64 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { RefreshControl } from "react-native";
+// ... existing imports
+
 export default function HealthRecordsListScreen() {
   const router = useRouter();
   const { petId, recordType } = useLocalSearchParams<{
     petId: string;
     recordType: string;
   }>();
-  const { pets } = usePetStore();
+  // @ts-ignore
+  const { pets, fetchHealthRecordsByType, isLoading } = usePetStore();
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  // Helper to fetch data
+  const loadData = async () => {
+    if (petId && recordType) {
+      let apiType = recordType.toLowerCase();
+
+      // Map display labels to backend enum values
+      if (apiType === "check-up") apiType = "checkup";
+      if (apiType === "tick") apiType = "tick_flea";
+      // 'vaccination', 'medication', 'surgery', 'dental', 'other' map correctly with toLowerCase()
+
+      await fetchHealthRecordsByType(petId, apiType);
+    }
+  };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [petId, recordType]);
+
+  // Initial fetch and fetch on focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [petId, recordType])
+  );
 
   const pet = pets.find((p) => p.id === petId);
+  // Filter records based on the record type (passed via params)
+  // We still filter here because the store updates the pet, but we want to be safe
+  // Map display labels to backend enum values for filtering
+  const apiType = (() => {
+    let t = recordType?.toLowerCase();
+    if (t === "check-up") return "checkup";
+    if (t === "tick") return "tick_flea";
+    return t;
+  })();
+
   const records =
-    pet?.healthRecords?.filter((r) => r.recordType === recordType) || [];
+    pet?.healthRecords?.filter((r) => r.type?.toLowerCase() === apiType) || [];
 
   // Log records on mount
   React.useEffect(() => {
     console.log(
-      `[HealthRecordsList] Loaded ${recordType} records:`,
+      `[HealthRecordsList] Loaded ${recordType} (${apiType}) records:`,
       JSON.stringify(records, null, 2)
     );
   }, [records, recordType]);
@@ -46,7 +89,7 @@ export default function HealthRecordsListScreen() {
       onPress={() =>
         router.push({
           pathname: "/(tabs)/home/myPets/record-details",
-          params: { petId, recordId: item.id },
+          params: { petId, recordId: item._id },
         })
       }
     >
@@ -55,10 +98,14 @@ export default function HealthRecordsListScreen() {
       </View>
 
       <View style={styles.recordContent}>
-        <Text style={styles.recordName}>{item.recordName}</Text>
+        <Text style={styles.recordName}>
+          {item.recordDetails?.recordName || "Unnamed Record"}
+        </Text>
         <Text style={styles.recordSubtitle}>
-          Last updated {item.date}{" "}
-          {item.reminderEnabled ? `, Reminder in ${item.reminderDuration}` : ""}
+          Last updated {item.recordDetails?.date || "Unknown Date"}
+          {item.recordDetails?.reminder?.enabled
+            ? `, Reminder in ${item.recordDetails.reminder.offset}`
+            : ""}
         </Text>
       </View>
 
@@ -77,8 +124,15 @@ export default function HealthRecordsListScreen() {
       <FlatList
         data={records}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#00BCD4"]}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No {recordType} records found.</Text>
@@ -94,7 +148,13 @@ export default function HealthRecordsListScreen() {
               pathname: "/(tabs)/home/myPets/add-health-record",
               params: {
                 petId,
-                type: recordType?.toLowerCase().replace(/[^a-z0-9]/g, ""),
+                type: (() => {
+                  let t = recordType?.toLowerCase();
+                  if (t === "check-up") return "checkup";
+                  // Pass "tick" (UI id) instead of "tick_flea" (API enum) for the Add Screen
+                  if (t === "tick") return "tick";
+                  return t.replace(/[^a-z0-9_]/g, "");
+                })(),
               },
             })
           }

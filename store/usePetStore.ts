@@ -2,32 +2,47 @@ import petService from '@/services/petService';
 import { create } from 'zustand';
 
 export interface HealthRecord {
-    id: string;
-    recordType: string;
+  _id: string; // Changed from id to _id
+  id?: string; // keeping optional for backward compatibility if needed
+  type: string;
+  recordDetails: {
     recordName: string;
-    batchNumber: string;
-    otherInfo: string;
-    cost: string;
+    batchLotNo?: string;
+    otherInfo?: string;
+    cost?: string;
     date: string;
-    nextDueDate: string;
-    reminderEnabled: boolean;
-    reminderDuration: string;
-    vetDesignation: string;
-    vetName: string;
+    nextDueDate?: string;
+    reminder: {
+      enabled: boolean;
+      offset: string;
+    };
+  };
+  veterinarian: {
+    designation: string;
+    name: string;
     clinicName: string;
-    licenseNumber: string;
-    vetContact: string;
-    weight: string;
-    weightStatus: string;
-    temperature: string;
-    temperatureStatus: string;
-    heartRate: string;
-    heartRateStatus: string;
+    licenseNo: string;
+    contact: string;
+  };
+  vitalSigns: {
     respiratoryRate: string;
-    respiratoryRateStatus: string;
-    observations: string[];
+    weight: string;
+    temperature: string;
+    heartRate: string;
+    respiratory: string;
+    status: string;
+    weightStatus?: string;
+    temperatureStatus?: string;
+    heartRateStatus?: string;
+    respiratoryRateStatus?: string;
+  };
+  observation: {
+    lookupObservations: string[];
     clinicalNotes: string;
-    attachments: any[];
+  };
+  attachments: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Pet {
@@ -65,13 +80,15 @@ interface PetState {
     error: string | null;
     fetchPets: () => Promise<void>;
     fetchPetById: (id: string) => Promise<void>;
+    fetchHealthRecordsByType: (petId: string, type: string) => Promise<void>;
     createPet: (formData: FormData) => Promise<{ success: boolean; message: string; data?: Pet }>;
     addPet: (pet: Pet) => void;
     deletePet: (id: string) => Promise<{ success: boolean; message: string }>;
     updatePet: (data: FormData | (Partial<Pet> & { id: string })) => Promise<{ success: boolean; message: string; data?: Pet }>;
     addHealthRecord: (petId: string, record: HealthRecord) => void;
-    deleteHealthRecord: (petId: string, recordId: string) => void;
+    deleteHealthRecord: (petId: string, recordId: string) => Promise<{ success: boolean; message?: string }>;
     updateHealthRecord: (petId: string, record: HealthRecord) => void;
+    createHealthRecord: (petId: string, type: string, formData: FormData) => Promise<{ success: boolean; message: string }>;
     setError: (error: string | null) => void;
 }
 
@@ -87,6 +104,23 @@ export const usePetStore = create<PetState>((set, get) => ({
             set({ pets, isLoading: false });
         } catch (error: any) {
             set({ error: error.message || 'Failed to fetch pets', isLoading: false });
+        }
+    },
+
+    fetchHealthRecordsByType: async (petId: string, type: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const records = await petService.getHealthRecordsByType(petId, type);
+            set((state) => ({
+                pets: state.pets.map(p => 
+                    p.id === petId 
+                    ? { ...p, healthRecords: records }
+                    : p
+                ),
+                isLoading: false
+            }));
+        } catch (error: any) {
+            set({ error: error.message || 'Failed to fetch health records', isLoading: false });
         }
     },
 
@@ -199,12 +233,43 @@ export const usePetStore = create<PetState>((set, get) => ({
                 : p
         )
     })),
-    deleteHealthRecord: (petId, recordId) => set((state) => ({
-        pets: state.pets.map((p) =>
-            p.id === petId
-                ? { ...p, healthRecords: (p.healthRecords || []).filter((r) => r.id !== recordId) }
-                : p
-        )
-    })),
+    deleteHealthRecord: async (petId, recordId) => {
+        set({ isLoading: true, error: null });
+        try {
+            await petService.deleteHealthRecord(petId, recordId);
+            set((state) => ({
+                pets: state.pets.map((p) =>
+                    p.id === petId
+                        ? { ...p, healthRecords: (p.healthRecords || []).filter((r) => r._id !== recordId && r.id !== recordId) }
+                        : p
+                ),
+                isLoading: false
+            }));
+            return { success: true };
+        } catch (error: any) {
+             const message = error.message || 'Failed to delete health record';
+             set({ error: message, isLoading: false });
+             return { success: false, message };
+        }
+    },
+    createHealthRecord: async (petId: string, type: string, formData: FormData) => {
+        set({ isLoading: true, error: null });
+        try {
+            const newRecord = await petService.createHealthRecord(petId, type, formData);
+            set((state) => ({
+                pets: state.pets.map((p) =>
+                    p.id === petId
+                        ? { ...p, healthRecords: [...(p.healthRecords || []), newRecord] }
+                        : p
+                ),
+                isLoading: false
+            }));
+            return { success: true, message: 'Health record added successfully' };
+        } catch (error: any) {
+            const message = error.message || 'Failed to add health record';
+            set({ error: message, isLoading: false });
+            return { success: false, message };
+        }
+    },
     setError: (error) => set({ error }),
 }));

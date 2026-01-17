@@ -80,6 +80,14 @@ export const petService = {
     },
 
     /**
+     * Get health records by type
+     */
+    async getHealthRecordsByType(petId: string, type: string): Promise<HealthRecord[]> {
+        const response = await api.get<ApiResponse<HealthRecord[]>>(`/pets/${petId}/health-records?type=${type}`);
+        return response.data;
+    },
+
+    /**
      * Get a single health record
      */
     async getHealthRecordById(petId: string, recordId: string): Promise<HealthRecord> {
@@ -90,8 +98,16 @@ export const petService = {
     /**
      * Create a new health record
      */
-    async createHealthRecord(petId: string, record: Omit<HealthRecord, 'id'>): Promise<HealthRecord> {
-        const response = await api.post<ApiResponse<HealthRecord>>(`/pets/${petId}/health-records`, record);
+    /**
+     * Create a new health record
+     */
+    async createHealthRecord(petId: string, type: string, recordData: FormData): Promise<HealthRecord> {
+        const response = await api.post<ApiResponse<HealthRecord>>(`/pets/${petId}/health-records/${type}`, recordData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+            timeout: 60000, // Increase timeout for file uploads
+        });
         return response.data;
     },
 
