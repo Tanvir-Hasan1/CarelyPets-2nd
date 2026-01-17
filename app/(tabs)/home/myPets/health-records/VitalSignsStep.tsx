@@ -107,7 +107,8 @@ export default function VitalSignsStep({
             onChangeText={(text) => updateData("weight", text)}
           />
         </View>
-        <View style={[styles.inputContainer, { marginTop: 24 }]}>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>STATUS</Text>
           <Dropdown
             label={data.weightStatus || "Normal"}
             onSelect={(val) => updateData("weightStatus", val)}
@@ -127,7 +128,8 @@ export default function VitalSignsStep({
             onChangeText={(text) => updateData("temperature", text)}
           />
         </View>
-        <View style={[styles.inputContainer, { marginTop: 24 }]}>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>STATUS</Text>
           <Dropdown
             label={data.temperatureStatus || "Normal"}
             onSelect={(val) => updateData("temperatureStatus", val)}
@@ -147,7 +149,8 @@ export default function VitalSignsStep({
             onChangeText={(text) => updateData("heartRate", text)}
           />
         </View>
-        <View style={[styles.inputContainer, { marginTop: 24 }]}>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>STATUS</Text>
           <Dropdown
             label={data.heartRateStatus || "Normal"}
             onSelect={(val) => updateData("heartRateStatus", val)}
@@ -167,7 +170,8 @@ export default function VitalSignsStep({
             onChangeText={(text) => updateData("respiratoryRate", text)}
           />
         </View>
-        <View style={[styles.inputContainer, { marginTop: 24 }]}>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>STATUS</Text>
           <Dropdown
             label={data.respiratoryRateStatus || "Normal"}
             onSelect={(val) => updateData("respiratoryRateStatus", val)}
