@@ -92,184 +92,196 @@ interface PetState {
     setError: (error: string | null) => void;
 }
 
-export const usePetStore = create<PetState>((set, get) => ({
-    pets: [],
-    isLoading: false,
-    error: null,
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
-    fetchPets: async () => {
-        set({ isLoading: true, error: null });
-        try {
-            const pets = await petService.getPets();
-            set({ pets, isLoading: false });
-        } catch (error: any) {
-            set({ error: error.message || 'Failed to fetch pets', isLoading: false });
-        }
-    },
+export const usePetStore = create<PetState>()(
+    persist(
+        (set, get) => ({
+            pets: [],
+            isLoading: false,
+            error: null,
 
-    fetchHealthRecordsByType: async (petId: string, type: string) => {
-        set({ isLoading: true, error: null });
-        try {
-            const records = await petService.getHealthRecordsByType(petId, type);
-            set((state) => ({
-                pets: state.pets.map(p => 
-                    p.id === petId 
-                    ? { ...p, healthRecords: records }
-                    : p
-                ),
-                isLoading: false
-            }));
-        } catch (error: any) {
-            set({ error: error.message || 'Failed to fetch health records', isLoading: false });
-        }
-    },
-
-    fetchPetById: async (id: string) => {
-        set({ isLoading: true, error: null });
-        try {
-            const pet = await petService.getPetById(id);
-            set((state) => ({
-                pets: state.pets.find(p => p.id === id)
-                    ? state.pets.map(p => p.id === id ? pet : p)
-                    : [...state.pets, pet],
-                isLoading: false
-            }));
-        } catch (error: any) {
-            set({ error: error.message || 'Failed to fetch pet details', isLoading: false });
-        }
-    },
-
-    createPet: async (formData: FormData) => {
-        set({ isLoading: true, error: null });
-        try {
-            const pet = await petService.createPet(formData);
-            set((state) => ({
-                pets: [...state.pets, pet],
-                isLoading: false
-            }));
-            return { success: true, message: 'Pet created successfully', data: pet };
-        } catch (error: any) {
-            const message = error.message || 'Failed to create pet';
-            set({ error: message, isLoading: false });
-            return { success: false, message };
-        }
-    },
-
-    addPet: (pet) => set((state) => ({ pets: [...state.pets, { ...pet, healthRecords: pet.healthRecords || [] }] })),
-
-    deletePet: async (id) => {
-        set({ isLoading: true, error: null });
-        try {
-            await petService.deletePet(id);
-            set((state) => ({
-                pets: state.pets.filter((p) => p.id !== id),
-                isLoading: false
-            }));
-            return { success: true, message: 'Pet deleted successfully' };
-        } catch (error: any) {
-            const message = error.message || 'Failed to delete pet';
-            set({ error: message, isLoading: false });
-            return { success: false, message };
-        }
-    },
-
-    updatePet: async (data: FormData | (Partial<Pet> & { id: string })) => {
-        set({ isLoading: true, error: null });
-        try {
-            let petId: string;
-            let updateData: FormData | Partial<Pet>;
-
-            if (data instanceof FormData) {
-                // @ts-ignore - Access React Native FormData internal structure
-                const parts = data._parts || [];
-                
-                console.log('[usePetStore] FormData parts count:', parts.length);
-                console.log('[usePetStore] Looking for id field in FormData...');
-                
-                const idPart = parts.find(([key]: [string, any]) => key === 'id');
-                
-                if (!idPart) {
-                    console.error('[usePetStore] Available FormData keys:', parts.map(([key]: [string, any]) => key));
-                    throw new Error('Pet ID missing from update data. Make sure to append "id" to FormData.');
+            fetchPets: async () => {
+                set({ isLoading: true, error: null });
+                try {
+                    const pets = await petService.getPets();
+                    set({ pets, isLoading: false });
+                } catch (error: any) {
+                    set({ error: error.message || 'Failed to fetch pets', isLoading: false });
                 }
-                
-                petId = idPart[1];
-                console.log('[usePetStore] Extracted pet ID:', petId);
-                updateData = data;
-            } else {
-                petId = data.id;
-                updateData = data;
-            }
+            },
 
-            const updatedPet = await petService.updatePet(petId, updateData);
-            set((state) => ({
-                pets: state.pets.map((p) => p.id === petId ? updatedPet : p),
-                isLoading: false
-            }));
-            return { success: true, message: 'Pet updated successfully', data: updatedPet };
-        } catch (error: any) {
-            const message = error.message || 'Failed to update pet';
-            console.error('[usePetStore] Update pet error:', error);
-            set({ error: message, isLoading: false });
-            return { success: false, message };
-        }
-    },
-    addHealthRecord: (petId, record) => set((state) => ({
-        pets: state.pets.map((p) =>
-            p.id === petId
-                ? { ...p, healthRecords: [...(p.healthRecords || []), record] }
-                : p
-        )
-    })),
-    updateHealthRecord: (petId, updatedRecord) => set((state) => ({
-        pets: state.pets.map((p) =>
-            p.id === petId
-                ? {
-                    ...p,
-                    healthRecords: (p.healthRecords || []).map((r) =>
-                        r.id === updatedRecord.id ? updatedRecord : r
-                    )
+            fetchHealthRecordsByType: async (petId: string, type: string) => {
+                set({ isLoading: true, error: null });
+                try {
+                    const records = await petService.getHealthRecordsByType(petId, type);
+                    set((state) => ({
+                        pets: state.pets.map(p => 
+                            p.id === petId 
+                            ? { ...p, healthRecords: records }
+                            : p
+                        ),
+                        isLoading: false
+                    }));
+                } catch (error: any) {
+                    set({ error: error.message || 'Failed to fetch health records', isLoading: false });
                 }
-                : p
-        )
-    })),
-    deleteHealthRecord: async (petId, recordId) => {
-        set({ isLoading: true, error: null });
-        try {
-            await petService.deleteHealthRecord(petId, recordId);
-            set((state) => ({
+            },
+
+            fetchPetById: async (id: string) => {
+                set({ isLoading: true, error: null });
+                try {
+                    const pet = await petService.getPetById(id);
+                    set((state) => ({
+                        pets: state.pets.find(p => p.id === id)
+                            ? state.pets.map(p => p.id === id ? pet : p)
+                            : [...state.pets, pet],
+                        isLoading: false
+                    }));
+                } catch (error: any) {
+                    set({ error: error.message || 'Failed to fetch pet details', isLoading: false });
+                }
+            },
+
+            createPet: async (formData: FormData) => {
+                set({ isLoading: true, error: null });
+                try {
+                    const pet = await petService.createPet(formData);
+                    set((state) => ({
+                        pets: [...state.pets, pet],
+                        isLoading: false
+                    }));
+                    return { success: true, message: 'Pet created successfully', data: pet };
+                } catch (error: any) {
+                    const message = error.message || 'Failed to create pet';
+                    set({ error: message, isLoading: false });
+                    return { success: false, message };
+                }
+            },
+
+            addPet: (pet) => set((state) => ({ pets: [...state.pets, { ...pet, healthRecords: pet.healthRecords || [] }] })),
+
+            deletePet: async (id) => {
+                set({ isLoading: true, error: null });
+                try {
+                    await petService.deletePet(id);
+                    set((state) => ({
+                        pets: state.pets.filter((p) => p.id !== id),
+                        isLoading: false
+                    }));
+                    return { success: true, message: 'Pet deleted successfully' };
+                } catch (error: any) {
+                    const message = error.message || 'Failed to delete pet';
+                    set({ error: message, isLoading: false });
+                    return { success: false, message };
+                }
+            },
+
+            updatePet: async (data: FormData | (Partial<Pet> & { id: string })) => {
+                set({ isLoading: true, error: null });
+                try {
+                    let petId: string;
+                    let updateData: FormData | Partial<Pet>;
+
+                    if (data instanceof FormData) {
+                        // @ts-ignore - Access React Native FormData internal structure
+                        const parts = data._parts || [];
+                        
+                        console.log('[usePetStore] FormData parts count:', parts.length);
+                        console.log('[usePetStore] Looking for id field in FormData...');
+                        
+                        const idPart = parts.find(([key]: [string, any]) => key === 'id');
+                        
+                        if (!idPart) {
+                            console.error('[usePetStore] Available FormData keys:', parts.map(([key]: [string, any]) => key));
+                            throw new Error('Pet ID missing from update data. Make sure to append "id" to FormData.');
+                        }
+                        
+                        petId = idPart[1];
+                        console.log('[usePetStore] Extracted pet ID:', petId);
+                        updateData = data;
+                    } else {
+                        petId = data.id;
+                        updateData = data;
+                    }
+
+                    const updatedPet = await petService.updatePet(petId, updateData);
+                    set((state) => ({
+                        pets: state.pets.map((p) => p.id === petId ? updatedPet : p),
+                        isLoading: false
+                    }));
+                    return { success: true, message: 'Pet updated successfully', data: updatedPet };
+                } catch (error: any) {
+                    const message = error.message || 'Failed to update pet';
+                    console.error('[usePetStore] Update pet error:', error);
+                    set({ error: message, isLoading: false });
+                    return { success: false, message };
+                }
+            },
+            addHealthRecord: (petId, record) => set((state) => ({
                 pets: state.pets.map((p) =>
                     p.id === petId
-                        ? { ...p, healthRecords: (p.healthRecords || []).filter((r) => r._id !== recordId && r.id !== recordId) }
+                        ? { ...p, healthRecords: [...(p.healthRecords || []), record] }
                         : p
-                ),
-                isLoading: false
-            }));
-            return { success: true };
-        } catch (error: any) {
-             const message = error.message || 'Failed to delete health record';
-             set({ error: message, isLoading: false });
-             return { success: false, message };
-        }
-    },
-    createHealthRecord: async (petId: string, type: string, formData: FormData) => {
-        set({ isLoading: true, error: null });
-        try {
-            const newRecord = await petService.createHealthRecord(petId, type, formData);
-            set((state) => ({
+                )
+            })),
+            updateHealthRecord: (petId, updatedRecord) => set((state) => ({
                 pets: state.pets.map((p) =>
                     p.id === petId
-                        ? { ...p, healthRecords: [...(p.healthRecords || []), newRecord] }
+                        ? {
+                            ...p,
+                            healthRecords: (p.healthRecords || []).map((r) =>
+                                r.id === updatedRecord.id ? updatedRecord : r
+                            )
+                        }
                         : p
-                ),
-                isLoading: false
-            }));
-            return { success: true, message: 'Health record added successfully' };
-        } catch (error: any) {
-            const message = error.message || 'Failed to add health record';
-            set({ error: message, isLoading: false });
-            return { success: false, message };
+                )
+            })),
+            deleteHealthRecord: async (petId, recordId) => {
+                set({ isLoading: true, error: null });
+                try {
+                    await petService.deleteHealthRecord(petId, recordId);
+                    set((state) => ({
+                        pets: state.pets.map((p) =>
+                            p.id === petId
+                                ? { ...p, healthRecords: (p.healthRecords || []).filter((r) => r._id !== recordId && r.id !== recordId) }
+                                : p
+                        ),
+                        isLoading: false
+                    }));
+                    return { success: true };
+                } catch (error: any) {
+                     const message = error.message || 'Failed to delete health record';
+                     set({ error: message, isLoading: false });
+                     return { success: false, message };
+                }
+            },
+            createHealthRecord: async (petId: string, type: string, formData: FormData) => {
+                set({ isLoading: true, error: null });
+                try {
+                    const newRecord = await petService.createHealthRecord(petId, type, formData);
+                    set((state) => ({
+                        pets: state.pets.map((p) =>
+                            p.id === petId
+                                ? { ...p, healthRecords: [...(p.healthRecords || []), newRecord] }
+                                : p
+                        ),
+                        isLoading: false
+                    }));
+                    return { success: true, message: 'Health record added successfully' };
+                } catch (error: any) {
+                    const message = error.message || 'Failed to add health record';
+                    set({ error: message, isLoading: false });
+                    return { success: false, message };
+                }
+            },
+            setError: (error) => set({ error }),
+        }),
+        {
+            name: 'pet-storage', // unique name
+            storage: createJSONStorage(() => AsyncStorage),
+            partialize: (state) => ({ pets: state.pets }), // only persist pets
         }
-    },
-    setError: (error) => set({ error }),
-}));
+    )
+);

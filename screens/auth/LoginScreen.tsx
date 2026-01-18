@@ -13,7 +13,7 @@ import {
 } from "@/constants/colors";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -23,7 +23,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -57,7 +57,6 @@ export default function LoginScreen() {
     //   }
     // }
     router.replace("/(tabs)/home");
-
   };
 
   const handleGoogleLogin = async () => {

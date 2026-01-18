@@ -384,7 +384,15 @@ export default function PetDetailsScreen({ id }: { id: string }) {
               <HugeiconsIcon icon={Delete02Icon} size={20} color="#ffffff" />
               <Text style={styles.deleteText}>Delete</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.bookButton}>
+            <TouchableOpacity
+              style={styles.bookButton}
+              onPress={() =>
+                router.push({
+                  pathname: "/(tabs)/home/booking",
+                  params: { petId: pet.id },
+                })
+              }
+            >
               <HugeiconsIcon icon={Calendar02Icon} size={20} color="#ffffff" />
               <Text style={styles.bookText}>Book a Service</Text>
             </TouchableOpacity>
