@@ -1,32 +1,30 @@
-import {
-  Home01Icon,
-} from "@hugeicons/core-free-icons";
+import { Home01Icon } from "@hugeicons/core-free-icons";
 
 import ChatIcon from "@/assets/images/icons/chat.svg";
 import PawIcon from "@/assets/images/icons/paw.svg";
 import ProfileIcon from "@/assets/images/icons/profile.svg";
-import {
-  Colors,
-  FontSizes,
-  FontWeights,
-  Spacing
-} from "@/constants/colors";
+import { Colors, FontSizes, FontWeights, Spacing } from "@/constants/colors";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import { Tabs } from "expo-router";
-import React from "react";
+import { Tabs, useSegments } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
 const ACTIVE_COLOR = Colors.primary;
 const INACTIVE_COLOR = Colors.placeholder;
 
 export default function TabLayout() {
+  const segments = useSegments();
+
+  // The segments for main tabs are typically ['(tabs)', 'home'], ['(tabs)', 'pethub'], etc.
+  // Sub-pages will have more segments, e.g., ['(tabs)', 'home', 'myPets']
+  const isExcludedPage = segments.length > 2;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: ACTIVE_COLOR,
         tabBarInactiveTintColor: INACTIVE_COLOR,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, isExcludedPage ? { display: "none" } : {}],
         tabBarLabelStyle: styles.tabBarLabel,
       }}
     >
