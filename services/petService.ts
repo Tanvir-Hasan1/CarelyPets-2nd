@@ -114,8 +114,8 @@ export const petService = {
     /**
      * Update an existing health record
      */
-    async updateHealthRecord(petId: string, recordId: string, record: Partial<HealthRecord>): Promise<HealthRecord> {
-        const response = await api.put<ApiResponse<HealthRecord>>(`/pets/${petId}/health-records/${recordId}`, record);
+    async updateHealthRecord(petId: string, recordId: string, record: Partial<HealthRecord> | FormData): Promise<HealthRecord> {
+        const response = await api.patch<ApiResponse<HealthRecord>>(`/pets/${petId}/health-records/${recordId}`, record);
         return response.data;
     },
 

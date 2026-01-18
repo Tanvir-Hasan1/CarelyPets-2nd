@@ -23,7 +23,7 @@ export default function MapFAB({ onPress, style }: MapFABProps) {
 const styles = StyleSheet.create({
   fab: {
     position: "absolute",
-    bottom: Spacing.xl + Spacing.xxl,
+    bottom: Spacing.xl,
     right: Spacing.md,
     width: 56,
     height: 56,

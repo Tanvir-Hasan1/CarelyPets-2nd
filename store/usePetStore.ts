@@ -87,7 +87,7 @@ interface PetState {
     updatePet: (data: FormData | (Partial<Pet> & { id: string })) => Promise<{ success: boolean; message: string; data?: Pet }>;
     addHealthRecord: (petId: string, record: HealthRecord) => void;
     deleteHealthRecord: (petId: string, recordId: string) => Promise<{ success: boolean; message?: string }>;
-    updateHealthRecord: (petId: string, record: HealthRecord) => void;
+    updateHealthRecord: (petId: string, recordId: string, record: Partial<HealthRecord> | FormData) => Promise<{ success: boolean; message?: string }>;
     createHealthRecord: (petId: string, type: string, formData: FormData) => Promise<{ success: boolean; message: string }>;
     setError: (error: string | null) => void;
 }
@@ -226,18 +226,30 @@ export const usePetStore = create<PetState>()(
                         : p
                 )
             })),
-            updateHealthRecord: (petId, updatedRecord) => set((state) => ({
-                pets: state.pets.map((p) =>
-                    p.id === petId
-                        ? {
-                            ...p,
-                            healthRecords: (p.healthRecords || []).map((r) =>
-                                r.id === updatedRecord.id ? updatedRecord : r
-                            )
-                        }
-                        : p
-                )
-            })),
+            updateHealthRecord: async (petId, recordId, updatedData) => {
+                set({ isLoading: true, error: null });
+                try {
+                    const updatedRecord = await petService.updateHealthRecord(petId, recordId, updatedData);
+                    set((state) => ({
+                        pets: state.pets.map((p) =>
+                            p.id === petId
+                                ? {
+                                    ...p,
+                                    healthRecords: (p.healthRecords || []).map((r) =>
+                                        (r._id === recordId || r.id === recordId) ? updatedRecord : r
+                                    )
+                                }
+                                : p
+                        ),
+                        isLoading: false
+                    }));
+                    return { success: true };
+                } catch (error: any) {
+                    const message = error.message || 'Failed to update health record';
+                    set({ error: message, isLoading: false });
+                    return { success: false, message };
+                }
+            },
             deleteHealthRecord: async (petId, recordId) => {
                 set({ isLoading: true, error: null });
                 try {

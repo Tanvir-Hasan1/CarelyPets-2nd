@@ -6,7 +6,7 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
-import { HealthRecord, usePetStore } from "@/store/usePetStore";
+import { usePetStore } from "@/store/usePetStore";
 import {
   BandageIcon,
   Bug02Icon,
@@ -21,6 +21,7 @@ import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -162,6 +163,8 @@ export default function AddHealthRecordScreen() {
     attachments: [] as any[],
   });
 
+  const [deletedAttachments, setDeletedAttachments] = useState<string[]>([]);
+
   // Scroll to top when step changes
   useEffect(() => {
     if (scrollViewRef.current) {
@@ -176,6 +179,16 @@ export default function AddHealthRecordScreen() {
   };
 
   const updateFormData = (key: string, value: any) => {
+    if (key === "attachments" && recordId) {
+      // If we are editing, track which existing attachments are being removed
+      const removed = formData.attachments.filter(
+        (a) => typeof a === "string" && !value.includes(a)
+      );
+      if (removed.length > 0) {
+        console.log("[AddHealthRecord] Tracking deletions:", removed);
+        setDeletedAttachments((prev) => [...prev, ...removed]);
+      }
+    }
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -245,57 +258,7 @@ export default function AddHealthRecordScreen() {
   const handleSubmit = async () => {
     if (!petId || !selectedType) return;
 
-    if (recordId) {
-      // Keep existing logic for updates (simplified) but ideally should use API too
-      // Since the user focused on "Add", we verify "Add" specifically.
-      const newRecord: HealthRecord = {
-        _id: recordId,
-        type: selectedType,
-        recordDetails: {
-          recordName: formData.recordName,
-          batchLotNo: formData.batchNumber,
-          otherInfo: formData.otherInfo,
-          cost: formData.cost,
-          date: formData.date,
-          nextDueDate: formData.nextDueDate,
-          reminder: {
-            enabled: formData.reminderEnabled,
-            offset: formData.reminderDuration,
-          },
-        },
-        veterinarian: {
-          designation: formData.vetDesignation,
-          name: formData.vetName,
-          clinicName: formData.clinicName,
-          licenseNo: formData.licenseNumber,
-          contact: formData.vetContact,
-        },
-        vitalSigns: {
-          weight: formData.weight,
-          weightStatus: formData.weightStatus,
-          temperature: formData.temperature,
-          temperatureStatus: formData.temperatureStatus,
-          heartRate: formData.heartRate,
-          heartRateStatus: formData.heartRateStatus,
-          respiratory: formData.respiratoryRate, // map respiratory to respiratoryRate
-          respiratoryRate: formData.respiratoryRate,
-          respiratoryRateStatus: formData.respiratoryRateStatus,
-          status: "normal",
-        },
-        observation: {
-          lookupObservations: formData.observations as string[],
-          clinicalNotes: formData.clinicalNotes,
-        },
-        attachments: formData.attachments.map((a) =>
-          typeof a === "string" ? a : a.uri
-        ),
-      };
-      updateHealthRecord(petId, newRecord);
-      router.back();
-      return;
-    }
-
-    // Construct nested objects for FormData
+    // Construct nested objects
     const recordDetails = {
       recordName: formData.recordName,
       batchLotNo: formData.batchNumber,
@@ -307,9 +270,6 @@ export default function AddHealthRecordScreen() {
         enabled: formData.reminderEnabled,
         offset: formData.reminderDuration,
       },
-      // Include recordType if needed by backend inside details or keep separate?
-      // Usually type is separate but let's check.
-      // The backend URL has :type, so maybe not needed in body, but let's keep specific logging.
     };
 
     const veterinarian = {
@@ -327,28 +287,26 @@ export default function AddHealthRecordScreen() {
       temperatureStatus: formData.temperatureStatus,
       heartRate: formData.heartRate,
       heartRateStatus: formData.heartRateStatus,
-      respiratory: formData.respiratoryRate, // assuming 'respiratory' corresponds to respiratoryRate
+      respiratory: formData.respiratoryRate,
       respiratoryRate: formData.respiratoryRate,
       respiratoryRateStatus: formData.respiratoryRateStatus,
+      status: "normal",
     };
 
-    // CREATE Logic with FormData
-    const data = new FormData();
-    // data.append("recordType", getRecordTypeLabel()); // URL param likely sufficient or handled by backend
-
-    data.append("recordDetails", JSON.stringify(recordDetails));
-    data.append("veterinarian", JSON.stringify(veterinarian));
-    data.append("vitalSigns", JSON.stringify(vitalSigns));
-
-    // Backend expects "observation" to be a JSON object string containing lookupObservations and clinicalNotes
-    const observationData = {
+    const observation = {
       lookupObservations: formData.observations,
       clinicalNotes: formData.clinicalNotes,
     };
-    data.append("observation", JSON.stringify(observationData));
 
-    // Files
+    const data = new FormData();
+    data.append("recordDetails", JSON.stringify(recordDetails));
+    data.append("veterinarian", JSON.stringify(veterinarian));
+    data.append("vitalSigns", JSON.stringify(vitalSigns));
+    data.append("observation", JSON.stringify(observation));
+
+    // Handle attachments
     formData.attachments.forEach((file: any) => {
+      // Only append new files (non-string assets)
       if (file && typeof file !== "string") {
         // @ts-ignore
         data.append("files", {
@@ -359,17 +317,39 @@ export default function AddHealthRecordScreen() {
       }
     });
 
-    // Determine API type (map UI "tick" to backend "tick-flea")
-    // User specified endpoint utilizes "tick-flea"
-    const apiType = selectedType === "tick" ? "tick-flea" : selectedType;
-    console.log("[AddHealthRecord] Submitting FormData for type:", apiType);
+    let result;
+    if (recordId) {
+      console.log(
+        "[AddHealthRecord] Updating record via PATCH (FormData):",
+        recordId
+      );
 
-    const result = await createHealthRecord(petId, apiType, data);
+      // Add deleteAttachments if we have any
+      if (deletedAttachments.length > 0) {
+        // The image shows it as a JSON string like ["url1", "url2"]
+        data.append("deleteAttachments", JSON.stringify(deletedAttachments));
+        console.log(
+          "[AddHealthRecord] Sending deleteAttachments:",
+          deletedAttachments
+        );
+      }
+
+      result = await updateHealthRecord(petId, recordId, data);
+    } else {
+      // Determine API type (map UI "tick" to backend "tick-flea")
+      const apiType = selectedType === "tick" ? "tick-flea" : selectedType;
+      console.log(
+        "[AddHealthRecord] Creating record via POST for type:",
+        apiType
+      );
+      result = await createHealthRecord(petId, apiType, data);
+    }
+
     if (result.success) {
       router.back();
     } else {
-      // Handle error (maybe show alert)
-      console.error("Failed to add record");
+      Alert.alert("Error", result.message || "Failed to save record");
+      console.error("Failed to save record:", result.message);
     }
   };
 
