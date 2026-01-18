@@ -10,11 +10,17 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { usePetStore } from "@/store/usePetStore";
 import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
-import { RefreshControl, ScrollView, StatusBar, StyleSheet, View } from "react-native";
+import {
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  View,
+} from "react-native";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { fetchUser, isLoading: isAuthLoading } = useAuthStore();
+  const { user, fetchUser, isLoading: isAuthLoading } = useAuthStore();
   const { fetchPets, isLoading: isPetsLoading } = usePetStore();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -25,19 +31,31 @@ export default function HomeScreen() {
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     await Promise.all([fetchUser(), fetchPets()]);
+    console.log(
+      "[HomeScreen] User Info on Refresh:",
+      useAuthStore.getState().user
+    );
     setRefreshing(false);
   }, [fetchUser, fetchPets]);
 
   return (
     <View style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
       <Header isHome />
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+          />
         }
       >
         {/* ... content ... */}
@@ -45,13 +63,22 @@ export default function HomeScreen() {
 
         <QuickActions />
 
-        <SectionHeader title="My Pets" onSeeAll={() => router.push("/home/myPets/all-pets")} />
+        <SectionHeader
+          title="My Pets"
+          onSeeAll={() => router.push("/home/myPets/all-pets")}
+        />
         <PetList />
 
-        <SectionHeader title="Pet Pals" onSeeAll={() => console.log("See All My Pets")} />
+        <SectionHeader
+          title="Pet Pals"
+          onSeeAll={() => console.log("See All My Pets")}
+        />
         <PetPalsList />
 
-        <SectionHeader title="Available for Adoption" onSeeAll={() => console.log("See All Adoptions")} />
+        <SectionHeader
+          title="Available for Adoption"
+          onSeeAll={() => console.log("See All Adoptions")}
+        />
         <AdoptionList />
 
         {/* Bottom padding for tab bar */}

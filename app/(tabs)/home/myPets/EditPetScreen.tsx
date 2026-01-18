@@ -1,4 +1,5 @@
 import Header from "@/components/ui/Header";
+import LoadingModal from "@/components/ui/LoadingModal";
 import {
   BorderRadius,
   Colors,
@@ -22,7 +23,6 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -264,6 +264,7 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
     })) || []
   );
   const [viewedImage, setViewedImage] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Modal State
   const [avatarModalVisible, setAvatarModalVisible] = useState(false);
@@ -442,8 +443,11 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
 
       const result = await updatePet(formData);
       if (result.success) {
-        alert("Pet updated successfully!");
-        router.back();
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          router.back();
+        }, 2000);
       } else {
         alert(result.message || "Failed to update pet");
       }
@@ -456,14 +460,12 @@ export default function EditPetScreen({ initialData }: { initialData: Pet }) {
   return (
     <>
       {/* Loading Modal */}
-      <Modal visible={isLoading} transparent={true} animationType="fade">
-        <View style={styles.loadingOverlay}>
-          <View style={styles.loadingContent}>
-            <ActivityIndicator size="large" color="#00BCD4" />
-            <Text style={styles.loadingText}>Updating pet information...</Text>
-          </View>
-        </View>
-      </Modal>
+      <LoadingModal
+        visible={isLoading || showSuccess}
+        message="Updating pet information..."
+        success={showSuccess}
+        successMessage="Pet updated successfully!"
+      />
 
       {/* Main Content */}
       <View style={styles.container}>

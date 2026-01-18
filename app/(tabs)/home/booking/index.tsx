@@ -1,10 +1,13 @@
+import BookingDropdown from "@/components/bookService/BookingDropdown";
 import BookingCalendar from "@/components/booking/BookingCalendar";
 import Header from "@/components/ui/Header";
 import { Colors, FontSizes, FontWeights, Spacing } from "@/constants/colors";
+import bookingService from "@/services/bookingService";
 import { usePetStore } from "@/store/usePetStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
@@ -18,7 +21,15 @@ import GroomingIcon from "@/assets/images/icons/grooming.svg";
 import TrainingIcon from "@/assets/images/icons/training.svg";
 import VetIcon from "@/assets/images/icons/vet.svg";
 import WalkingIcon from "@/assets/images/icons/walking.svg";
-import { Bell, ChevronDown } from "lucide-react-native";
+import { Bell } from "lucide-react-native";
+
+const REMINDER_OPTIONS = [
+  "No reminder",
+  "30 minutes before",
+  "1 hour before",
+  "1 day before",
+  "1 week before",
+];
 
 const SERVICES = [
   {
@@ -51,18 +62,6 @@ const SERVICES = [
   },
 ];
 
-const TIME_SLOTS = [
-  "9:00 AM",
-  "9:30 AM",
-  "10:00 AM",
-  "11:00 AM",
-  "11:30 AM",
-  "1:30 PM",
-  "2:00 PM",
-  "2:30 PM",
-  "3:00 PM",
-];
-
 export default function BookServiceScreen() {
   const router = useRouter();
   // @ts-ignore
@@ -75,21 +74,81 @@ export default function BookServiceScreen() {
   );
   const [selectedServiceId, setSelectedServiceId] = useState("grooming");
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTime, setSelectedTime] = useState("11:30 AM");
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [selectedTime, setSelectedTime] = useState("");
+  const [selectedReminder, setSelectedReminder] = useState(REMINDER_OPTIONS[3]); // Default "1 week before"
 
-  // Update selectedPetId if pets change or params change logic if needed,
-  // but initial state usually suffices for navigation entry.
+  useEffect(() => {
+    fetchSlots();
+  }, [selectedDate]);
 
-  // ... rest of logic
+  const fetchSlots = async () => {
+    setIsLoadingSlots(true);
+    try {
+      // Format date to YYYY-MM-DD using local components to avoid timezone shifts
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+      const day = String(selectedDate.getDate()).padStart(2, "0");
+      const formattedDate = `${year}-${month}-${day}`;
+
+      const slots = await bookingService.getAvailability(formattedDate);
+      setAvailableSlots(slots);
+
+      // Select first slot by default if available
+      if (slots.length > 0) {
+        setSelectedTime(slots[0]);
+      } else {
+        setSelectedTime("");
+      }
+    } catch (error) {
+      console.error("[BookService] Failed to fetch slots:", error);
+      setAvailableSlots([]);
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  };
+
+  const formatTimeSlot = (isoString: string) => {
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch (e) {
+      return isoString;
+    }
+  };
 
   const handleNext = () => {
+    if (!selectedTime) return;
+
+    const selectedPet = pets.find((p) => p.id === selectedPetId);
+    const { healthRecords, ...petDataToLog } = selectedPet || ({} as any);
+    const selectedService = SERVICES.find((s) => s.id === selectedServiceId);
+
+    console.log("--- Booking Application Info ---");
+    console.log(
+      "Selected Pet (Excl. Health Records):",
+      JSON.stringify(petDataToLog, null, 2)
+    );
+    console.log("Selected Service:", JSON.stringify(selectedService, null, 2));
+    console.log("Selected Time (Slot):", selectedTime);
+    console.log("Selected Time (Formatted):", formatTimeSlot(selectedTime));
+    console.log("Reminder Setting:", selectedReminder);
+    console.log("--------------------------------");
+
     router.push({
       pathname: "/(tabs)/home/booking/confirm",
       params: {
         petId: selectedPetId,
         serviceId: selectedServiceId,
         date: selectedDate.toISOString(),
-        time: selectedTime,
+        time: formatTimeSlot(selectedTime),
+        slotIso: selectedTime,
+        reminder: selectedReminder,
       },
     });
   };
@@ -186,27 +245,42 @@ export default function BookServiceScreen() {
           <Text style={[styles.sectionTitle, { marginTop: Spacing.lg }]}>
             Available Times
           </Text>
-          <View style={styles.timeGrid}>
-            {TIME_SLOTS.map((time) => (
-              <TouchableOpacity
-                key={time}
-                style={[
-                  styles.timeSlot,
-                  selectedTime === time && styles.selectedTimeSlot,
-                ]}
-                onPress={() => setSelectedTime(time)}
-              >
-                <Text
+
+          {isLoadingSlots ? (
+            <View style={{ padding: Spacing.xl }}>
+              <ActivityIndicator color={Colors.primary} size="large" />
+            </View>
+          ) : availableSlots.length > 0 ? (
+            <View style={styles.timeGrid}>
+              {availableSlots.map((slot) => (
+                <TouchableOpacity
+                  key={slot}
                   style={[
-                    styles.timeText,
-                    selectedTime === time && styles.selectedTimeText,
+                    styles.timeSlot,
+                    selectedTime === slot && styles.selectedTimeSlot,
                   ]}
+                  onPress={() => setSelectedTime(slot)}
                 >
-                  {time}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <Text
+                    style={[
+                      styles.timeText,
+                      selectedTime === slot && styles.selectedTimeText,
+                    ]}
+                  >
+                    {formatTimeSlot(slot)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            <View style={{ padding: Spacing.lg, alignItems: "center" }}>
+              <Text
+                style={{ color: Colors.textSecondary, fontStyle: "italic" }}
+              >
+                No slots available for this date.
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Remind me */}
@@ -215,10 +289,14 @@ export default function BookServiceScreen() {
             <Bell size={18} color={Colors.primary} />
             <Text style={styles.reminderText}>Remind me before due time</Text>
           </View>
-          <TouchableOpacity style={styles.timeDropdown}>
-            <Text style={styles.dropdownText}>1 week</Text>
-            <ChevronDown size={18} color={Colors.textSecondary} />
-          </TouchableOpacity>
+          <View style={{ flex: 1, marginLeft: Spacing.md }}>
+            <BookingDropdown
+              label="Select Reminder"
+              options={REMINDER_OPTIONS}
+              selectedOption={selectedReminder}
+              onSelect={setSelectedReminder}
+            />
+          </View>
         </View>
 
         <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
@@ -387,20 +465,6 @@ const styles = StyleSheet.create({
   reminderText: {
     fontSize: FontSizes.sm,
     color: Colors.textSecondary,
-  },
-  timeDropdown: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-    backgroundColor: "#F3F4F6",
-    padding: Spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  dropdownText: {
-    fontSize: FontSizes.sm,
-    color: Colors.text,
   },
   nextButton: {
     backgroundColor: "#00BCD4",
