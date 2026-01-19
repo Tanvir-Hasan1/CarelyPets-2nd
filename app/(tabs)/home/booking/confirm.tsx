@@ -1,3 +1,4 @@
+import CountrySelectModal from "@/components/ui/CountrySelectModal";
 import Header from "@/components/ui/Header";
 import bookingService, { Service } from "@/services/bookingService";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -30,6 +31,8 @@ export default function ConfirmBookingScreen() {
   const [apiServices, setApiServices] = useState<Service[]>([]);
   const [taxPercent, setTaxPercent] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedCountry, setSelectedCountry] = useState("United States");
+  const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchPricing = async () => {
@@ -199,12 +202,22 @@ export default function ConfirmBookingScreen() {
 
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>COUNTRY</Text>
-              <TouchableOpacity style={styles.dropdown}>
-                <Text style={styles.dropdownText}>United States</Text>
+              <TouchableOpacity
+                style={styles.dropdown}
+                onPress={() => setIsCountryModalVisible(true)}
+              >
+                <Text style={styles.dropdownText}>{selectedCountry}</Text>
                 <ChevronDown size={20} color="#6B7280" />
               </TouchableOpacity>
             </View>
           </View>
+
+          <CountrySelectModal
+            visible={isCountryModalVisible}
+            onClose={() => setIsCountryModalVisible(false)}
+            onSelect={setSelectedCountry}
+            selectedCountry={selectedCountry}
+          />
 
           <TouchableOpacity
             style={styles.confirmButton}
