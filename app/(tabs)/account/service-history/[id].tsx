@@ -8,7 +8,14 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { usePetStore } from "@/store/usePetStore";
 import { useLocalSearchParams } from "expo-router";
 import { Calendar, CheckCircle2, Store } from "lucide-react-native";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 const SERVICE_ICONS: Record<string, any> = {
   vet: VetIcon,
@@ -17,39 +24,70 @@ const SERVICE_ICONS: Record<string, any> = {
   walking: WalkingIcon,
 };
 
-const SERVICE_NAMES: Record<string, string> = {
-  vet: "Vet Visit",
-  grooming: "Full Grooming Session",
-  training: "Training Session",
-  walking: "Walking Session",
+const SERVICE_THEMES: Record<string, { color: string; bgColor: string }> = {
+  vet: { color: "#4DD0E1", bgColor: "#E0F7FA" },
+  grooming: { color: "#4DB6AC", bgColor: "#E0F2F1" },
+  training: { color: "#4FC3F7", bgColor: "#E1F5FE" },
+  walking: { color: "#81C784", bgColor: "#E8F5E9" },
 };
 
+import useBookingStore from "@/store/useBookingStore";
+
 export default function ServiceHistoryDetailScreen() {
-  const {
-    id,
-    serviceId = "grooming",
-    date,
-    time,
-    petId,
-  } = useLocalSearchParams();
+  const { id } = useLocalSearchParams();
   const { user } = useAuthStore();
   const { pets } = usePetStore();
+  const { getBookingById, fetchBookingById, isLoading } = useBookingStore();
+  const booking = getBookingById(id as string);
 
-  const sid = (serviceId as string).toLowerCase();
-  const ServiceIcon = SERVICE_ICONS[sid] || GroomingIcon;
-  const serviceName = SERVICE_NAMES[sid] || "Full Grooming Session";
+  useEffect(() => {
+    if (id && !booking) {
+      fetchBookingById(id as string);
+    }
+  }, [id, booking]);
 
-  const dateString = date
-    ? new Date(date as string).toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "Tuesday, Oct 25, 2026";
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Header title="View History" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#006D77" />
+        </View>
+      </View>
+    );
+  }
 
-  const displayTime = time || "10:00 AM";
-  const pet = pets.find((p) => p.id === petId) || pets[0];
+  if (!booking) {
+    return (
+      <View style={styles.container}>
+        <Header title="View History" />
+        <View style={styles.loadingContainer}>
+          <Text>Booking not found</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const item = booking.items[0];
+  const serviceType = item?.serviceType || "grooming";
+  const ServiceIcon = SERVICE_ICONS[serviceType.toLowerCase()] || GroomingIcon;
+  const theme =
+    SERVICE_THEMES[serviceType.toLowerCase()] || SERVICE_THEMES.grooming;
+
+  const dateObject = new Date(booking.scheduledAt);
+  const dateString = dateObject.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timeString = dateObject.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const pet = pets.find((p) => p.id === booking.pets[0]) || pets[0];
 
   return (
     <View style={styles.container}>
@@ -63,38 +101,61 @@ export default function ServiceHistoryDetailScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Customer Information</Text>
-            <View style={[styles.statusBadge, { backgroundColor: "#FEF3C7" }]}>
-              <Text style={[styles.statusText, { color: "#92400E" }]}>
-                Processing
+            <View
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor:
+                    booking.status === "completed" ? "#DCFCE7" : "#FEF3C7",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusText,
+                  {
+                    color:
+                      booking.status === "completed" ? "#166534" : "#92400E",
+                  },
+                ]}
+              >
+                {booking.status.charAt(0).toUpperCase() +
+                  booking.status.slice(1)}
               </Text>
               <View
-                style={[styles.statusDot, { backgroundColor: "#B45309" }]}
+                style={[
+                  styles.statusDot,
+                  {
+                    backgroundColor:
+                      booking.status === "completed" ? "#15803D" : "#B45309",
+                  },
+                ]}
               />
             </View>
           </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>NAME</Text>
-            <Text style={styles.infoValue}>{user?.name || "John Doe"}</Text>
+            <Text style={styles.infoValue}>{user?.name || "N/A"}</Text>
           </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>PHONE</Text>
-            <Text style={styles.infoValue}>
-              {user?.phone || "555 666 8898"}
-            </Text>
+            <Text style={styles.infoValue}>{user?.phone || "N/A"}</Text>
           </View>
         </View>
 
         {/* Service Details */}
         <View style={styles.card}>
           <View style={styles.detailRow}>
-            <View style={[styles.iconCircle, { backgroundColor: "#B2EBF2" }]}>
-              <ServiceIcon width={50} height={50} />
+            <View
+              style={[styles.iconCircle, { backgroundColor: theme.bgColor }]}
+            >
+              <ServiceIcon width={40} height={40} />
             </View>
             <View style={styles.detailText}>
               <Text style={styles.infoLabel}>SERVICE</Text>
-              <Text style={styles.infoValue}>{serviceName}</Text>
+              <Text style={styles.infoValue}>{item?.serviceName || "N/A"}</Text>
             </View>
           </View>
 
@@ -105,7 +166,7 @@ export default function ServiceHistoryDetailScreen() {
             <View style={styles.detailText}>
               <Text style={styles.infoLabel}>DATE & TIME</Text>
               <Text style={styles.infoValue}>
-                {dateString} at {displayTime}
+                {dateString} at {timeString}
               </Text>
             </View>
           </View>
@@ -126,7 +187,7 @@ export default function ServiceHistoryDetailScreen() {
             </View>
             <View style={styles.detailText}>
               <Text style={styles.infoLabel}>FOR</Text>
-              <Text style={styles.infoValue}>{pet?.name || "Bubby"}</Text>
+              <Text style={styles.infoValue}>{item?.petName || "N/A"}</Text>
             </View>
           </View>
         </View>
@@ -135,16 +196,20 @@ export default function ServiceHistoryDetailScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Order Summary</Text>
           <Text style={[styles.infoLabel, { marginTop: 12 }]}>
-            {serviceName}
+            {item?.serviceName || "N/A"}
           </Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{pet?.name || "Bubby"}</Text>
-            <Text style={styles.summaryValue}>$ 250.00</Text>
+            <Text style={styles.summaryLabel}>{item?.petName || "N/A"}</Text>
+            <Text style={styles.summaryValue}>
+              $ {item?.unitPrice.toFixed(2)}
+            </Text>
           </View>
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
-            <Text style={styles.summaryValue}>$ 250.00</Text>
+            <Text style={styles.summaryValue}>
+              $ {booking.subtotal.toFixed(2)}
+            </Text>
           </View>
 
           <View style={styles.summaryRow}>
@@ -152,9 +217,13 @@ export default function ServiceHistoryDetailScreen() {
               style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
             >
               <Text style={styles.summaryLabel}>Tax</Text>
-              <Text style={[styles.infoLabel, { fontSize: 11 }]}>(5%)</Text>
+              <Text style={[styles.infoLabel, { fontSize: 11 }]}>
+                ({booking.taxPercent}%)
+              </Text>
             </View>
-            <Text style={styles.summaryValue}>$ 12.50</Text>
+            <Text style={styles.summaryValue}>
+              $ {booking.taxAmount.toFixed(2)}
+            </Text>
           </View>
 
           <View
@@ -182,17 +251,21 @@ export default function ServiceHistoryDetailScreen() {
                 { fontWeight: "bold", fontSize: 18, color: "#111827" },
               ]}
             >
-              $ 237.50
+              $ {booking.total.toFixed(2)}
             </Text>
           </View>
         </View>
 
         {/* Footer */}
         <View style={styles.footerCard}>
-          <Text style={styles.footerText}>Paid</Text>
-          <View style={styles.checkCircle}>
-            <CheckCircle2 size={24} color="#10B981" />
-          </View>
+          <Text style={styles.footerText}>
+            {booking.paymentStatus === "paid" ? "Paid" : "Payment Pending"}
+          </Text>
+          {booking.paymentStatus === "paid" && (
+            <View style={styles.checkCircle}>
+              <CheckCircle2 size={24} color="#10B981" />
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -313,5 +386,10 @@ const styles = StyleSheet.create({
   },
   checkCircle: {
     // styles for check circle wrapper if needed
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

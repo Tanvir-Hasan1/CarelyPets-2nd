@@ -1,14 +1,16 @@
 import CountrySelectModal from "@/components/ui/CountrySelectModal";
 import Header from "@/components/ui/Header";
+import LoadingModal from "@/components/ui/LoadingModal";
 import bookingService, { Service } from "@/services/bookingService";
 import { useAuthStore } from "@/store/useAuthStore";
+import useBookingStore from "@/store/useBookingStore";
 import { usePetStore } from "@/store/usePetStore";
+import { CardField, useConfirmPayment } from "@stripe/stripe-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronDown } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -33,6 +35,14 @@ export default function ConfirmBookingScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState("United States");
   const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
+
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isPaymentSuccess, setIsPaymentSuccess] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | undefined>();
+  const [bookingData, setBookingData] = useState<any>(null);
+  const [cardName, setCardName] = useState("");
+
+  const { confirmPayment } = useConfirmPayment();
 
   useEffect(() => {
     const fetchPricing = async () => {
@@ -65,11 +75,104 @@ export default function ConfirmBookingScreen() {
 
   const pet = pets.find((p) => p.id === petId) || pets[0];
 
-  const handleConfirm = () => {
-    router.push({
-      pathname: "/(tabs)/home/booking/success",
-      params: { ...params },
-    });
+  const handleConfirm = async () => {
+    if (!apiService) return;
+
+    setIsProcessing(true);
+    setPaymentError(undefined);
+
+    try {
+      // Map reminder string to API format
+      let reminderType = "day_before";
+      const reminderParam = params.reminder as string;
+      if (reminderParam === "No reminder") reminderType = "none";
+      else if (reminderParam === "30 minutes before")
+        reminderType = "30_min_before";
+      else if (reminderParam === "1 hour before") reminderType = "hour_before";
+      else if (reminderParam === "1 day before") reminderType = "day_before";
+      else if (reminderParam === "1 week before") reminderType = "week_before";
+
+      // 1. Create Booking
+      const bookingPayload = {
+        serviceIds: [apiService._id],
+        petIds: [petId],
+        scheduledAt: params.slotIso as string,
+        reminderType: reminderType,
+      };
+      console.log(
+        "[ConfirmBooking] Creating booking with payload:",
+        JSON.stringify(bookingPayload, null, 2),
+      );
+
+      const res = await bookingService.createBooking(bookingPayload);
+      console.log(
+        "[ConfirmBooking] Booking created successfully:",
+        JSON.stringify(res, null, 2),
+      );
+
+      setBookingData(res.booking);
+      // Add the new booking to the store
+      const { bookings, setBookings } = useBookingStore.getState();
+      setBookings([res.booking, ...bookings]);
+
+      // 2. Confirm Payment with Stripe
+      const { error, paymentIntent } = await confirmPayment(res.clientSecret, {
+        paymentMethodType: "Card",
+        paymentMethodData: {
+          billingDetails: {
+            name: cardName || user?.name || "User",
+          },
+        },
+      });
+
+      if (error) {
+        console.error("[ConfirmBooking] Payment failed:", error);
+        setPaymentError(error.message);
+        setIsProcessing(false);
+      } else if (paymentIntent) {
+        // 3. Success -> Show success message then navigate
+        console.log(
+          "[ConfirmBooking] Payment successful:",
+          JSON.stringify(paymentIntent, null, 2),
+        );
+        setIsPaymentSuccess(true);
+
+        setTimeout(() => {
+          console.log(
+            "[ConfirmBooking] Process completed. Navigating to success page.",
+          );
+          setIsProcessing(false);
+          setIsPaymentSuccess(false);
+          router.push({
+            pathname: "/(tabs)/home/booking/success",
+            params: {
+              ...params,
+              bookingId: res.booking._id,
+            },
+          });
+        }, 1500);
+      }
+    } catch (error: any) {
+      console.error("[ConfirmBooking] Booking failed:", error);
+      setPaymentError(error.message || "An unexpected error occurred");
+      setIsProcessing(false);
+    }
+  };
+
+  const handleViewBookingDetails = () => {
+    setIsProcessing(false);
+    if (bookingData) {
+      router.push({
+        pathname: "/(tabs)/home/booking/[id]",
+        params: {
+          id: bookingData._id,
+          serviceId: serviceId,
+          petId: petId,
+          date: params.date as string,
+          time: params.time as string,
+        },
+      });
+    }
   };
 
   return (
@@ -147,48 +250,20 @@ export default function ConfirmBookingScreen() {
             <Text style={styles.cardTitle}>Payment</Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>CARD NUMBER</Text>
-              <View style={styles.cardInputWrapper}>
-                <TextInput
-                  style={styles.cardInput}
-                  placeholder="1111 2222 3333 4444"
-                  placeholderTextColor="#9CA3AF"
-                />
-                <View style={styles.cardLogos}>
-                  <Image
-                    source={{ uri: MASTERCARD_LOGO }}
-                    style={styles.cardLogo}
-                    resizeMode="contain"
-                  />
-                  <View style={{ width: 8 }} />
-                  <Image
-                    source={{ uri: VISA_LOGO }}
-                    style={styles.cardLogo}
-                    resizeMode="contain"
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.row}>
-              <View
-                style={[styles.inputContainer, { flex: 1, marginRight: 12 }]}
-              >
-                <Text style={styles.inputLabel}>EXPIRATION DATE</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="11/25"
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
-              <View style={[styles.inputContainer, { flex: 1 }]}>
-                <Text style={styles.inputLabel}>CVV</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="865"
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
+              <Text style={styles.inputLabel}>CARD DETAILS</Text>
+              <CardField
+                postalCodeEnabled={true}
+                placeholders={{
+                  number: "1111 2222 3333 4444",
+                }}
+                cardStyle={{
+                  backgroundColor: "#F9FAFB",
+                  textColor: "#111827",
+                  placeholderColor: "#9CA3AF",
+                  borderRadius: 12,
+                }}
+                style={styles.cardField}
+              />
             </View>
 
             <View style={styles.inputContainer}>
@@ -197,6 +272,8 @@ export default function ConfirmBookingScreen() {
                 style={styles.input}
                 placeholder="John Doe"
                 placeholderTextColor="#9CA3AF"
+                value={cardName}
+                onChangeText={setCardName}
               />
             </View>
 
@@ -219,11 +296,28 @@ export default function ConfirmBookingScreen() {
             selectedCountry={selectedCountry}
           />
 
+          <LoadingModal
+            visible={isProcessing || !!paymentError}
+            message="Processing your booking..."
+            success={isPaymentSuccess}
+            successMessage="Payment Successful!"
+            failed={!!paymentError}
+            error={paymentError}
+            onClose={() => {
+              setPaymentError(undefined);
+              setIsProcessing(false);
+            }}
+            onViewDetails={bookingData ? handleViewBookingDetails : undefined}
+          />
+
           <TouchableOpacity
             style={styles.confirmButton}
             onPress={handleConfirm}
+            disabled={isProcessing}
           >
-            <Text style={styles.confirmButtonText}>Confirm & Pay</Text>
+            <Text style={styles.confirmButtonText}>
+              {isProcessing ? "Processing..." : "Confirm & Pay"}
+            </Text>
           </TouchableOpacity>
 
           <View style={{ height: 40 }} />
@@ -376,6 +470,13 @@ const styles = StyleSheet.create({
   cardLogo: {
     width: 30,
     height: 20,
+  },
+  cardField: {
+    width: "100%",
+    height: 56,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   row: {
     flexDirection: "row",
