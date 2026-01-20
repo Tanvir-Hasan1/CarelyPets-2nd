@@ -14,6 +14,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 
@@ -192,12 +193,12 @@ const CommentModal = ({
       visible={visible}
       onRequestClose={onClose}
     >
-      <TouchableOpacity
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
-        <TouchableOpacity style={styles.modalContent} activeOpacity={1}>
+      <View style={styles.modalOverlay}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={StyleSheet.absoluteFill} />
+        </TouchableWithoutFeedback>
+
+        <View style={styles.modalContent}>
           <View style={styles.headerHandle} />
 
           <View style={styles.statsRow}>
@@ -224,6 +225,8 @@ const CommentModal = ({
                 )}
                 contentContainerStyle={styles.commentsList}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                removeClippedSubviews={Platform.OS === "android"}
                 ListEmptyComponent={
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>
@@ -236,7 +239,7 @@ const CommentModal = ({
           </View>
 
           <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
             keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
           >
             {replyingTo && (
@@ -276,8 +279,8 @@ const CommentModal = ({
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
-        </TouchableOpacity>
-      </TouchableOpacity>
+        </View>
+      </View>
     </Modal>
   );
 };

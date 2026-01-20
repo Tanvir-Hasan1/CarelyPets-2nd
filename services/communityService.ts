@@ -159,6 +159,12 @@ class CommunityService {
       text: data.text,
     });
   }
+
+  async sharePost(postId: string | number, text?: string): Promise<any> {
+    return await api.post(`/community/posts/${postId}/share`, {
+      text,
+    });
+  }
 }
 
 export const communityService = new CommunityService();

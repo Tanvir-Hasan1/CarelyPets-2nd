@@ -1,10 +1,12 @@
 import ShareIcon from "@/assets/images/icons/share.svg";
 import { Colors } from "@/constants/colors";
+import communityService from "@/services/communityService";
 import { Heart, MessageCircle, MoreVertical } from "lucide-react-native";
 import { useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import PetPalPostDropdown from "../../home/petPals/PetPalPostDropdown";
 import PetPalShareModal from "../../home/petPals/PetPalShareModal";
+import LoadingModal from "../../ui/LoadingModal";
 import PostOptionsDropdown from "./PostOptionsDropdown";
 
 interface FeedItemProps {
@@ -57,6 +59,30 @@ const FeedItem = ({
   onBlock,
 }: FeedItemProps) => {
   const [showShareModal, setShowShareModal] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+
+  const handleShareNow = async (text: string) => {
+    try {
+      setShowShareModal(false);
+      setIsSharing(true);
+      const response = await communityService.sharePost(postId, text);
+      if (response.success) {
+        setShareSuccess(true);
+        setTimeout(() => {
+          setIsSharing(false);
+          setShareSuccess(false);
+        }, 1500);
+      } else {
+        setIsSharing(false);
+        alert("Failed to share post");
+      }
+    } catch (error) {
+      setIsSharing(false);
+      console.error("Error sharing post:", error);
+      alert("Error sharing post");
+    }
+  };
 
   return (
     <TouchableOpacity
@@ -129,10 +155,14 @@ const FeedItem = ({
       <PetPalShareModal
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
-        onShare={(text) => {
-          console.log("Post shared with message:", text);
-          setShowShareModal(false);
-        }}
+        onShare={handleShareNow}
+      />
+
+      <LoadingModal
+        visible={isSharing}
+        message="Sharing post..."
+        success={shareSuccess}
+        successMessage="Post shared successfully!"
       />
     </TouchableOpacity>
   );
