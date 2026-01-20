@@ -4,8 +4,12 @@ import ChatIcon from "@/assets/images/icons/chat.svg";
 import PawIcon from "@/assets/images/icons/paw.svg";
 import ProfileIcon from "@/assets/images/icons/profile.svg";
 import { Colors, FontSizes, FontWeights, Spacing } from "@/constants/colors";
+import socketService from "@/services/socketService";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useChatStore } from "@/store/useChatStore";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Tabs, useSegments } from "expo-router";
+import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 
 const ACTIVE_COLOR = Colors.primary;
@@ -17,6 +21,24 @@ export default function TabLayout() {
   // The segments for main tabs are typically ['(tabs)', 'home'], ['(tabs)', 'pethub'], etc.
   // Sub-pages will have more segments, e.g., ['(tabs)', 'home', 'myPets']
   const isExcludedPage = segments.length > 2;
+
+  const { isAuthenticated, user } = useAuthStore();
+  const { fetchConversations } = useChatStore();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Connect socket with token if available
+      socketService.connect();
+      fetchConversations();
+    } else {
+      socketService.disconnect();
+    }
+
+    return () => {
+      // We might not want to disconnect on unmount if it's just a sub-navigation
+      // but TabLayout usually stays mounted.
+    };
+  }, [isAuthenticated]);
 
   return (
     <Tabs
