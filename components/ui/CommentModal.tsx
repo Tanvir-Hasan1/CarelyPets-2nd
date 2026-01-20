@@ -1,379 +1,459 @@
-import SendIcon from '@/assets/images/icons/send.svg';
-import { Colors } from '@/constants/colors';
-import { Heart, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import SendIcon from "@/assets/images/icons/send.svg";
+import { Colors } from "@/constants/colors";
+import communityService from "@/services/communityService";
+import { Heart, X } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import {
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+  ActivityIndicator,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-interface Comment {
-    id: number;
-    userAvatar: string;
-    userName: string;
-    content: string;
-    time: string;
-    likes: string;
-    replies?: Comment[];
+interface UIComment {
+  id: string;
+  userAvatar: string;
+  userName: string;
+  content: string;
+  time: string;
+  likes: string;
+  replies?: UIComment[];
 }
 
 interface CommentModalProps {
-    visible: boolean;
-    onClose: () => void;
-    postId: number;
-    likesCount: string;
-    sharesCount: string;
+  visible: boolean;
+  onClose: () => void;
+  postId: string | number;
+  likesCount: string | number;
+  sharesCount: string | number;
+  onCommentAdded?: () => void;
 }
 
-const MOCK_COMMENTS: Comment[] = [
-    {
-        id: 1,
-        userAvatar: 'https://i.pravatar.cc/150?u=delray',
-        userName: 'Del Ray',
-        content: 'Really a cute cat, and the lady raise them quite good',
-        time: '5h',
-        likes: '12',
-    },
-    {
-        id: 2,
-        userAvatar: 'https://i.pravatar.cc/150?u=somia',
-        userName: 'Somia Kasem',
-        content: 'Really a cute cat, and the lady raise them quite good',
-        time: '5h',
-        likes: '5K',
-        replies: [
-            {
-                id: 3,
-                userAvatar: 'https://i.pravatar.cc/150?u=kasem',
-                userName: 'Kasem Khondokar',
-                content: 'Really a cute cat, and the lady raise them quite good',
-                time: '5h',
-                likes: '5K',
-            },
-            {
-                id: 4,
-                userAvatar: 'https://i.pravatar.cc/150?u=yasin',
-                userName: 'Yasin Kasem',
-                content: 'Really a cute cat, and the lady raise them quite good',
-                time: '5h',
-                likes: '5K',
-            }
-        ]
-    }
-];
+const mapApiCommentsToUI = (apiData: any[]): UIComment[] => {
+  return apiData.map((item) => {
+    // Handle both wrapped { comment, replies } and flat { id, text, ... } formats
+    const comment = item.comment || item;
+    const replies = item.replies || [];
 
-const CommentItem = ({ comment, isReply = false, onReply }: { comment: Comment; isReply?: boolean; onReply: (comment: Comment) => void }) => {
-    return (
-        <View style={[styles.commentContainer, isReply && styles.replyContainer]}>
-            <View style={styles.commentHeader}>
-                <Image source={{ uri: comment.userAvatar }} style={isReply ? styles.replyAvatar : styles.commentAvatar} />
-                <View style={styles.commentContent}>
-                    <View style={styles.commentBubble}>
-                        <Text style={styles.commentUserName}>{comment.userName}</Text>
-                        <Text style={styles.commentText}>{comment.content}</Text>
-                    </View>
-                    <View style={styles.commentActions}>
-                        <Text style={styles.actionText}>{comment.time}</Text>
-                        <TouchableOpacity>
-                            <Text style={[styles.actionText, styles.highlightText]}>{comment.likes} Like</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => onReply(comment)}>
-                            <Text style={styles.actionText}>Reply</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </View>
-
-            {comment.replies && comment.replies.length > 0 && (
-                <View style={styles.repliesList}>
-                    <View style={styles.replyLine} />
-                    {comment.replies.map(reply => (
-                        <CommentItem key={reply.id} comment={reply} isReply onReply={onReply} />
-                    ))}
-                </View>
-            )}
-        </View>
-    );
+    return {
+      id: String(comment.id),
+      userAvatar:
+        comment.author?.avatarUrl ||
+        `https://i.pravatar.cc/150?u=${comment.author?.username || "user"}`,
+      userName: comment.author?.name || "User",
+      content: comment.text,
+      time: comment.timeAgo || "Just now",
+      likes: "0",
+      replies: replies.map((reply: any) => ({
+        id: String(reply.id),
+        userAvatar:
+          reply.author?.avatarUrl ||
+          `https://i.pravatar.cc/150?u=${reply.author?.username || "user"}`,
+        userName: reply.author?.name || "User",
+        content: reply.text,
+        time: reply.timeAgo || "Just now",
+        likes: "0",
+      })),
+    };
+  });
 };
 
+/* ---------------- Comment Item ---------------- */
+const CommentItem = ({
+  comment,
+  isReply = false,
+  onReply,
+}: {
+  comment: UIComment;
+  isReply?: boolean;
+  onReply: (comment: UIComment) => void;
+}) => (
+  <View style={[styles.commentContainer, isReply && styles.replyContainer]}>
+    <View style={styles.commentHeader}>
+      <Image
+        source={{ uri: comment.userAvatar }}
+        style={isReply ? styles.replyAvatar : styles.commentAvatar}
+      />
+      <View style={styles.commentContent}>
+        <View style={styles.commentBubble}>
+          <Text style={styles.commentUserName}>{comment.userName}</Text>
+          <Text style={styles.commentText}>{comment.content}</Text>
+        </View>
+        <View style={styles.commentActions}>
+          <Text style={styles.actionText}>{comment.time}</Text>
+          <TouchableOpacity activeOpacity={0.7}>
+            <Text style={[styles.actionText, styles.highlightText]}>
+              {comment.likes} Like
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => onReply(comment)}>
+            <Text style={styles.actionText}>Reply</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
 
-const CommentModal = ({ visible, onClose, postId, likesCount, sharesCount }: CommentModalProps) => {
-    const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS);
-    const [newComment, setNewComment] = useState("");
-    const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+    {!isReply && comment.replies && comment.replies.length > 0 && (
+      <View style={styles.repliesList}>
+        <View style={styles.replyLine} />
+        {comment.replies.map((reply) => (
+          <CommentItem
+            key={reply.id}
+            comment={reply}
+            isReply
+            onReply={onReply}
+          />
+        ))}
+      </View>
+    )}
+  </View>
+);
 
-    const handleReply = (comment: Comment) => {
-        setReplyingTo(comment);
-    };
+/* ---------------- Comment Modal ---------------- */
+const CommentModal = ({
+  visible,
+  onClose,
+  postId,
+  likesCount,
+  sharesCount,
+  onCommentAdded,
+}: CommentModalProps) => {
+  const [comments, setComments] = useState<UIComment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [replyingTo, setReplyingTo] = useState<UIComment | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSend = () => {
-        if (!newComment.trim()) return;
+  /* -------- Fetch Comments -------- */
+  const loadComments = async () => {
+    try {
+      setLoading(true);
+      const res = await communityService.getPostComments(postId);
+      if (res.success && res.data) {
+        setComments(mapApiCommentsToUI(res.data));
+      }
+    } catch (err) {
+      console.error("Failed to load comments", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        const commentData: Comment = {
-            id: Date.now(),
-            userAvatar: 'https://i.pravatar.cc/150?u=me',
-            userName: 'Tuval Smith',
-            content: newComment,
-            time: 'Just now',
-            likes: '0',
-        };
+  useEffect(() => {
+    if (visible && postId) {
+      loadComments();
+    } else if (!visible) {
+      setComments([]);
+      setReplyingTo(null);
+      setNewComment("");
+    }
+  }, [visible, postId]);
 
-        if (replyingTo) {
-            // Find parent and add reply
-            const updatedComments = comments.map(c => {
-                if (c.id === replyingTo.id) {
-                    return { ...c, replies: [...(c.replies || []), commentData] };
-                }
-                // Check in replies (only 1 level deep for mock)
-                if (c.replies?.some(r => r.id === replyingTo.id)) {
-                    return { ...c, replies: [...(c.replies || []), commentData] };
-                }
-                return c;
-            });
-            setComments(updatedComments);
-            setReplyingTo(null);
-        } else {
-            setComments([commentData, ...comments]);
-        }
+  /* -------- Send Comment / Reply -------- */
+  const handleSend = async () => {
+    if (!newComment.trim() || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      const parentId = replyingTo?.id || null;
+      const res = await communityService.createComment({
+        postId,
+        text: newComment.trim(),
+        parentId,
+      });
+
+      if (res.success) {
         setNewComment("");
-    };
+        setReplyingTo(null);
+        if (onCommentAdded) onCommentAdded();
+        await loadComments(); // refresh after post
+      } else {
+        alert("Failed to send comment");
+      }
+    } catch (err) {
+      console.error("Failed to send comment", err);
+      alert("Error sending comment");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    return (
-        <Modal
-            animationType="slide"
-            transparent={true}
-            visible={visible}
-            onRequestClose={onClose}
-        >
-            <TouchableOpacity
-                activeOpacity={1}
-                onPress={onClose}
-                style={styles.modalOverlay}
-            >
-                <TouchableOpacity
-                    activeOpacity={1}
-                    style={styles.modalContent}
-                >
-                    <View style={styles.headerHandle} />
+  return (
+    <Modal
+      transparent
+      animationType="slide"
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <TouchableOpacity style={styles.modalContent} activeOpacity={1}>
+          <View style={styles.headerHandle} />
 
-                    <View style={styles.statsRow}>
-                        <View style={styles.statGroup}>
-                            <Heart size={20} color={Colors.primary} fill={Colors.primary} />
-                            <Text style={styles.statCount}>{likesCount}</Text>
-                        </View>
-                        <Text style={styles.shareCount}>{sharesCount} shares</Text>
-                    </View>
+          <View style={styles.statsRow}>
+            <View style={styles.statGroup}>
+              <Heart size={20} color={Colors.primary} fill={Colors.primary} />
+              <Text style={styles.statCount}>{likesCount}</Text>
+            </View>
+            <Text style={styles.shareCount}>{sharesCount} shares</Text>
+          </View>
 
-                    <FlatList
-                        data={comments}
-                        keyExtractor={(item) => item.id.toString()}
-                        renderItem={({ item }) => <CommentItem comment={item} onReply={handleReply} />}
-                        contentContainerStyle={styles.commentsList}
-                        showsVerticalScrollIndicator={false}
-                    />
+          <View style={{ flex: 1 }}>
+            {loading ? (
+              <ActivityIndicator
+                size="large"
+                color={Colors.primary}
+                style={{ marginTop: 40 }}
+              />
+            ) : (
+              <FlatList
+                data={comments}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <CommentItem comment={item} onReply={setReplyingTo} />
+                )}
+                contentContainerStyle={styles.commentsList}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      No comments yet. Be the first to comment!
+                    </Text>
+                  </View>
+                }
+              />
+            )}
+          </View>
 
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === "ios" ? "padding" : "height"}
-                        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
-                    >
-                        {replyingTo && (
-                            <View style={styles.replyingIndicator}>
-                                <Text style={styles.replyingToText}>Replying to {replyingTo.userName}</Text>
-                                <TouchableOpacity onPress={() => setReplyingTo(null)}>
-                                    <X size={16} color="#6B7280" />
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                        <View style={styles.inputArea}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder={replyingTo ? "Add Reply" : "Add Comment"}
-                                placeholderTextColor="#9CA3AF"
-                                value={newComment}
-                                onChangeText={setNewComment}
-                            />
-                            <TouchableOpacity
-                                style={styles.sendButton}
-                                onPress={handleSend}
-                            >
-                                <SendIcon width={50} height={50} color="#FFFFFF" />
-                            </TouchableOpacity>
-                        </View>
-                    </KeyboardAvoidingView>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
+          >
+            {replyingTo && (
+              <View style={styles.replyingIndicator}>
+                <Text style={styles.replyingToText}>
+                  Replying to {replyingTo.userName}
+                </Text>
+                <TouchableOpacity onPress={() => setReplyingTo(null)}>
+                  <X size={16} color="#6B7280" />
                 </TouchableOpacity>
-            </TouchableOpacity>
-        </Modal>
-    );
+              </View>
+            )}
+
+            <View style={styles.inputArea}>
+              <TextInput
+                style={styles.input}
+                placeholder={replyingTo ? "Add reply..." : "Add comment..."}
+                placeholderTextColor="#9CA3AF"
+                value={newComment}
+                onChangeText={setNewComment}
+                multiline
+              />
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  (!newComment.trim() || isSubmitting) &&
+                    styles.sendButtonDisabled,
+                ]}
+                onPress={handleSend}
+                disabled={!newComment.trim() || isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <SendIcon width={24} height={24} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
 };
 
 const styles = StyleSheet.create({
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        backgroundColor: '#FFFFFF',
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
-        height: '80%',
-        paddingTop: 12,
-    },
-    headerHandle: {
-        width: 60,
-        height: 4,
-        backgroundColor: '#E5E7EB',
-        borderRadius: 2,
-        alignSelf: 'center',
-        marginBottom: 20,
-    },
-    statsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingBottom: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
-    },
-    statGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    statCount: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#111827',
-    },
-    shareCount: {
-        fontSize: 14,
-        color: '#6B7280',
-    },
-    commentsList: {
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: 40,
-    },
-    commentContainer: {
-        marginBottom: 24,
-    },
-    replyContainer: {
-        marginTop: 16,
-    },
-    commentHeader: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    commentAvatar: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-    },
-    replyAvatar: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-    },
-    commentContent: {
-        flex: 1,
-    },
-    commentBubble: {
-        backgroundColor: '#F9FAFB',
-        borderRadius: 12,
-        padding: 12,
-    },
-    commentUserName: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#111827',
-        marginBottom: 4,
-    },
-    commentText: {
-        fontSize: 14,
-        color: '#374151',
-        lineHeight: 20,
-    },
-    commentActions: {
-        flexDirection: 'row',
-        gap: 16,
-        marginTop: 8,
-        paddingLeft: 4,
-    },
-    actionText: {
-        fontSize: 12,
-        color: '#6B7280',
-    },
-    highlightText: {
-        color: Colors.secondary, // Or a color that matches "5K Like"
-        fontWeight: '600',
-    },
-    repliesList: {
-        paddingLeft: 22,
-        position: 'relative',
-    },
-    replyLine: {
-        position: 'absolute',
-        left: 0,
-        top: -10,
-        bottom: 20,
-        width: 2,
-        backgroundColor: '#E5E7EB',
-        borderBottomLeftRadius: 10,
-    },
-    inputArea: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-        backgroundColor: '#FFFFFF',
-        gap: 12,
-    },
-    input: {
-        flex: 1,
-        height: 48,
-        backgroundColor: '#FFFFFF',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderRadius: 24,
-        paddingHorizontal: 20,
-        fontSize: 14,
-        color: '#111827',
-    },
-    sendButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: Colors.secondary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
-    },
-    replyingIndicator: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingVertical: 8,
-        backgroundColor: '#F3F4F6',
-        borderTopWidth: 1,
-        borderTopColor: '#E5E7EB',
-    },
-    replyingToText: {
-        fontSize: 12,
-        color: '#4B5563',
-        fontWeight: '500',
-    }
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    height: "80%",
+    paddingTop: 12,
+  },
+  headerHandle: {
+    width: 60,
+    height: 4,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  statGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  statCount: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#111827",
+  },
+  shareCount: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  commentsList: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+  commentContainer: {
+    marginBottom: 24,
+  },
+  replyContainer: {
+    marginTop: 16,
+  },
+  commentHeader: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  commentAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  replyAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  commentContent: {
+    flex: 1,
+  },
+  commentBubble: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    padding: 12,
+  },
+  commentUserName: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  commentText: {
+    fontSize: 14,
+    color: "#374151",
+    lineHeight: 20,
+  },
+  commentActions: {
+    flexDirection: "row",
+    gap: 16,
+    marginTop: 8,
+    paddingLeft: 4,
+  },
+  actionText: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  highlightText: {
+    color: Colors.secondary,
+    fontWeight: "600",
+  },
+  repliesList: {
+    paddingLeft: 22,
+    position: "relative",
+  },
+  replyLine: {
+    position: "absolute",
+    left: 0,
+    top: -10,
+    bottom: 0,
+    width: 2,
+    backgroundColor: "#E5E7EB",
+  },
+  inputArea: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    backgroundColor: "#FFFFFF",
+    gap: 12,
+  },
+  input: {
+    flex: 1,
+    height: 48,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    fontSize: 14,
+    color: "#111827",
+  },
+  sendButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.secondary,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  sendButtonDisabled: {
+    backgroundColor: "#D1D5DB",
+  },
+  replyingIndicator: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    backgroundColor: "#F3F4F6",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  replyingToText: {
+    fontSize: 12,
+    color: "#4B5563",
+    fontWeight: "500",
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyText: {
+    color: "#9CA3AF",
+    fontSize: 14,
+    fontStyle: "italic",
+    textAlign: "center",
+  },
 });
 
 export default CommentModal;
