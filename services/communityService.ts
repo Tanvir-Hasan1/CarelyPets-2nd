@@ -151,13 +151,13 @@ class CommunityService {
     text: string;
     parentId?: string | number | null;
   }): Promise<AddCommentResponse> {
-    return await api.post<AddCommentResponse>(
-      `/community/posts/${data.postId}/comments`,
-      {
-        text: data.text,
-        ...(data.parentId && { parent_id: data.parentId }),
-      },
-    );
+    const url = data.parentId
+      ? `/community/comments/${data.parentId}/replies`
+      : `/community/posts/${data.postId}/comments`;
+
+    return await api.post<AddCommentResponse>(url, {
+      text: data.text,
+    });
   }
 }
 
