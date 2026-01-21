@@ -55,13 +55,18 @@ class SocketService {
     });
 
     // Listen for new messages
-    this.socket.on("new_message", (data) => {
-      // console.log("[Socket] Handled new_message:", data); // onAny already logs this
+    const handleNewMessage = (data: any) => {
+      console.log("[Socket] Message received:", JSON.stringify(data, null, 2));
       const message = data?.data && data?.success ? data.data : data;
-      if (message && message.id) {
-        useChatStore.getState().addMessage(message);
+      if (message && message.id && message.conversationId) {
+        useChatStore.getState().addMessage(message.conversationId, message);
+      } else {
+        console.error("[Socket] Received invalid message structure:", data);
       }
-    });
+    };
+
+    this.socket.on("new_message", handleNewMessage);
+    this.socket.on("newMessage", handleNewMessage);
 
     // Listen for conversation updates
     this.socket.on("conversation_update", (data) => {

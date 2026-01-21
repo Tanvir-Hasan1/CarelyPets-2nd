@@ -93,6 +93,21 @@ class ChatService {
     });
   }
 
+  async sendMessageWithAttachments(
+    formData: FormData,
+  ): Promise<{ success: boolean; data: Message }> {
+    return await api.post<{ success: boolean; data: Message }>(
+      "/messages/attachments",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        timeout: 60000, // Higher timeout for file uploads
+      },
+    );
+  }
+
   async markAsRead(conversationId: string): Promise<{ success: boolean }> {
     return await api.post<{ success: boolean }>(
       `/messages/conversations/${conversationId}/read`,

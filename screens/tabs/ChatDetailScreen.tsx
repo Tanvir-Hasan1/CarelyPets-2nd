@@ -31,6 +31,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+const EMPTY_MESSAGES: Message[] = [];
+
 const MessageBubble = ({
   message,
   onImagePress,
@@ -39,8 +41,8 @@ const MessageBubble = ({
   onImagePress: (uri: string) => void;
 }) => {
   const isMe =
-    message.sender === "me" ||
-    message.sender === useAuthStore.getState().user?.id;
+    message.senderId === useAuthStore.getState().user?.id ||
+    message.sender === "me";
 
   return (
     <View
@@ -79,10 +81,10 @@ const MessageBubble = ({
               style={[
                 styles.statusCheck,
                 styles.myStatusCheck,
-                message.status === "read" && { color: "#E0F7FA" },
+                message.readAt && { color: "#E0F7FA" },
               ]}
             >
-              {message.status === "sent" ? "✓" : "✓✓"}
+              {message.readAt ? "✓✓" : "✓"}
             </Text>
           )}
         </View>
@@ -98,15 +100,18 @@ export default function ChatDetailScreen() {
   const insets = useSafeAreaInsets();
 
   const { user } = useAuthStore();
-  const {
-    messages: allMessages,
-    fetchMessages,
-    sendMessage,
-    isLoadingMessages,
-    setActiveConversation,
-  } = useChatStore();
-
-  const messages = allMessages[conversationId] || [];
+  const messages = useChatStore(
+    (state) => state.messages[conversationId] || EMPTY_MESSAGES,
+  );
+  const isLoadingMessages = useChatStore((state) => state.isLoadingMessages);
+  const fetchMessages = useChatStore((state) => state.fetchMessages);
+  const sendMessage = useChatStore((state) => state.sendMessage);
+  const sendMessageWithAttachments = useChatStore(
+    (state) => state.sendMessageWithAttachments,
+  );
+  const setActiveConversation = useChatStore(
+    (state) => state.setActiveConversation,
+  );
 
   const [messageText, setMessageText] = useState("");
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -129,6 +134,15 @@ export default function ChatDetailScreen() {
       }
     };
   }, [conversationId]);
+
+  // Auto-scroll when messages update
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 200);
+    }
+  }, [messages.length]);
 
   const handleBack = () => router.back();
 
@@ -153,25 +167,40 @@ export default function ChatDetailScreen() {
     if (!messageText.trim() && selectedImages.length === 0) return;
 
     try {
-      // Mapping selected images to the Attachment structure requested by the API
-      // Note: In a real app, these would be uploaded first to get URLs.
-      // For now, mapping local URIs to the structure for demonstration.
-      const attachments = selectedImages.map((uri) => ({
-        url: uri, // In reality, this would be a server-provided URL
-        mimeType: "image/jpeg",
-        fileName: uri.split("/").pop() || "image.jpg",
-        size: 0, // Placeholder
-      }));
+      if (selectedImages.length > 0) {
+        const { conversations } = useChatStore.getState();
+        const conversation = conversations.find((c) => c.id === conversationId);
+        const recipient = conversation?.participants.find(
+          (p) => p.id !== user?.id,
+        );
 
-      await sendMessage(conversationId, messageText, attachments);
+        if (!recipient) throw new Error("Recipient not found");
+
+        const formData = new FormData();
+        formData.append("recipientId", recipient.id);
+        formData.append("body", messageText.trim());
+
+        // Append files
+        selectedImages.forEach((uri) => {
+          const fileName = uri.split("/").pop() || "image.jpg";
+          const match = /\.(\w+)$/.exec(fileName);
+          const type = match ? `image/${match[1]}` : "image/jpeg";
+
+          // @ts-ignore - React Native FormData expects this structure for files
+          formData.append("files", {
+            uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
+            name: fileName,
+            type,
+          });
+        });
+
+        await sendMessageWithAttachments(conversationId, formData);
+      } else {
+        await sendMessage(conversationId, messageText);
+      }
+
       setMessageText("");
       setSelectedImages([]);
-
-      // Scroll to bottom
-      setTimeout(
-        () => flatListRef.current?.scrollToEnd({ animated: true }),
-        100,
-      );
     } catch (error) {
       console.error("Failed to send message:", error);
     }
@@ -225,12 +254,7 @@ export default function ChatDetailScreen() {
               message={
                 {
                   ...item,
-                  text: item.body || item.content,
                   sender: isMe ? "me" : "other",
-                  time: new Date(item.createdAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  }),
                 } as any
               }
               onImagePress={(uri) => setViewingImage(uri)}

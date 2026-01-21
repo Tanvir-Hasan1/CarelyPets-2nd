@@ -18,7 +18,11 @@ interface ChatState {
     content: string,
     attachments?: any[],
   ) => Promise<void>;
-  addMessage: (message: Message) => void;
+  sendMessageWithAttachments: (
+    conversationId: string,
+    formData: FormData,
+  ) => Promise<void>;
+  addMessage: (conversationId: string, message: Message) => void;
   updateConversation: (
     conversation: Partial<Conversation> & { id: string },
   ) => void;
@@ -59,12 +63,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       const response = await chatService.getMessages(conversationId);
       if (response.success && response.data) {
-        // The API now returns { data: { data: Message[], pagination: ... } }
+        // The API returns { success: true, data: { data: Message[], pagination: ... } }
         const apiMessages = response.data.data;
+        console.log(
+          `[Store] Fetched ${apiMessages?.length} messages for ${conversationId}`,
+        );
+
         set((state) => ({
           messages: {
             ...state.messages,
-            [conversationId]: apiMessages.reverse(), // Latest at bottom
+            [conversationId]: Array.isArray(apiMessages)
+              ? [...apiMessages].reverse()
+              : [],
           },
           isLoadingMessages: false,
         }));
@@ -105,21 +115,49 @@ export const useChatStore = create<ChatState>((set, get) => ({
       );
       if (response.success) {
         const newMessage = response.data;
-        get().addMessage(newMessage);
+        get().addMessage(conversationId, newMessage);
       }
     } catch (error: any) {
       set({ error: error.message || "Error sending message" });
     }
   },
 
-  addMessage: (message: Message) => {
+  sendMessageWithAttachments: async (
+    conversationId: string,
+    formData: FormData,
+  ) => {
+    try {
+      const response = await chatService.sendMessageWithAttachments(formData);
+      if (response.success) {
+        const newMessage = response.data;
+        get().addMessage(conversationId, newMessage);
+      }
+    } catch (error: any) {
+      set({
+        error: error.message || "Error sending message with attachments",
+      });
+    }
+  },
+
+  addMessage: (conversationId: string, message: Message) => {
+    if (!conversationId) {
+      console.warn("[Store] addMessage called without conversationId", message);
+      return;
+    }
+
+    console.log(`[Store] Incoming message for conv: ${conversationId}`);
+
     set((state) => {
-      const conversationId = message.conversationId;
       const conversationMessages = state.messages[conversationId] || [];
 
       // Avoid duplicate messages
-      if (conversationMessages.find((m) => m.id === message.id)) return state;
+      if (conversationMessages.find((m) => m.id === message.id)) {
+        return state;
+      }
 
+      console.log(
+        `[Store] Updating state with new message for ${conversationId}.`,
+      );
       const updatedMessages = [...conversationMessages, message];
       const currentUserId = useAuthStore.getState().user?.id;
 
