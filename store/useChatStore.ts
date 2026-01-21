@@ -23,6 +23,8 @@ interface ChatState {
     formData: FormData,
   ) => Promise<void>;
   addMessage: (conversationId: string, message: Message) => void;
+  updateMessage: (conversationId: string, message: Message) => void;
+  deleteMessage: (conversationId: string, messageId: string) => void;
   updateConversation: (
     conversation: Partial<Conversation> & { id: string },
   ) => void;
@@ -203,6 +205,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
           [conversationId]: updatedMessages,
         },
         conversations: updatedConversations,
+      };
+    });
+  },
+
+  updateMessage: (conversationId: string, message: Message) => {
+    set((state) => {
+      const conversationMessages = state.messages[conversationId] || [];
+      const updatedMessages = conversationMessages.map((m) =>
+        m.id === message.id ? { ...m, ...message } : m,
+      );
+
+      return {
+        messages: {
+          ...state.messages,
+          [conversationId]: updatedMessages,
+        },
+      };
+    });
+  },
+
+  deleteMessage: (conversationId: string, messageId: string) => {
+    set((state) => {
+      const conversationMessages = state.messages[conversationId] || [];
+      const updatedMessages = conversationMessages.filter(
+        (m) => m.id !== messageId,
+      );
+
+      return {
+        messages: {
+          ...state.messages,
+          [conversationId]: updatedMessages,
+        },
       };
     });
   },

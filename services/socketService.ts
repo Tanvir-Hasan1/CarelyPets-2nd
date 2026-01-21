@@ -54,7 +54,7 @@ class SocketService {
       );
     });
 
-    // Listen for new messages
+    // Listen for new messages - backend emits "message:new"
     const handleNewMessage = (data: any) => {
       console.log("[Socket] Message received:", JSON.stringify(data, null, 2));
       const message = data?.data && data?.success ? data.data : data;
@@ -65,8 +65,27 @@ class SocketService {
       }
     };
 
-    this.socket.on("new_message", handleNewMessage);
-    this.socket.on("newMessage", handleNewMessage);
+    this.socket.on("message:new", handleNewMessage);
+
+    // Listen for message updates - backend emits "message:updated"
+    this.socket.on("message:updated", (data: any) => {
+      console.log("[Socket] Message updated:", JSON.stringify(data, null, 2));
+      const message = data?.data && data?.success ? data.data : data;
+      if (message && message.id && message.conversationId) {
+        useChatStore.getState().updateMessage(message.conversationId, message);
+      }
+    });
+
+    // Listen for message deletions - backend emits "message:deleted"
+    this.socket.on("message:deleted", (data: any) => {
+      console.log("[Socket] Message deleted:", JSON.stringify(data, null, 2));
+      const message = data?.data && data?.success ? data.data : data;
+      if (message && message.id && message.conversationId) {
+        useChatStore
+          .getState()
+          .deleteMessage(message.conversationId, message.id);
+      }
+    });
 
     // Listen for conversation updates
     this.socket.on("conversation_update", (data) => {
@@ -87,7 +106,8 @@ class SocketService {
   joinConversation(conversationId: string) {
     if (this.socket) {
       console.log("[Socket] Joining conversation:", conversationId);
-      this.socket.emit("join_conversation", { conversationId });
+      // Backend expects "conversation:join" event
+      this.socket.emit("conversation:join", conversationId);
     } else {
       console.warn("[Socket] Cannot join conversation: Socket not connected");
     }
@@ -96,7 +116,34 @@ class SocketService {
   leaveConversation(conversationId: string) {
     if (this.socket) {
       console.log("[Socket] Leaving conversation:", conversationId);
-      this.socket.emit("leave_conversation", { conversationId });
+      // Backend expects "conversation:leave" event
+      this.socket.emit("conversation:leave", conversationId);
+    }
+  }
+
+  sendMessage(
+    conversationId: string,
+    content: string,
+    callback?: (response: {
+      success: boolean;
+      data?: any;
+      message?: string;
+    }) => void,
+  ) {
+    if (this.socket) {
+      console.log("[Socket] Sending message to conversation:", conversationId);
+      // Backend expects "message:send" event
+      this.socket.emit(
+        "message:send",
+        {
+          conversationId,
+          content,
+        },
+        callback,
+      );
+    } else {
+      console.warn("[Socket] Cannot send message: Socket not connected");
+      callback?.({ success: false, message: "Socket not connected" });
     }
   }
 }
