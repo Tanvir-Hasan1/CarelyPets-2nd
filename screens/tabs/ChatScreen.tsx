@@ -42,12 +42,17 @@ const FilterChip = ({
 const ChatItem = ({
   item,
   currentUserId,
+  isBlocked,
   onPress,
+  onUnblock,
 }: {
   item: Conversation;
   currentUserId: string | undefined;
+  isBlocked?: boolean;
   onPress: () => void;
+  onUnblock?: () => void;
 }) => {
+  const [menuVisible, setMenuVisible] = useState(false);
   const otherParticipant =
     item.participants.find((p) => p.id !== currentUserId) ||
     item.participants[0];
@@ -109,18 +114,28 @@ const ChatItem = ({
       <View style={styles.chatInfo}>
         <View style={styles.chatHeader}>
           <Text style={styles.name}>{otherParticipant?.name || "Unknown"}</Text>
-          <Text
-            style={[
-              styles.time,
-              item.unreadCount
-                ? styles.timeUnread
-                : item.status === "blocked"
-                  ? styles.timeBlocked
-                  : null,
-            ]}
-          >
-            {lastMsg ? formatTime(lastMsg.createdAt) : ""}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text
+              style={[
+                styles.time,
+                item.unreadCount
+                  ? styles.timeUnread
+                  : item.status === "blocked"
+                    ? styles.timeBlocked
+                    : null,
+              ]}
+            >
+              {lastMsg ? formatTime(lastMsg.createdAt) : ""}
+            </Text>
+            {isBlocked && (
+              <TouchableOpacity
+                onPress={() => setMenuVisible(!menuVisible)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={{ fontSize: 20, color: "#6B7280" }}>⋮</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
         <View style={styles.chatFooter}>
           <Text style={styles.lastMessage} numberOfLines={1}>
@@ -129,6 +144,21 @@ const ChatItem = ({
           {renderStatus()}
         </View>
       </View>
+
+      {/* Unblock Menu */}
+      {menuVisible && isBlocked && (
+        <View style={styles.unblockMenu}>
+          <TouchableOpacity
+            style={styles.unblockMenuItem}
+            onPress={() => {
+              setMenuVisible(false);
+              onUnblock?.();
+            }}
+          >
+            <Text style={styles.unblockMenuText}>Unblock</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -140,14 +170,24 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
 
   const { user } = useAuthStore();
-  const { conversations, isLoadingConversations, fetchConversations } =
-    useChatStore();
+  const {
+    conversations,
+    blockedUsers,
+    isLoadingConversations,
+    fetchConversations,
+    fetchBlockedUsers,
+    unblockUser,
+  } = useChatStore();
 
   useEffect(() => {
     fetchConversations(searchQuery);
+    fetchBlockedUsers(); // Load blocked users when screen loads
   }, [searchQuery]);
 
-  const filteredConversations = conversations.filter((conv) => {
+  // Choose which list to show based on active filter
+  const sourceList = activeFilter === "Blocked" ? blockedUsers : conversations;
+
+  const filteredConversations = sourceList.filter((conv) => {
     const otherParticipant =
       conv.participants.find((p) => p.id !== user?.id) || conv.participants[0];
     const matchesSearch = otherParticipant?.name
@@ -160,7 +200,7 @@ export default function ChatScreen() {
         : activeFilter === "Unread"
           ? conv.unreadCount > 0
           : activeFilter === "Blocked"
-            ? conv.status === "blocked"
+            ? true // Already filtered by sourceList
             : true;
 
     return matchesSearch && matchesFilter;
@@ -216,6 +256,7 @@ export default function ChatScreen() {
             <ChatItem
               item={item}
               currentUserId={user?.id}
+              isBlocked={activeFilter === "Blocked"}
               onPress={() =>
                 router.push({
                   pathname: "/chat/[id]",
@@ -226,6 +267,13 @@ export default function ChatScreen() {
                   },
                 })
               }
+              onUnblock={async () => {
+                try {
+                  await unblockUser(otherParticipant.id);
+                } catch (error) {
+                  console.error("Failed to unblock user:", error);
+                }
+              }}
             />
           );
         }}
@@ -375,5 +423,27 @@ const styles = StyleSheet.create({
     height: 24,
     justifyContent: "center",
     alignItems: "center",
+  },
+  unblockMenu: {
+    position: "absolute",
+    right: 12,
+    top: 50,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    minWidth: 120,
+  },
+  unblockMenuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  unblockMenuText: {
+    fontSize: 14,
+    color: "#1DAFB6",
+    fontWeight: "600",
   },
 });

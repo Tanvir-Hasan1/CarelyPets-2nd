@@ -4,6 +4,7 @@ import { create } from "zustand";
 
 interface ChatState {
   conversations: Conversation[];
+  blockedUsers: Conversation[];
   messages: Record<string, Message[]>;
   activeConversationId: string | null;
   isLoadingConversations: boolean;
@@ -12,7 +13,8 @@ interface ChatState {
 
   // Actions
   fetchConversations: (search?: string) => Promise<void>;
-  fetchMessages: (conversationId: string) => Promise<void>;
+  fetchBlockedUsers: () => Promise<void>;
+  fetchMessages: (conversationId: string) => void; // Synchronous - returns immediately!
   sendMessage: (
     conversationId: string,
     content: string,
@@ -30,10 +32,13 @@ interface ChatState {
   ) => void;
   setActiveConversation: (id: string | null) => void;
   markAsRead: (conversationId: string) => Promise<void>;
+  blockUser: (userId: string) => Promise<void>;
+  unblockUser: (userId: string) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   conversations: [],
+  blockedUsers: [],
   messages: {},
   activeConversationId: null,
   isLoadingConversations: false,
@@ -60,35 +65,47 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  fetchMessages: async (conversationId: string) => {
-    set({ isLoadingMessages: true, error: null });
-    try {
-      const response = await chatService.getMessages(conversationId);
-      if (response.success && response.data) {
-        // The API returns { success: true, data: { data: Message[], pagination: ... } }
-        const apiMessages = response.data.data;
-        console.log(
-          `[Store] Fetched ${apiMessages?.length} messages for ${conversationId}`,
-        );
-
-        set((state) => ({
-          messages: {
-            ...state.messages,
-            [conversationId]: Array.isArray(apiMessages)
-              ? [...apiMessages].reverse()
-              : [],
-          },
-          isLoadingMessages: false,
-        }));
-      } else {
-        set({ error: "Failed to fetch messages", isLoadingMessages: false });
-      }
-    } catch (error: any) {
-      set({
-        error: error.message || "Error fetching messages",
-        isLoadingMessages: false,
-      });
+  fetchMessages: (conversationId: string) => {
+    // SYNCHRONOUS: Show cached messages immediately if available
+    const cachedMessages = get().messages[conversationId];
+    if (cachedMessages && cachedMessages.length > 0) {
+      // User sees cached messages instantly - ZERO delay!
+      set({ isLoadingMessages: false });
+    } else {
+      // No cached messages, show loading state
+      set({ isLoadingMessages: true, error: null });
     }
+
+    // ASYNCHRONOUS: Fetch fresh messages in background (doesn't block anything)
+    (async () => {
+      try {
+        const response = await chatService.getMessages(conversationId);
+        if (response.success && response.data) {
+          // The API returns { success: true, data: { data: Message[], pagination: ... } }
+          const apiMessages = response.data.data;
+          console.log(
+            `[Store] Fetched ${apiMessages?.length} messages for ${conversationId}`,
+          );
+
+          set((state) => ({
+            messages: {
+              ...state.messages,
+              [conversationId]: Array.isArray(apiMessages)
+                ? [...apiMessages].reverse()
+                : [],
+            },
+            isLoadingMessages: false,
+          }));
+        } else {
+          set({ error: "Failed to fetch messages", isLoadingMessages: false });
+        }
+      } catch (error: any) {
+        set({
+          error: error.message || "Error fetching messages",
+          isLoadingMessages: false,
+        });
+      }
+    })();
   },
 
   sendMessage: async (
@@ -277,6 +294,54 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }));
     } catch (error) {
       console.error("Failed to mark conversation as read", error);
+    }
+  },
+
+  fetchBlockedUsers: async () => {
+    set({ isLoadingConversations: true, error: null });
+    try {
+      const response = await chatService.getConversations("", "blocked");
+      if (response.success) {
+        set({ blockedUsers: response.data, isLoadingConversations: false });
+      } else {
+        set({
+          error: "Failed to fetch blocked users",
+          isLoadingConversations: false,
+        });
+      }
+    } catch (error: any) {
+      set({
+        error: error.message || "Error fetching blocked users",
+        isLoadingConversations: false,
+      });
+    }
+  },
+
+  blockUser: async (userId: string) => {
+    try {
+      const response = await chatService.blockUser(userId);
+      if (response.success) {
+        // Refresh conversations and blocked users
+        get().fetchConversations();
+        get().fetchBlockedUsers();
+      }
+    } catch (error: any) {
+      set({ error: error.message || "Error blocking user" });
+      throw error;
+    }
+  },
+
+  unblockUser: async (userId: string) => {
+    try {
+      const response = await chatService.unblockUser(userId);
+      if (response.success) {
+        // Refresh conversations and blocked users
+        get().fetchConversations();
+        get().fetchBlockedUsers();
+      }
+    } catch (error: any) {
+      set({ error: error.message || "Error unblocking user" });
+      throw error;
     }
   },
 }));

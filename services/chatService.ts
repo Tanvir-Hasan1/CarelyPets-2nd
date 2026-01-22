@@ -114,6 +114,23 @@ class ChatService {
       {},
     );
   }
+
+  async blockUser(
+    userId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return await api.post<{ success: boolean; message: string }>(
+      `/messages/block/${userId}`,
+      {},
+    );
+  }
+
+  async unblockUser(
+    userId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return await api.delete<{ success: boolean; message: string }>(
+      `/messages/block/${userId}`,
+    );
+  }
 }
 
 export const chatService = new ChatService();

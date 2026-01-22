@@ -1,99 +1,31 @@
+import ChatHeader from "@/components/chat/ChatHeader";
+import ChatInput from "@/components/chat/ChatInput";
 import ChatMenu from "@/components/chat/ChatMenu";
+import MessageBubble from "@/components/chat/MessageBubble";
 import PetPalBlockModal from "@/components/home/petPals/PetPalBlockModal";
 import ImageViewingModal from "@/components/ui/ImageViewingModal";
 import { Spacing } from "@/constants/colors";
-import { Message } from "@/services/chatService";
 import socketService from "@/services/socketService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useChatStore } from "@/store/useChatStore";
-import {
-  ArrowLeft02Icon,
-  AttachmentIcon,
-  Cancel01Icon,
-  MoreVerticalIcon,
-  SentIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const EMPTY_MESSAGES: Message[] = [];
+const EMPTY_MESSAGES: any[] = [];
 
-const MessageBubble = ({
-  message,
-  onImagePress,
-}: {
-  message: Message & { text?: string; time?: string }; // Fallback for transition
-  onImagePress: (uri: string) => void;
-}) => {
-  const isMe =
-    message.senderId === useAuthStore.getState().user?.id ||
-    message.sender === "me";
+function ChatDetailScreen() {
+  console.log("[ChatDetailScreen] Component rendering started");
 
-  return (
-    <View
-      style={[
-        styles.messageContainer,
-        isMe ? styles.myMessageContainer : styles.otherMessageContainer,
-      ]}
-    >
-      <View
-        style={[styles.bubble, isMe ? styles.myBubble : styles.otherBubble]}
-      >
-        {/* API has images grid from attachments */}
-        {message.attachments && message.attachments.length > 0 && (
-          <View style={styles.imageGrid}>
-            {message.attachments.map((at, idx) => (
-              <TouchableOpacity key={idx} onPress={() => onImagePress(at.url)}>
-                <Image source={{ uri: at.url }} style={styles.messageImage} />
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-        {(message.body || message.content) && (
-          <Text style={[styles.messageText, isMe && styles.myMessageText]}>
-            {message.body || message.content}
-          </Text>
-        )}
-        <View style={styles.messageFooter}>
-          <Text style={[styles.messageTime, isMe && styles.myMessageTime]}>
-            {new Date(message.createdAt).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Text>
-          {isMe && (
-            <Text
-              style={[
-                styles.statusCheck,
-                styles.myStatusCheck,
-                message.readAt && { color: "#E0F7FA" },
-              ]}
-            >
-              {message.readAt ? "✓✓" : "✓"}
-            </Text>
-          )}
-        </View>
-      </View>
-    </View>
-  );
-};
-
-export default function ChatDetailScreen() {
   const { id, name, avatar } = useLocalSearchParams();
   const conversationId = id as string;
   const router = useRouter();
@@ -103,6 +35,8 @@ export default function ChatDetailScreen() {
   const messages = useChatStore(
     (state) => state.messages[conversationId] || EMPTY_MESSAGES,
   );
+  const conversations = useChatStore((state) => state.conversations);
+  const blockedUsers = useChatStore((state) => state.blockedUsers);
   const isLoadingMessages = useChatStore((state) => state.isLoadingMessages);
   const fetchMessages = useChatStore((state) => state.fetchMessages);
   const sendMessage = useChatStore((state) => state.sendMessage);
@@ -112,17 +46,28 @@ export default function ChatDetailScreen() {
   const setActiveConversation = useChatStore(
     (state) => state.setActiveConversation,
   );
+  const blockUser = useChatStore((state) => state.blockUser);
+  const unblockUser = useChatStore((state) => state.unblockUser);
 
   const [messageText, setMessageText] = useState("");
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [isSending, setIsSending] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [blockModalVisible, setBlockModalVisible] = useState(false);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  // Detect if conversation is blocked
+  useEffect(() => {
+    const blocked = blockedUsers.some((conv) => conv.id === conversationId);
+    setIsBlocked(blocked);
+  }, [conversationId, blockedUsers]);
 
   useEffect(() => {
     if (conversationId) {
-      fetchMessages(conversationId);
+      // Fire and forget - don't wait for fetchMessages
+      fetchMessages(conversationId); // This returns immediately with cached data
       setActiveConversation(conversationId);
       socketService.joinConversation(conversationId);
     }
@@ -165,7 +110,9 @@ export default function ChatDetailScreen() {
 
   const handleSend = async () => {
     if (!messageText.trim() && selectedImages.length === 0) return;
+    if (isSending) return;
 
+    setIsSending(true);
     try {
       if (selectedImages.length > 0) {
         const { conversations } = useChatStore.getState();
@@ -177,16 +124,17 @@ export default function ChatDetailScreen() {
         if (!recipient) throw new Error("Recipient not found");
 
         const formData = new FormData();
-        formData.append("recipientId", recipient.id);
-        formData.append("body", messageText.trim());
+        const bodyContent = messageText.trim() || " ";
 
-        // Append files
-        selectedImages.forEach((uri) => {
+        formData.append("recipientId", recipient.id);
+        formData.append("body", bodyContent);
+
+        selectedImages.forEach((uri, index) => {
           const fileName = uri.split("/").pop() || "image.jpg";
           const match = /\.(\w+)$/.exec(fileName);
           const type = match ? `image/${match[1]}` : "image/jpeg";
 
-          // @ts-ignore - React Native FormData expects this structure for files
+          // @ts-ignore
           formData.append("files", {
             uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
             name: fileName,
@@ -203,137 +151,126 @@ export default function ChatDetailScreen() {
       setSelectedImages([]);
     } catch (error) {
       console.error("Failed to send message:", error);
+    } finally {
+      setIsSending(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-    >
-      {/* Custom Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color="#4B5563" />
-        </TouchableOpacity>
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
+        <ChatHeader
+          name={name as string}
+          avatar={avatar as string}
+          onBackPress={handleBack}
+          onMenuPress={() => setMenuVisible(!menuVisible)}
+          paddingTop={insets.top}
+        />
 
-        <View style={styles.headerInfo}>
-          <Image
-            source={{ uri: (avatar as string) || "https://i.pravatar.cc/150" }}
-            style={styles.headerAvatar}
-          />
-          <View>
-            <Text style={styles.headerName}>{name || "User"}</Text>
-            <Text style={styles.headerStatus}>Online</Text>
-          </View>
-        </View>
+        <ChatMenu
+          visible={menuVisible}
+          isBlocked={isBlocked}
+          onClose={() => setMenuVisible(false)}
+          onBlock={() => setBlockModalVisible(true)}
+          onUnblock={async () => {
+            try {
+              // Get the other user's ID from the conversation
+              const conversation = conversations.find(
+                (c) => c.id === conversationId,
+              );
+              const recipient = conversation?.participants.find(
+                (p) => p.id !== user?.id,
+              );
 
-        <TouchableOpacity
-          onPress={() => setMenuVisible(!menuVisible)}
-          style={styles.menuButton}
-        >
-          <HugeiconsIcon icon={MoreVerticalIcon} size={24} color="#006064" />
-        </TouchableOpacity>
-      </View>
-
-      <ChatMenu
-        visible={menuVisible}
-        onClose={() => setMenuVisible(false)}
-        onBlock={() => setBlockModalVisible(true)}
-      />
-
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => {
-          const isMe = item.senderId === user?.id || item.sender === "me";
-          return (
-            <MessageBubble
-              message={
-                {
-                  ...item,
-                  sender: isMe ? "me" : "other",
-                } as any
+              if (recipient) {
+                await unblockUser(recipient.id);
+                setIsBlocked(false); // Update UI immediately
+                console.log("User unblocked successfully");
               }
+            } catch (error) {
+              console.error("Failed to unblock user:", error);
+            }
+          }}
+        />
+
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <MessageBubble
+              message={item}
               onImagePress={(uri) => setViewingImage(uri)}
             />
-          );
-        }}
-        contentContainerStyle={styles.messageList}
-        showsVerticalScrollIndicator={false}
-      />
+          )}
+          contentContainerStyle={styles.messageList}
+          showsVerticalScrollIndicator={false}
+        />
 
-      {/* Input Area */}
-      <View
-        style={[
-          styles.inputContainer,
-          { paddingBottom: Math.max(insets.bottom, Spacing.md) },
-        ]}
-      >
-        {selectedImages.length > 0 && (
-          <ScrollView
-            horizontal
-            style={styles.imagePreviewContainer}
-            showsHorizontalScrollIndicator={false}
+        {/* Input Area or Blocked Message */}
+        {isBlocked ? (
+          <View
+            style={[
+              styles.blockedContainer,
+              { paddingBottom: insets.bottom || Spacing.sm },
+            ]}
           >
-            {selectedImages.map((uri, index) => (
-              <View key={index} style={styles.previewImageWrapper}>
-                <Image source={{ uri }} style={styles.previewImage} />
-                <TouchableOpacity
-                  style={styles.removeImageButton}
-                  onPress={() => removeImage(index)}
-                >
-                  <HugeiconsIcon
-                    icon={Cancel01Icon}
-                    size={16}
-                    color="#FFFFFF"
-                  />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
+            <Text style={styles.blockedText}>🚫 User is blocked</Text>
+            <Text style={styles.blockedSubtext}>
+              Unblock this user to send messages
+            </Text>
+          </View>
+        ) : (
+          <ChatInput
+            messageText={messageText}
+            selectedImages={selectedImages}
+            isSending={isSending}
+            onMessageChange={setMessageText}
+            onAttachmentPress={handleAttachment}
+            onSendPress={handleSend}
+            onRemoveImage={removeImage}
+            paddingBottom={insets.bottom || Spacing.sm}
+          />
         )}
 
-        <View style={styles.inputRow}>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              placeholder="Message"
-              style={styles.input}
-              placeholderTextColor="#000000"
-              value={messageText}
-              onChangeText={setMessageText}
-              multiline
-            />
-            <TouchableOpacity
-              style={styles.attachmentButton}
-              onPress={handleAttachment}
-            >
-              <HugeiconsIcon icon={AttachmentIcon} size={24} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <HugeiconsIcon icon={SentIcon} size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
+        <PetPalBlockModal
+          visible={blockModalVisible}
+          onClose={() => setBlockModalVisible(false)}
+          onConfirm={async () => {
+            try {
+              // Get the other user's ID from the conversation
+              const { conversations } = useChatStore.getState();
+              const conversation = conversations.find(
+                (c) => c.id === conversationId,
+              );
+              const recipient = conversation?.participants.find(
+                (p) => p.id !== user?.id,
+              );
 
-      <PetPalBlockModal
-        visible={blockModalVisible}
-        onClose={() => setBlockModalVisible(false)}
-        onConfirm={() => {
-          console.log("Blocked user");
-          setBlockModalVisible(false);
-        }}
-      />
+              if (recipient) {
+                await blockUser(recipient.id);
+                setIsBlocked(true); // Update UI immediately
+                console.log("User blocked successfully");
+                setBlockModalVisible(false);
+                // Don't go back - stay in conversation with blocked UI
+              }
+            } catch (error) {
+              console.error("Failed to block user:", error);
+            }
+          }}
+        />
 
-      <ImageViewingModal
-        visible={!!viewingImage}
-        imageUri={viewingImage}
-        onClose={() => setViewingImage(null)}
-      />
-    </KeyboardAvoidingView>
+        <ImageViewingModal
+          visible={!!viewingImage}
+          imageUri={viewingImage}
+          onClose={() => setViewingImage(null)}
+        />
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -342,180 +279,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.sm,
-    backgroundColor: "#F3F4F6",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: Spacing.sm,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  headerInfo: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: Spacing.sm,
-  },
-  headerName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  headerStatus: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  menuButton: {
-    padding: Spacing.xs,
-  },
   messageList: {
     padding: Spacing.md,
   },
-  messageContainer: {
-    marginBottom: Spacing.md,
-    width: "100%",
-    flexDirection: "row",
-  },
-  myMessageContainer: {
-    justifyContent: "flex-end",
-  },
-  otherMessageContainer: {
-    justifyContent: "flex-start",
-  },
-  bubble: {
-    maxWidth: "80%",
-    padding: 12,
-    borderRadius: 12,
-  },
-  myBubble: {
-    backgroundColor: "#007AFF",
-    borderBottomRightRadius: 2,
-  },
-  otherBubble: {
-    backgroundColor: "#F3F4F6",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderBottomLeftRadius: 2,
-  },
-  myMessageText: {
-    color: "#FFFFFF",
-  },
-  myMessageTime: {
-    color: "#E0E0E0",
-  },
-  myStatusCheck: {
-    color: "#E0E0E0",
-  },
-  imageGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-    marginBottom: 4,
-  },
-  messageImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-  },
-  messageText: {
-    fontSize: 15,
-    color: "#111827",
-    lineHeight: 20,
-  },
-  messageFooter: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    marginTop: 4,
-    gap: 4,
-  },
-  messageTime: {
-    fontSize: 10,
-    color: "#6B7280",
-  },
-  statusCheck: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  inputContainer: {
-    backgroundColor: "#FFFFFF",
+  blockedContainer: {
+    backgroundColor: "#FFF3E0",
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    marginBottom: Spacing.xxl,
+    borderTopColor: "#FFB74D",
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: Spacing.sm,
-  },
-  inputWrapper: {
-    flex: 1,
-    flexDirection: "row",
+    paddingVertical: Spacing.xl,
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    paddingHorizontal: 16,
-    minHeight: 48,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: "#111827",
-    paddingVertical: 10,
-    maxHeight: 100,
-  },
-  attachmentButton: {
-    marginLeft: 8,
-  },
-  sendButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: "#1DAFB6",
     justifyContent: "center",
-    alignItems: "center",
   },
-  imagePreviewContainer: {
-    flexDirection: "row",
-    marginBottom: Spacing.sm,
+  blockedText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#E65100",
+    marginBottom: Spacing.xs,
   },
-  previewImageWrapper: {
-    marginRight: Spacing.sm,
-    position: "relative",
-  },
-  previewImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-  },
-  removeImageButton: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: "#000000",
-    borderRadius: 10,
-    padding: 2,
-    opacity: 0.7,
+  blockedSubtext: {
+    fontSize: 14,
+    color: "#F57C00",
+    textAlign: "center",
   },
 });
+
+// Memoize component to prevent unnecessary re-renders and speed up navigation
+export default React.memo(ChatDetailScreen);

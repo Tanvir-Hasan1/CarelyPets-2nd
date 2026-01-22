@@ -1,0 +1,484 @@
+import ChatMenu from "@/components/chat/ChatMenu";
+import MessageBubble from "@/components/chat/MessageBubble";
+import PetPalBlockModal from "@/components/home/petPals/PetPalBlockModal";
+import ImageViewingModal from "@/components/ui/ImageViewingModal";
+import { Spacing } from "@/constants/colors";
+import socketService from "@/services/socketService";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useChatStore } from "@/store/useChatStore";
+import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const EMPTY_MESSAGES: any[] = [];
+
+export default function ChatDetailScreen() {
+  const { id, name, avatar } = useLocalSearchParams();
+  const conversationId = id as string;
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const { user } = useAuthStore();
+  const messages = useChatStore(
+    (state) => state.messages[conversationId] || EMPTY_MESSAGES,
+  );
+  const isLoadingMessages = useChatStore((state) => state.isLoadingMessages);
+  const fetchMessages = useChatStore((state) => state.fetchMessages);
+  const sendMessage = useChatStore((state) => state.sendMessage);
+  const sendMessageWithAttachments = useChatStore(
+    (state) => state.sendMessageWithAttachments,
+  );
+  const setActiveConversation = useChatStore(
+    (state) => state.setActiveConversation,
+  );
+
+  const [messageText, setMessageText] = useState("");
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [isSending, setIsSending] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [blockModalVisible, setBlockModalVisible] = useState(false);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const flatListRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    if (conversationId) {
+      fetchMessages(conversationId);
+      setActiveConversation(conversationId);
+      socketService.joinConversation(conversationId);
+    }
+
+    return () => {
+      setActiveConversation(null);
+      if (conversationId) {
+        socketService.leaveConversation(conversationId);
+      }
+    };
+  }, [conversationId]);
+
+  // Auto-scroll when messages update
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 200);
+    }
+  }, [messages.length]);
+
+  const handleBack = () => router.back();
+
+  const handleAttachment = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      const newImages = result.assets.map((asset) => asset.uri);
+      setSelectedImages((prev) => [...prev, ...newImages]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSend = async () => {
+    if (!messageText.trim() && selectedImages.length === 0) return;
+    if (isSending) return; // Prevent double sending
+
+    setIsSending(true);
+    try {
+      if (selectedImages.length > 0) {
+        const { conversations } = useChatStore.getState();
+        const conversation = conversations.find((c) => c.id === conversationId);
+        const recipient = conversation?.participants.find(
+          (p) => p.id !== user?.id,
+        );
+
+        if (!recipient) throw new Error("Recipient not found");
+
+        const formData = new FormData();
+        // Use placeholder instead of space - some parsers strip whitespace-only values
+        const bodyContent = messageText.trim() || " ";
+
+        formData.append("recipientId", recipient.id);
+        formData.append("body", bodyContent);
+
+        console.log("[ChatDetail] Sending message with attachments");
+        console.log("[ChatDetail] Body content:", JSON.stringify(bodyContent));
+        console.log("[ChatDetail] Number of images:", selectedImages.length);
+
+        // Append files
+        selectedImages.forEach((uri, index) => {
+          const fileName = uri.split("/").pop() || "image.jpg";
+          const match = /\.(\w+)$/.exec(fileName);
+          const type = match ? `image/${match[1]}` : "image/jpeg";
+
+          console.log(`[ChatDetail] Appending file ${index + 1}:`, fileName);
+
+          // @ts-ignore - React Native FormData expects this structure for files
+          formData.append("files", {
+            uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
+            name: fileName,
+            type,
+          });
+        });
+
+        await sendMessageWithAttachments(conversationId, formData);
+      } else {
+        await sendMessage(conversationId, messageText);
+      }
+
+      setMessageText("");
+      setSelectedImages([]);
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
+        {/* Custom Header */}
+        <View style={[styles.header, { paddingTop: insets.top }]}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color="#4B5563" />
+          </TouchableOpacity>
+
+          <View style={styles.headerInfo}>
+            <Image
+              source={{
+                uri: (avatar as string) || "https://i.pravatar.cc/150",
+              }}
+              style={styles.headerAvatar}
+            />
+            <View>
+              <Text style={styles.headerName}>{name || "User"}</Text>
+              <Text style={styles.headerStatus}>Online</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => setMenuVisible(!menuVisible)}
+            style={styles.menuButton}
+          >
+            <HugeiconsIcon icon={MoreVerticalIcon} size={24} color="#006064" />
+          </TouchableOpacity>
+        </View>
+
+        <ChatMenu
+          visible={menuVisible}
+          onClose={() => setMenuVisible(false)}
+          onBlock={() => setBlockModalVisible(true)}
+        />
+
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            const isMe = item.senderId === user?.id || item.sender === "me";
+            return (
+              <MessageBubble
+                message={
+                  {
+                    ...item,
+                    sender: isMe ? "me" : "other",
+                  } as any
+                }
+                onImagePress={(uri) => setViewingImage(uri)}
+              />
+            );
+          }}
+          contentContainerStyle={styles.messageList}
+          showsVerticalScrollIndicator={false}
+        />
+
+        {/* Input Area */}
+        <View
+          style={[
+            styles.inputContainer,
+            { paddingBottom: insets.bottom || Spacing.sm },
+          ]}
+        >
+          {selectedImages.length > 0 && (
+            <ScrollView
+              horizontal
+              style={styles.imagePreviewContainer}
+              showsHorizontalScrollIndicator={false}
+            >
+              {selectedImages.map((uri, index) => (
+                <View key={index} style={styles.previewImageWrapper}>
+                  <Image source={{ uri }} style={styles.previewImage} />
+                  <TouchableOpacity
+                    style={styles.removeImageButton}
+                    onPress={() => removeImage(index)}
+                  >
+                    <HugeiconsIcon
+                      icon={Cancel01Icon}
+                      size={16}
+                      color="#FFFFFF"
+                    />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+
+          <View style={styles.inputRow}>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                placeholder="Message"
+                style={styles.input}
+                placeholderTextColor="#000000"
+                value={messageText}
+                onChangeText={setMessageText}
+                multiline
+              />
+              <TouchableOpacity
+                style={styles.attachmentButton}
+                onPress={handleAttachment}
+              >
+                <HugeiconsIcon
+                  icon={AttachmentIcon}
+                  size={24}
+                  color="#6B7280"
+                />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                isSending && styles.sendButtonDisabled,
+              ]}
+              onPress={handleSend}
+              disabled={isSending}
+            >
+              {isSending ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <HugeiconsIcon icon={SentIcon} size={24} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <PetPalBlockModal
+          visible={blockModalVisible}
+          onClose={() => setBlockModalVisible(false)}
+          onConfirm={() => {
+            console.log("Blocked user");
+            setBlockModalVisible(false);
+          }}
+        />
+
+        <ImageViewingModal
+          visible={!!viewingImage}
+          imageUri={viewingImage}
+          onClose={() => setViewingImage(null)}
+        />
+      </KeyboardAvoidingView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffffff",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.sm,
+    backgroundColor: "#F3F4F6",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Spacing.sm,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  headerInfo: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: Spacing.sm,
+  },
+  headerName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  headerStatus: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  menuButton: {
+    padding: Spacing.xs,
+  },
+  messageList: {
+    padding: Spacing.md,
+  },
+  messageContainer: {
+    marginBottom: Spacing.md,
+    width: "100%",
+    flexDirection: "row",
+  },
+  myMessageContainer: {
+    justifyContent: "flex-end",
+  },
+  otherMessageContainer: {
+    justifyContent: "flex-start",
+  },
+  bubble: {
+    maxWidth: "80%",
+    padding: 12,
+    borderRadius: 12,
+  },
+  myBubble: {
+    backgroundColor: "#007AFF",
+    borderBottomRightRadius: 2,
+  },
+  otherBubble: {
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderBottomLeftRadius: 2,
+  },
+  myMessageText: {
+    color: "#FFFFFF",
+  },
+  myMessageTime: {
+    color: "#E0E0E0",
+  },
+  myStatusCheck: {
+    color: "#E0E0E0",
+  },
+  imageGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    marginBottom: 4,
+  },
+  messageImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  messageText: {
+    fontSize: 15,
+    color: "#111827",
+    lineHeight: 20,
+  },
+  messageFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    marginTop: 4,
+    gap: 4,
+  },
+  messageTime: {
+    fontSize: 10,
+    color: "#6B7280",
+  },
+  statusCheck: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  inputContainer: {
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    // Gap 1 fix: removed marginBottom to eliminate gap below input
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: Spacing.sm,
+  },
+  inputWrapper: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 16,
+    minHeight: 48,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: "#111827",
+    paddingVertical: 10,
+    maxHeight: 100,
+  },
+  attachmentButton: {
+    marginLeft: 8,
+  },
+  sendButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#1DAFB6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sendButtonDisabled: {
+    opacity: 0.6,
+  },
+  imagePreviewContainer: {
+    flexDirection: "row",
+    marginBottom: Spacing.sm,
+  },
+  previewImageWrapper: {
+    marginRight: Spacing.sm,
+    position: "relative",
+  },
+  previewImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#000000",
+    borderRadius: 10,
+    padding: 2,
+    opacity: 0.7,
+  },
+});
