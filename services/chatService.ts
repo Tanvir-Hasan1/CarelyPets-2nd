@@ -131,6 +131,25 @@ class ChatService {
       `/messages/block/${userId}`,
     );
   }
+
+  async updateMessage(
+    messageId: string,
+    body: string,
+  ): Promise<{ success: boolean; data: Message; message: string }> {
+    return await api.patch<{
+      success: boolean;
+      data: Message;
+      message: string;
+    }>(`/messages/${messageId}`, { body });
+  }
+
+  async deleteMessage(
+    messageId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return await api.delete<{ success: boolean; message: string }>(
+      `/messages/${messageId}`,
+    );
+  }
 }
 
 export const chatService = new ChatService();

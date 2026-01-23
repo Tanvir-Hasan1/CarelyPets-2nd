@@ -1,4 +1,5 @@
 import SearchIcon from "@/assets/images/icons/search.svg";
+import ConversationCard from "@/components/chat/ConversationCard";
 import Header from "@/components/ui/Header";
 import { Colors, Spacing } from "@/constants/colors";
 import { Conversation } from "@/services/chatService";
@@ -9,7 +10,6 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -52,114 +52,25 @@ const ChatItem = ({
   onPress: () => void;
   onUnblock?: () => void;
 }) => {
-  const [menuVisible, setMenuVisible] = useState(false);
-  const otherParticipant =
-    item.participants.find((p) => p.id !== currentUserId) ||
-    item.participants[0];
-  const lastMsg = item.lastMessage;
-
-  const renderStatus = () => {
-    if (item.unreadCount) {
-      return (
-        <View style={styles.unreadBadge}>
-          <Text style={styles.unreadText}>{item.unreadCount}</Text>
-        </View>
-      );
-    }
-    if (item.status === "blocked") {
-      return (
-        <View style={styles.blockedIcon}>
-          <Text style={{ color: "#E53935" }}>🚫</Text>
-        </View>
-      );
-    }
-    if (lastMsg && lastMsg.sender === currentUserId) {
-      if (lastMsg.status === "sent")
-        return <Text style={styles.statusCheck}>✓</Text>;
-      if (lastMsg.status === "delivered")
-        return <Text style={styles.statusCheck}>✓✓</Text>;
-      if (lastMsg.status === "read")
-        return (
-          <Text style={[styles.statusCheck, { color: "#1DAFB6" }]}>✓✓</Text>
-        );
-    }
-    return null;
-  };
-
-  const formatTime = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diff = now.getTime() - date.getTime();
-      const mins = Math.floor(diff / 60000);
-      const hours = Math.floor(diff / 3600000);
-      const days = Math.floor(diff / 86400000);
-
-      if (mins < 60) return `${mins}m ago`;
-      if (hours < 24) return `${hours}h ago`;
-      return `${days}d ago`;
-    } catch (e) {
-      return "";
-    }
-  };
-
   return (
-    <TouchableOpacity style={styles.chatItem} onPress={onPress}>
-      <Image
-        source={{
-          uri: otherParticipant?.avatarUrl || "https://i.pravatar.cc/150",
-        }}
-        style={styles.avatar}
+    <View style={{ position: "relative" }}>
+      <ConversationCard
+        conversation={item}
+        currentUserId={currentUserId}
+        onPress={onPress}
+        showUnreadBadge={true}
+        showStatus={true}
       />
-      <View style={styles.chatInfo}>
-        <View style={styles.chatHeader}>
-          <Text style={styles.name}>{otherParticipant?.name || "Unknown"}</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Text
-              style={[
-                styles.time,
-                item.unreadCount
-                  ? styles.timeUnread
-                  : item.status === "blocked"
-                    ? styles.timeBlocked
-                    : null,
-              ]}
-            >
-              {lastMsg ? formatTime(lastMsg.createdAt) : ""}
-            </Text>
-            {isBlocked && (
-              <TouchableOpacity
-                onPress={() => setMenuVisible(!menuVisible)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Text style={{ fontSize: 20, color: "#6B7280" }}>⋮</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-        <View style={styles.chatFooter}>
-          <Text style={styles.lastMessage} numberOfLines={1}>
-            {lastMsg ? lastMsg.body || lastMsg.content : "No messages yet"}
-          </Text>
-          {renderStatus()}
-        </View>
-      </View>
 
-      {/* Unblock Menu */}
-      {menuVisible && isBlocked && (
-        <View style={styles.unblockMenu}>
-          <TouchableOpacity
-            style={styles.unblockMenuItem}
-            onPress={() => {
-              setMenuVisible(false);
-              onUnblock?.();
-            }}
-          >
-            <Text style={styles.unblockMenuText}>Unblock</Text>
+      {/* Unblock button for blocked conversations */}
+      {isBlocked && (
+        <View style={styles.blockedMenuOverlay}>
+          <TouchableOpacity onPress={onUnblock} style={styles.unblockButton}>
+            <Text style={styles.unblockButtonText}>Unblock</Text>
           </TouchableOpacity>
         </View>
       )}
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -176,6 +87,7 @@ export default function ChatScreen() {
     isLoadingConversations,
     fetchConversations,
     fetchBlockedUsers,
+    fetchMessages,
     unblockUser,
   } = useChatStore();
 
@@ -257,16 +169,25 @@ export default function ChatScreen() {
               item={item}
               currentUserId={user?.id}
               isBlocked={activeFilter === "Blocked"}
-              onPress={() =>
-                router.push({
-                  pathname: "/chat/[id]",
-                  params: {
-                    id: item.id,
-                    name: otherParticipant?.name,
-                    avatar: otherParticipant?.avatarUrl,
+              onPress={() => {
+                // PRE-FETCH: Start loading messages BEFORE navigation (skip if blocked)
+                if (activeFilter !== "Blocked") {
+                  fetchMessages(item.id);
+                }
+
+                // Navigate with no animation for instant transition
+                router.push(
+                  {
+                    pathname: "/chat/[id]",
+                    params: {
+                      id: item.id,
+                      name: otherParticipant?.name,
+                      avatar: otherParticipant?.avatarUrl,
+                    },
                   },
-                })
-              }
+                  // { animation: "none" }, // Instant navigation!
+                );
+              }}
               onUnblock={async () => {
                 try {
                   await unblockUser(otherParticipant.id);
@@ -424,26 +345,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  unblockMenu: {
+  blockedMenuOverlay: {
     position: "absolute",
-    right: 12,
-    top: 50,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    minWidth: 120,
+    bottom: Spacing.sm,
+    right: Spacing.sm,
+    zIndex: 100,
   },
-  unblockMenuItem: {
-    paddingVertical: 12,
+  unblockButton: {
+    backgroundColor: "#1DAFB6",
     paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  unblockMenuText: {
-    fontSize: 14,
-    color: "#1DAFB6",
+  unblockButtonText: {
+    fontSize: 13,
+    color: "#FFFFFF",
     fontWeight: "600",
   },
 });

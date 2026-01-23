@@ -1,6 +1,7 @@
 import { Spacing } from "@/constants/colors";
 import { ArrowLeft02Icon, MoreVerticalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
+import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface ChatHeaderProps {
@@ -11,13 +12,13 @@ interface ChatHeaderProps {
   paddingTop: number;
 }
 
-export default function ChatHeader({
+const ChatHeader = ({
   name,
   avatar,
   onBackPress,
   onMenuPress,
   paddingTop,
-}: ChatHeaderProps) {
+}: ChatHeaderProps) => {
   return (
     <View style={[styles.header, { paddingTop }]}>
       <TouchableOpacity onPress={onBackPress} style={styles.backButton}>
@@ -42,7 +43,9 @@ export default function ChatHeader({
       </TouchableOpacity>
     </View>
   );
-}
+};
+
+export default React.memo(ChatHeader);
 
 const styles = StyleSheet.create({
   header: {

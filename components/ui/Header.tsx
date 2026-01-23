@@ -2,6 +2,7 @@ import BasketIcon from "@/assets/images/icons/basket.svg";
 import NotificationIcon from "@/assets/images/icons/notification.svg";
 import SearchIcon from "@/assets/images/icons/search.svg";
 import { Colors, FontSizes, FontWeights, Spacing } from "@/constants/colors";
+import { useChatStore } from "@/store/useChatStore";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useRouter } from "expo-router";
@@ -45,6 +46,17 @@ export default function Header({
 }: HeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  // Subscribe to conversations array to get reactive unread count updates
+  const conversations = useChatStore((state) => state.conversations);
+  const unreadCount = conversations.reduce(
+    (total, conv) => total + (conv.unreadCount || 0),
+    0,
+  );
+
+  const handleNotificationPress = () => {
+    router.push("/notifications");
+  };
 
   const handleBack = () => {
     if (onBackPress) {
@@ -105,9 +117,18 @@ export default function Header({
               {showNotifications && (
                 <TouchableOpacity
                   style={styles.iconButton}
-                  onPress={() => router.push("/notifications")}
+                  onPress={handleNotificationPress}
                 >
-                  <NotificationIcon width={36} height={36} />
+                  <View style={styles.notificationContainer}>
+                    <NotificationIcon width={36} height={36} />
+                    {unreadCount > 0 && (
+                      <View style={styles.notificationBadge}>
+                        <Text style={styles.notificationBadgeText}>
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </TouchableOpacity>
               )}
             </View>
@@ -170,5 +191,27 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
+  },
+  notificationContainer: {
+    position: "relative",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: "#E53935",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  notificationBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
   },
 });

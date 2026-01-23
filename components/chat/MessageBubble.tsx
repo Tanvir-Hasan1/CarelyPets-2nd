@@ -5,15 +5,38 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 interface MessageBubbleProps {
   message: Message & { text?: string; time?: string };
   onImagePress: (uri: string) => void;
+  onLongPress: (message: Message) => void;
 }
 
 export default function MessageBubble({
   message,
   onImagePress,
+  onLongPress,
 }: MessageBubbleProps) {
   const isMe =
     message.senderId === useAuthStore.getState().user?.id ||
     message.sender === "me";
+
+  if (message.isDeleted) {
+    return (
+      <View
+        style={[
+          styles.messageContainer,
+          isMe ? styles.myMessageContainer : styles.otherMessageContainer,
+        ]}
+      >
+        <View
+          style={[
+            styles.bubble,
+            styles.deletedBubble,
+            isMe ? styles.myBubble : styles.otherBubble,
+          ]}
+        >
+          <Text style={styles.deletedText}>🚫 This message was deleted</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -22,14 +45,25 @@ export default function MessageBubble({
         isMe ? styles.myMessageContainer : styles.otherMessageContainer,
       ]}
     >
-      <View
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onLongPress={() => {
+          console.log("Bubble Long Pressed:", message.id);
+          onLongPress(message);
+        }}
+        delayLongPress={200}
         style={[styles.bubble, isMe ? styles.myBubble : styles.otherBubble]}
       >
         {/* API has images grid from attachments */}
         {message.attachments && message.attachments.length > 0 && (
           <View style={styles.imageGrid}>
             {message.attachments.map((at, idx) => (
-              <TouchableOpacity key={idx} onPress={() => onImagePress(at.url)}>
+              <TouchableOpacity
+                key={idx}
+                onPress={() => onImagePress(at.url)}
+                onLongPress={() => onLongPress(message)}
+                delayLongPress={200}
+              >
                 <Image source={{ uri: at.url }} style={styles.messageImage} />
               </TouchableOpacity>
             ))}
@@ -64,7 +98,7 @@ export default function MessageBubble({
             </Text>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -135,5 +169,16 @@ const styles = StyleSheet.create({
   statusCheck: {
     fontSize: 12,
     color: "#6B7280",
+  },
+  deletedBubble: {
+    backgroundColor: "#F3F4F6",
+    borderStyle: "dashed",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+  },
+  deletedText: {
+    fontStyle: "italic",
+    color: "#6B7280",
+    fontSize: 14,
   },
 });

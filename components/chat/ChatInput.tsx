@@ -24,6 +24,8 @@ interface ChatInputProps {
   onSendPress: () => void;
   onRemoveImage: (index: number) => void;
   paddingBottom: number;
+  isEditing?: boolean;
+  onCancelEdit?: () => void;
 }
 
 export default function ChatInput({
@@ -35,6 +37,8 @@ export default function ChatInput({
   onSendPress,
   onRemoveImage,
   paddingBottom,
+  isEditing = false,
+  onCancelEdit,
 }: ChatInputProps) {
   return (
     <View style={[styles.inputContainer, { paddingBottom }]}>
@@ -59,6 +63,14 @@ export default function ChatInput({
       )}
 
       <View style={styles.inputRow}>
+        {isEditing && (
+          <TouchableOpacity
+            onPress={onCancelEdit}
+            style={styles.cancelEditButton}
+          >
+            <HugeiconsIcon icon={Cancel01Icon} size={24} color="#EF4444" />
+          </TouchableOpacity>
+        )}
         <View style={styles.inputWrapper}>
           <TextInput
             placeholder="Message"
@@ -83,7 +95,11 @@ export default function ChatInput({
           {isSending ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <HugeiconsIcon icon={SentIcon} size={24} color="#FFFFFF" />
+            <HugeiconsIcon
+              icon={isEditing ? SentIcon : SentIcon}
+              size={24}
+              color="#FFFFFF"
+            />
           )}
         </TouchableOpacity>
       </View>
@@ -157,5 +173,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 2,
     opacity: 0.7,
+  },
+  cancelEditButton: {
+    padding: Spacing.sm,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

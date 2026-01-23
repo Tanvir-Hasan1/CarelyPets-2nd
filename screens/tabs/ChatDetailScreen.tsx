@@ -2,16 +2,20 @@ import ChatHeader from "@/components/chat/ChatHeader";
 import ChatInput from "@/components/chat/ChatInput";
 import ChatMenu from "@/components/chat/ChatMenu";
 import MessageBubble from "@/components/chat/MessageBubble";
+import MessageOptionsModal from "@/components/chat/MessageOptionsModal";
 import PetPalBlockModal from "@/components/home/petPals/PetPalBlockModal";
 import ImageViewingModal from "@/components/ui/ImageViewingModal";
-import { Spacing } from "@/constants/colors";
+import { Colors, Spacing } from "@/constants/colors";
+import { Message } from "@/services/chatService";
 import socketService from "@/services/socketService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useChatStore } from "@/store/useChatStore";
+import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -22,24 +26,40 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const EMPTY_MESSAGES: any[] = [];
+const DEFAULT_PAGINATION = { page: 1, hasMore: true, isLoading: false };
+
+export default React.memo(ChatDetailScreen);
 
 function ChatDetailScreen() {
-  console.log("[ChatDetailScreen] Component rendering started");
-
   const { id, name, avatar } = useLocalSearchParams();
   const conversationId = id as string;
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const { user } = useAuthStore();
+
+  // Only subscribe to messages for THIS conversation - won't re-render on other conversations
   const messages = useChatStore(
     (state) => state.messages[conversationId] || EMPTY_MESSAGES,
   );
-  const conversations = useChatStore((state) => state.conversations);
-  const blockedUsers = useChatStore((state) => state.blockedUsers);
+
+  // Subscribe to pagination state
+  const pagination = useChatStore(
+    (state) => state.pagination[conversationId] || DEFAULT_PAGINATION,
+  );
+
+  // Only subscribe to isBlocked status for THIS conversation
+  const isBlockedInStore = useChatStore((state) =>
+    state.blockedUsers.some((conv) => conv.id === conversationId),
+  );
+
   const isLoadingMessages = useChatStore((state) => state.isLoadingMessages);
+
+  // Get action functions (these don't cause re-renders)
   const fetchMessages = useChatStore((state) => state.fetchMessages);
   const sendMessage = useChatStore((state) => state.sendMessage);
+  const editMessage = useChatStore((state) => state.editMessage);
+  const removeMessage = useChatStore((state) => state.removeMessage);
   const sendMessageWithAttachments = useChatStore(
     (state) => state.sendMessageWithAttachments,
   );
@@ -55,21 +75,38 @@ function ChatDetailScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [blockModalVisible, setBlockModalVisible] = useState(false);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
-  const [isBlocked, setIsBlocked] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(isBlockedInStore);
+
+  // State for message actions
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+
   const flatListRef = useRef<FlatList>(null);
 
-  // Detect if conversation is blocked
+  // Update isBlocked when store value changes
   useEffect(() => {
-    const blocked = blockedUsers.some((conv) => conv.id === conversationId);
-    setIsBlocked(blocked);
-  }, [conversationId, blockedUsers]);
+    setIsBlocked(isBlockedInStore);
+  }, [isBlockedInStore]);
 
   useEffect(() => {
     if (conversationId) {
-      // Fire and forget - don't wait for fetchMessages
-      fetchMessages(conversationId); // This returns immediately with cached data
+      // Check if conversation is blocked by getting from store
+      const { blockedUsers } = useChatStore.getState();
+      const isConversationBlocked = blockedUsers.some(
+        (conv) => conv.id === conversationId,
+      );
+
+      // Only fetch messages if not blocked
+      if (!isConversationBlocked) {
+        fetchMessages(conversationId); // This returns immediately with cached data
+      }
       setActiveConversation(conversationId);
-      socketService.joinConversation(conversationId);
+
+      // Defer socket connection until after mount (non-blocking)
+      setTimeout(() => {
+        socketService.joinConversation(conversationId);
+      }, 0);
     }
 
     return () => {
@@ -78,16 +115,7 @@ function ChatDetailScreen() {
         socketService.leaveConversation(conversationId);
       }
     };
-  }, [conversationId]);
-
-  // Auto-scroll when messages update
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 200);
-    }
-  }, [messages.length]);
+  }, [conversationId, isBlockedInStore]); // Depend on isBlockedInStore for block status changes
 
   const handleBack = () => router.back();
 
@@ -114,7 +142,12 @@ function ChatDetailScreen() {
 
     setIsSending(true);
     try {
-      if (selectedImages.length > 0) {
+      if (isEditing && editingMessageId) {
+        // Handle Edit
+        await editMessage(conversationId, editingMessageId, messageText.trim());
+        setIsEditing(false);
+        setEditingMessageId(null);
+      } else if (selectedImages.length > 0) {
         const { conversations } = useChatStore.getState();
         const conversation = conversations.find((c) => c.id === conversationId);
         const recipient = conversation?.participants.find(
@@ -150,9 +183,32 @@ function ChatDetailScreen() {
       setMessageText("");
       setSelectedImages([]);
     } catch (error) {
-      console.error("Failed to send message:", error);
+      console.error("Failed to send/edit message:", error);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (selectedMessage?.body) {
+      await Clipboard.setStringAsync(selectedMessage.body);
+    }
+    setSelectedMessage(null);
+  };
+
+  const handleEdit = () => {
+    if (selectedMessage) {
+      setIsEditing(true);
+      setEditingMessageId(selectedMessage.id);
+      setMessageText(selectedMessage.body || "");
+      setSelectedMessage(null);
+    }
+  };
+
+  const handleDelete = () => {
+    if (selectedMessage) {
+      removeMessage(conversationId, selectedMessage.id);
+      setSelectedMessage(null);
     }
   };
 
@@ -178,10 +234,12 @@ function ChatDetailScreen() {
           onBlock={() => setBlockModalVisible(true)}
           onUnblock={async () => {
             try {
-              // Get the other user's ID from the conversation
-              const conversation = conversations.find(
-                (c) => c.id === conversationId,
-              );
+              // Get the other user's ID from store
+              const { conversations, blockedUsers } = useChatStore.getState();
+              const conversation =
+                conversations.find((c) => c.id === conversationId) ||
+                blockedUsers.find((c) => c.id === conversationId);
+
               const recipient = conversation?.participants.find(
                 (p) => p.id !== user?.id,
               );
@@ -190,6 +248,8 @@ function ChatDetailScreen() {
                 await unblockUser(recipient.id);
                 setIsBlocked(false); // Update UI immediately
                 console.log("User unblocked successfully");
+              } else {
+                console.error("Failed to find recipient for unblock");
               }
             } catch (error) {
               console.error("Failed to unblock user:", error);
@@ -200,14 +260,42 @@ function ChatDetailScreen() {
         <FlatList
           ref={flatListRef}
           data={messages}
+          inverted
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <MessageBubble
               message={item}
               onImagePress={(uri) => setViewingImage(uri)}
+              onLongPress={(m) => setSelectedMessage(m)}
             />
           )}
-          contentContainerStyle={styles.messageList}
+          // Pagination props
+          onEndReached={() => {
+            if (
+              pagination.hasMore &&
+              !pagination.isLoading &&
+              !isLoadingMessages
+            ) {
+              fetchMessages(conversationId, pagination.page + 1);
+            }
+          }}
+          onEndReachedThreshold={0.2}
+          ListFooterComponent={
+            pagination.isLoading ? (
+              <View style={{ paddingVertical: 20 }}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+              </View>
+            ) : null
+          }
+          // Performance optimizations
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          removeClippedSubviews={true}
+          contentContainerStyle={[
+            styles.messageList,
+            { flexGrow: 1, justifyContent: "flex-end" },
+          ]}
           showsVerticalScrollIndicator={false}
         />
 
@@ -234,15 +322,33 @@ function ChatDetailScreen() {
             onSendPress={handleSend}
             onRemoveImage={removeImage}
             paddingBottom={insets.bottom || Spacing.sm}
+            isEditing={isEditing}
+            onCancelEdit={() => {
+              setIsEditing(false);
+              setEditingMessageId(null);
+              setMessageText("");
+            }}
           />
         )}
+
+        <MessageOptionsModal
+          visible={!!selectedMessage}
+          isMyMessage={
+            selectedMessage?.senderId === user?.id ||
+            selectedMessage?.sender === "me"
+          }
+          onClose={() => setSelectedMessage(null)}
+          onCopy={handleCopy}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
 
         <PetPalBlockModal
           visible={blockModalVisible}
           onClose={() => setBlockModalVisible(false)}
           onConfirm={async () => {
             try {
-              // Get the other user's ID from the conversation
+              // Get the other user's ID from store
               const { conversations } = useChatStore.getState();
               const conversation = conversations.find(
                 (c) => c.id === conversationId,
@@ -303,6 +409,3 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
-
-// Memoize component to prevent unnecessary re-renders and speed up navigation
-export default React.memo(ChatDetailScreen);

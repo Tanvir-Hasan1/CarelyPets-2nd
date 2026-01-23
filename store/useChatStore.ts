@@ -6,6 +6,10 @@ interface ChatState {
   conversations: Conversation[];
   blockedUsers: Conversation[];
   messages: Record<string, Message[]>;
+  pagination: Record<
+    string,
+    { page: number; hasMore: boolean; isLoading: boolean }
+  >;
   activeConversationId: string | null;
   isLoadingConversations: boolean;
   isLoadingMessages: boolean;
@@ -14,7 +18,7 @@ interface ChatState {
   // Actions
   fetchConversations: (search?: string) => Promise<void>;
   fetchBlockedUsers: () => Promise<void>;
-  fetchMessages: (conversationId: string) => void; // Synchronous - returns immediately!
+  fetchMessages: (conversationId: string, page?: number) => void;
   sendMessage: (
     conversationId: string,
     content: string,
@@ -27,6 +31,12 @@ interface ChatState {
   addMessage: (conversationId: string, message: Message) => void;
   updateMessage: (conversationId: string, message: Message) => void;
   deleteMessage: (conversationId: string, messageId: string) => void;
+  editMessage: (
+    conversationId: string,
+    messageId: string,
+    newBody: string,
+  ) => Promise<void>;
+  removeMessage: (conversationId: string, messageId: string) => Promise<void>;
   updateConversation: (
     conversation: Partial<Conversation> & { id: string },
   ) => void;
@@ -34,12 +44,17 @@ interface ChatState {
   markAsRead: (conversationId: string) => Promise<void>;
   blockUser: (userId: string) => Promise<void>;
   unblockUser: (userId: string) => Promise<void>;
+
+  // Selectors for notifications
+  getTotalUnreadCount: () => number;
+  getUnreadConversations: () => Conversation[];
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   conversations: [],
   blockedUsers: [],
   messages: {},
+  pagination: {},
   activeConversationId: null,
   isLoadingConversations: false,
   isLoadingMessages: false,
@@ -65,37 +80,65 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  fetchMessages: (conversationId: string) => {
-    // SYNCHRONOUS: Show cached messages immediately if available
-    const cachedMessages = get().messages[conversationId];
-    if (cachedMessages && cachedMessages.length > 0) {
-      // User sees cached messages instantly - ZERO delay!
-      set({ isLoadingMessages: false });
+  fetchMessages: (conversationId: string, page: number = 1) => {
+    // If loading next page, set per-conversation loading state
+    if (page > 1) {
+      set((state) => ({
+        pagination: {
+          ...state.pagination,
+          [conversationId]: {
+            ...state.pagination[conversationId],
+            isLoading: true,
+          },
+        },
+      }));
     } else {
-      // No cached messages, show loading state
-      set({ isLoadingMessages: true, error: null });
+      // First page: set global loading state
+      const cachedMessages = get().messages[conversationId];
+      if (!cachedMessages || cachedMessages.length === 0) {
+        set({ isLoadingMessages: true, error: null });
+      }
     }
 
-    // ASYNCHRONOUS: Fetch fresh messages in background (doesn't block anything)
+    // ASYNCHRONOUS: Fetch messages
     (async () => {
       try {
-        const response = await chatService.getMessages(conversationId);
+        const response = await chatService.getMessages(conversationId, page);
         if (response.success && response.data) {
-          // The API returns { success: true, data: { data: Message[], pagination: ... } }
-          const apiMessages = response.data.data;
-          console.log(
-            `[Store] Fetched ${apiMessages?.length} messages for ${conversationId}`,
-          );
+          const apiMessages = response.data.data || [];
+          const meta = response.data.pagination;
 
-          set((state) => ({
-            messages: {
-              ...state.messages,
-              [conversationId]: Array.isArray(apiMessages)
-                ? [...apiMessages].reverse()
-                : [],
-            },
-            isLoadingMessages: false,
-          }));
+          // API returns Newest -> Oldest (Index 0 is newest)
+          // For Inverted FlatList, we want this EXACT order.
+          // Page 1 matches. Page 2 needs to be appended to the END (bottom of array = top of visual list).
+
+          set((state) => {
+            const currentMessages = state.messages[conversationId] || [];
+            const finalMessages =
+              page === 1
+                ? [...apiMessages]
+                : [...currentMessages, ...apiMessages]; // Append older messages to end
+
+            return {
+              messages: {
+                ...state.messages,
+                [conversationId]: finalMessages,
+              },
+              pagination: {
+                ...state.pagination,
+                [conversationId]: {
+                  page: meta.page,
+                  hasMore: meta.page * meta.limit < meta.total,
+                  isLoading: false,
+                },
+              },
+              isLoadingMessages: false,
+            };
+          });
+
+          console.log(
+            `[Store] Fetched page ${page} (${apiMessages.length} msgs) for ${conversationId}`,
+          );
         } else {
           set({ error: "Failed to fetch messages", isLoadingMessages: false });
         }
@@ -158,6 +201,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
+  // Action: Edit message via API
+  editMessage: async (
+    conversationId: string,
+    messageId: string,
+    newBody: string,
+  ) => {
+    try {
+      const response = await chatService.updateMessage(messageId, newBody);
+      if (response.success) {
+        get().updateMessage(conversationId, response.data);
+      }
+    } catch (error: any) {
+      console.error("Failed to edit message:", error);
+    }
+  },
+
+  // Action: Delete message via API
+  removeMessage: async (conversationId: string, messageId: string) => {
+    // Optimistically delete from store
+    get().deleteMessage(conversationId, messageId);
+
+    try {
+      await chatService.deleteMessage(messageId);
+    } catch (error: any) {
+      console.error("Failed to delete message:", error);
+      // Ideally revert if failed, but for now log error
+    }
+  },
+
   addMessage: (conversationId: string, message: Message) => {
     if (!conversationId) {
       console.warn("[Store] addMessage called without conversationId", message);
@@ -177,7 +249,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       console.log(
         `[Store] Updating state with new message for ${conversationId}.`,
       );
-      const updatedMessages = [...conversationMessages, message];
+      // For Inverted FlatList, Newest message must be at INDEX 0
+      const updatedMessages = [message, ...conversationMessages];
       const currentUserId = useAuthStore.getState().user?.id;
 
       const conversationExists = state.conversations.find(
@@ -245,8 +318,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   deleteMessage: (conversationId: string, messageId: string) => {
     set((state) => {
       const conversationMessages = state.messages[conversationId] || [];
-      const updatedMessages = conversationMessages.filter(
-        (m) => m.id !== messageId,
+      const updatedMessages = conversationMessages.map((m) =>
+        m.id === messageId ? { ...m, isDeleted: true, body: "" } : m,
       );
 
       return {
@@ -343,5 +416,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ error: error.message || "Error unblocking user" });
       throw error;
     }
+  },
+
+  // Selectors for notifications
+  getTotalUnreadCount: () => {
+    const { conversations } = get();
+    return conversations.reduce(
+      (total, conv) => total + (conv.unreadCount || 0),
+      0,
+    );
+  },
+
+  getUnreadConversations: () => {
+    const { conversations } = get();
+    return conversations.filter((conv) => conv.unreadCount > 0);
   },
 }));
