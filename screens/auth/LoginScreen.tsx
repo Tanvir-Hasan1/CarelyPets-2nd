@@ -49,14 +49,13 @@ export default function LoginScreen() {
 
     const result = await login(email, password);
 
-    // if (result.success) {
-    //   if (result.needsProfileSetup) {
-    //     router.replace("/(auth)/setupProfile");
-    //   } else {
-    //     router.replace("/(tabs)/home");
-    //   }
-    // }
-    router.replace("/(tabs)/home");
+    if (result.success) {
+      if (result.needsProfileSetup) {
+        router.replace("/(auth)/setupProfile");
+      } else {
+        router.replace("/(tabs)/home");
+      }
+    }
   };
 
   const handleGoogleLogin = async () => {
