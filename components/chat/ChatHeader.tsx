@@ -10,6 +10,7 @@ interface ChatHeaderProps {
   onBackPress: () => void;
   onMenuPress: () => void;
   paddingTop: number;
+  status?: string;
 }
 
 const ChatHeader = ({
@@ -18,6 +19,7 @@ const ChatHeader = ({
   onBackPress,
   onMenuPress,
   paddingTop,
+  status,
 }: ChatHeaderProps) => {
   return (
     <View style={[styles.header, { paddingTop }]}>
@@ -34,7 +36,7 @@ const ChatHeader = ({
         />
         <View>
           <Text style={styles.headerName}>{name || "User"}</Text>
-          <Text style={styles.headerStatus}>Online</Text>
+          {status && <Text style={styles.headerStatus}>{status}</Text>}
         </View>
       </View>
 

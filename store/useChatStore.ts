@@ -44,6 +44,7 @@ interface ChatState {
   markAsRead: (conversationId: string) => Promise<void>;
   blockUser: (userId: string) => Promise<void>;
   unblockUser: (userId: string) => Promise<void>;
+  deleteConversation: (conversationId: string) => Promise<void>;
 
   // Selectors for notifications
   getTotalUnreadCount: () => number;
@@ -414,6 +415,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     } catch (error: any) {
       set({ error: error.message || "Error unblocking user" });
+      throw error;
+    }
+  },
+
+  deleteConversation: async (conversationId: string) => {
+    try {
+      const response = await chatService.deleteConversation(conversationId);
+      if (response.success) {
+        set((state) => ({
+          conversations: state.conversations.filter(
+            (c) => c.id !== conversationId,
+          ),
+          // remove messages from cache
+          messages: Object.fromEntries(
+            Object.entries(state.messages).filter(
+              ([key]) => key !== conversationId,
+            ),
+          ) as Record<string, Message[]>,
+        }));
+      }
+    } catch (error: any) {
+      set({ error: error.message || "Error deleting conversation" });
       throw error;
     }
   },

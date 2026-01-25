@@ -62,12 +62,17 @@ const ConversationCard = ({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Image
-        source={{
-          uri: otherParticipant?.avatarUrl || "https://i.pravatar.cc/150",
-        }}
-        style={styles.avatar}
-      />
+      <View style={styles.avatarContainer}>
+        <Image
+          source={{
+            uri: otherParticipant?.avatarUrl || "https://i.pravatar.cc/150",
+          }}
+          style={styles.avatar}
+        />
+        {conversation.otherParticipant?.isOnline && (
+          <View style={styles.onlineIndicator} />
+        )}
+      </View>
       <View style={styles.info}>
         <View style={styles.header}>
           <Text style={styles.name}>{otherParticipant?.name || "Unknown"}</Text>
@@ -103,11 +108,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: Spacing.sm,
   },
+  avatarContainer: {
+    position: "relative",
+    marginRight: Spacing.md,
+  },
   avatar: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    marginRight: Spacing.md,
+  },
+  onlineIndicator: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#10B981", // Green
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
   info: {
     flex: 1,

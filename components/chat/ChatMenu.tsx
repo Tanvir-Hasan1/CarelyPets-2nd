@@ -7,6 +7,7 @@ interface ChatMenuProps {
   onClose: () => void;
   onBlock: () => void;
   onUnblock?: () => void;
+  onDelete?: () => void;
 }
 
 const ChatMenu = ({
@@ -15,6 +16,7 @@ const ChatMenu = ({
   onClose,
   onBlock,
   onUnblock,
+  onDelete,
 }: ChatMenuProps) => {
   if (!visible) return null;
 
@@ -43,6 +45,18 @@ const ChatMenu = ({
           <Text style={styles.optionText}>Block</Text>
         </TouchableOpacity>
       )}
+
+      {/* Delete Conversation Option */}
+      <TouchableOpacity
+        style={styles.option}
+        onPress={() => {
+          onDelete?.();
+          onClose();
+        }}
+      >
+        <Octicons name="trash" size={20} color="#E53935" />
+        <Text style={styles.optionText}>Delete</Text>
+      </TouchableOpacity>
     </View>
   );
 };
