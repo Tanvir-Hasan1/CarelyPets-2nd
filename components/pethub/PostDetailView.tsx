@@ -1,4 +1,5 @@
 import PostOptionsDropdown from "@/components/accounts/profile/PostOptionsDropdown";
+import CommentModal from "@/components/ui/CommentModal";
 import DeleteModal from "@/components/ui/DeleteModal";
 import Header from "@/components/ui/Header";
 import LoadingModal from "@/components/ui/LoadingModal";
@@ -46,6 +47,7 @@ const PostDetailView = () => {
   const [deleteSuccess, setDeleteSuccess] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
+  const [commentModalVisible, setCommentModalVisible] = useState(false);
 
   const isOwnPost = post?.author?.id === user?.id;
 
@@ -145,7 +147,7 @@ const PostDetailView = () => {
       const newLikedState = !isLiked;
       setIsLiked(newLikedState);
       setLikesCount((prev) =>
-        newLikedState ? prev + 1 : Math.max(0, prev - 1)
+        newLikedState ? prev + 1 : Math.max(0, prev - 1),
       );
 
       const response = await communityService.likePost(post.id);
@@ -297,10 +299,13 @@ const PostDetailView = () => {
                   {likesCount}
                 </Text>
               </TouchableOpacity>
-              <View style={styles.statItem}>
+              <TouchableOpacity
+                style={styles.statItem}
+                onPress={() => setCommentModalVisible(true)}
+              >
                 <MessageCircle size={20} color="#666" />
                 <Text style={styles.statText}>{post.commentsCount}</Text>
-              </View>
+              </TouchableOpacity>
             </View>
             <Text style={styles.sharesText}>
               {post.sharesCount || 0} shares
@@ -355,6 +360,20 @@ const PostDetailView = () => {
           setShowBlockModal(false);
         }}
       />
+
+      {post && (
+        <CommentModal
+          visible={commentModalVisible}
+          onClose={() => setCommentModalVisible(false)}
+          postId={post.id}
+          likesCount={likesCount}
+          sharesCount={post.sharesCount}
+          onCommentAdded={() => {
+            // Optimistically increment or refetch
+            setPost({ ...post, commentsCount: post.commentsCount + 1 });
+          }}
+        />
+      )}
     </View>
   );
 };

@@ -193,55 +193,56 @@ const CommentModal = ({
       visible={visible}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View style={StyleSheet.absoluteFill} />
-        </TouchableWithoutFeedback>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback onPress={onClose}>
+            <View style={StyleSheet.absoluteFill} />
+          </TouchableWithoutFeedback>
 
-        <View style={styles.modalContent}>
-          <View style={styles.headerHandle} />
+          <View style={styles.modalContent}>
+            <View style={styles.headerHandle} />
 
-          <View style={styles.statsRow}>
-            <View style={styles.statGroup}>
-              <Heart size={20} color={Colors.primary} fill={Colors.primary} />
-              <Text style={styles.statCount}>{likesCount}</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statGroup}>
+                <Heart size={20} color={Colors.primary} fill={Colors.primary} />
+                <Text style={styles.statCount}>{likesCount}</Text>
+              </View>
+              <Text style={styles.shareCount}>{sharesCount} shares</Text>
             </View>
-            <Text style={styles.shareCount}>{sharesCount} shares</Text>
-          </View>
 
-          <View style={{ flex: 1 }}>
-            {loading ? (
-              <ActivityIndicator
-                size="large"
-                color={Colors.primary}
-                style={{ marginTop: 40 }}
-              />
-            ) : (
-              <FlatList
-                data={comments}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <CommentItem comment={item} onReply={setReplyingTo} />
-                )}
-                contentContainerStyle={styles.commentsList}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                removeClippedSubviews={Platform.OS === "android"}
-                ListEmptyComponent={
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>
-                      No comments yet. Be the first to comment!
-                    </Text>
-                  </View>
-                }
-              />
-            )}
-          </View>
+            <View style={{ flex: 1 }}>
+              {loading ? (
+                <ActivityIndicator
+                  size="large"
+                  color={Colors.primary}
+                  style={{ marginTop: 40 }}
+                />
+              ) : (
+                <FlatList
+                  data={comments}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <CommentItem comment={item} onReply={setReplyingTo} />
+                  )}
+                  contentContainerStyle={styles.commentsList}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  removeClippedSubviews={Platform.OS === "android"}
+                  ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                      <Text style={styles.emptyText}>
+                        No comments yet. Be the first to comment!
+                      </Text>
+                    </View>
+                  }
+                />
+              )}
+            </View>
 
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
-          >
             {replyingTo && (
               <View style={styles.replyingIndicator}>
                 <Text style={styles.replyingToText}>
@@ -278,9 +279,9 @@ const CommentModal = ({
                 )}
               </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
