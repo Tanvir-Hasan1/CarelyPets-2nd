@@ -140,6 +140,19 @@ class CommunityService {
     );
   }
 
+  async likeComment(commentId: string | number): Promise<{
+    success: boolean;
+    data: {
+      id: string;
+      postId: string;
+      likesCount: number;
+      isLikedByMe: boolean;
+    };
+    message: string;
+  }> {
+    return await api.post(`/community/comments/${commentId}/like`, {});
+  }
+
   async getPostComments(postId: string | number): Promise<CommentsResponse> {
     return await api.get<CommentsResponse>(
       `/community/posts/${postId}/comments`,

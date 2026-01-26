@@ -24,7 +24,8 @@ interface UIComment {
   userName: string;
   content: string;
   time: string;
-  likes: string;
+  likesCount: number;
+  isLiked: boolean;
   replies?: UIComment[];
 }
 
@@ -51,7 +52,8 @@ const mapApiCommentsToUI = (apiData: any[]): UIComment[] => {
       userName: comment.author?.name || "User",
       content: comment.text,
       time: comment.timeAgo || "Just now",
-      likes: "0",
+      likesCount: comment.likesCount || 0,
+      isLiked: comment.isLikedByMe || false,
       replies: replies.map((reply: any) => ({
         id: String(reply.id),
         userAvatar:
@@ -60,7 +62,8 @@ const mapApiCommentsToUI = (apiData: any[]): UIComment[] => {
         userName: reply.author?.name || "User",
         content: reply.text,
         time: reply.timeAgo || "Just now",
-        likes: "0",
+        likesCount: reply.likesCount || 0,
+        isLiked: reply.isLikedByMe || false,
       })),
     };
   });
@@ -71,10 +74,12 @@ const CommentItem = ({
   comment,
   isReply = false,
   onReply,
+  onLike,
 }: {
   comment: UIComment;
   isReply?: boolean;
   onReply: (comment: UIComment) => void;
+  onLike: (commentId: string) => void;
 }) => (
   <View style={[styles.commentContainer, isReply && styles.replyContainer]}>
     <View style={styles.commentHeader}>
@@ -89,10 +94,29 @@ const CommentItem = ({
         </View>
         <View style={styles.commentActions}>
           <Text style={styles.actionText}>{comment.time}</Text>
-          <TouchableOpacity activeOpacity={0.7}>
-            <Text style={[styles.actionText, styles.highlightText]}>
-              {comment.likes} Like
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => onLike(comment.id)}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+          >
+            <Text
+              style={[
+                styles.actionText,
+                comment.isLiked && styles.highlightText,
+              ]}
+            >
+              {comment.isLiked ? "Liked" : "Like"}
             </Text>
+            {comment.likesCount > 0 && (
+              <Text
+                style={[
+                  styles.actionText,
+                  comment.isLiked && styles.highlightText,
+                ]}
+              >
+                {comment.likesCount}
+              </Text>
+            )}
           </TouchableOpacity>
           <TouchableOpacity onPress={() => onReply(comment)}>
             <Text style={styles.actionText}>Reply</Text>
@@ -110,6 +134,7 @@ const CommentItem = ({
             comment={reply}
             isReply
             onReply={onReply}
+            onLike={onLike}
           />
         ))}
       </View>
@@ -156,6 +181,83 @@ const CommentModal = ({
       setNewComment("");
     }
   }, [visible, postId]);
+
+  /* -------- Handle Like -------- */
+  const handleLike = async (commentId: string) => {
+    // 1. Optimistic Update
+    setComments((prevComments) => {
+      const updateList = (list: UIComment[]): UIComment[] => {
+        return list.map((c) => {
+          if (c.id === commentId) {
+            const newIsLiked = !c.isLiked;
+            return {
+              ...c,
+              isLiked: newIsLiked,
+              likesCount: newIsLiked
+                ? c.likesCount + 1
+                : Math.max(0, c.likesCount - 1),
+            };
+          }
+          if (c.replies && c.replies.length > 0) {
+            return { ...c, replies: updateList(c.replies) };
+          }
+          return c;
+        });
+      };
+      return updateList(prevComments);
+    });
+
+    // 2. API Call
+    try {
+      const res = await communityService.likeComment(commentId);
+      if (res.success && res.data) {
+        setComments((prevComments) => {
+          const updateList = (list: UIComment[]): UIComment[] => {
+            return list.map((c) => {
+              if (c.id === commentId) {
+                return {
+                  ...c,
+                  isLiked: res.data.isLikedByMe,
+                  likesCount: res.data.likesCount,
+                };
+              }
+              if (c.replies && c.replies.length > 0) {
+                return { ...c, replies: updateList(c.replies) };
+              }
+              return c;
+            });
+          };
+          return updateList(prevComments);
+        });
+      }
+    } catch (err) {
+      console.error("Failed to like comment", err);
+      // Revert if error (simple revert by reloading or toggling back)
+      // For simplicity/safety, we might just reload comments or let the user try again
+      // But let's try to revert the toggle
+      setComments((prevComments) => {
+        const updateList = (list: UIComment[]): UIComment[] => {
+          return list.map((c) => {
+            if (c.id === commentId) {
+              const newIsLiked = !c.isLiked; // Toggle back
+              return {
+                ...c,
+                isLiked: newIsLiked,
+                likesCount: newIsLiked
+                  ? c.likesCount + 1
+                  : Math.max(0, c.likesCount - 1),
+              };
+            }
+            if (c.replies && c.replies.length > 0) {
+              return { ...c, replies: updateList(c.replies) };
+            }
+            return c;
+          });
+        };
+        return updateList(prevComments);
+      });
+    }
+  };
 
   /* -------- Send Comment / Reply -------- */
   const handleSend = async () => {
@@ -226,7 +328,11 @@ const CommentModal = ({
                   data={comments}
                   keyExtractor={(item) => item.id}
                   renderItem={({ item }) => (
-                    <CommentItem comment={item} onReply={setReplyingTo} />
+                    <CommentItem
+                      comment={item}
+                      onReply={setReplyingTo}
+                      onLike={handleLike}
+                    />
                   )}
                   contentContainerStyle={styles.commentsList}
                   showsVerticalScrollIndicator={false}
