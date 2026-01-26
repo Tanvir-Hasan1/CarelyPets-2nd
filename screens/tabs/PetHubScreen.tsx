@@ -26,7 +26,7 @@ export default function PetHubScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [dropdownPostId, setDropdownPostId] = useState<string | number | null>(
-    null
+    null,
   );
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +35,7 @@ export default function PetHubScreen() {
   const [deleteSuccess, setDeleteSuccess] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<string | number | null>(
-    null
+    null,
   );
 
   const [showReportModal, setShowReportModal] = useState(false);
@@ -84,24 +84,26 @@ export default function PetHubScreen() {
     setPosts((prevPosts) =>
       prevPosts.map((post) => {
         if (post.id === postId) {
-          const newIsLiked = !post.isLiked;
+          const currentlyLiked = post.isLikedByMe ?? post.isLiked;
+          const newIsLiked = !currentlyLiked;
           return {
             ...post,
             isLiked: newIsLiked,
+            isLikedByMe: newIsLiked,
             likesCount: newIsLiked
               ? post.likesCount + 1
               : Math.max(0, post.likesCount - 1),
           };
         }
         return post;
-      })
+      }),
     );
 
     try {
       const response = await communityService.likePost(postId);
       if (response.success) {
         setPosts((prevPosts) =>
-          prevPosts.map((post) => (post.id === postId ? response.data : post))
+          prevPosts.map((post) => (post.id === postId ? response.data : post)),
         );
       }
     } catch (error) {
@@ -126,7 +128,7 @@ export default function PetHubScreen() {
         setDeleteSuccess(true);
         setTimeout(() => {
           setPosts((prevPosts) =>
-            prevPosts.filter((post) => post.id !== selectedPostId)
+            prevPosts.filter((post) => post.id !== selectedPostId),
           );
           setIsDeleting(false);
           setDeleteSuccess(false);
@@ -152,7 +154,7 @@ export default function PetHubScreen() {
 
       const response = await communityService.reportPost(
         selectedPostId,
-        reason
+        reason,
       );
       console.log("Report response data:", response.data);
 
@@ -276,7 +278,7 @@ export default function PetHubScreen() {
             likesCount={item.likesCount.toString()}
             commentsCount={item.commentsCount.toString()}
             sharesCount={item.sharesCount?.toString() || "0"}
-            isLiked={item.isLiked}
+            isLiked={item.isLikedByMe ?? item.isLiked}
             onLike={() => handleLikePost(item.id)}
             isOwnPost={item.author.id === user?.id}
             isDropdownVisible={dropdownPostId === item.id}

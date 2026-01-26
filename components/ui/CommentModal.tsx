@@ -1,7 +1,9 @@
 import SendIcon from "@/assets/images/icons/send.svg";
 import { Colors } from "@/constants/colors";
 import communityService from "@/services/communityService";
-import { Heart, X } from "lucide-react-native";
+import { useAuthStore } from "@/store/useAuthStore";
+import * as Clipboard from "expo-clipboard";
+import { Edit2, Heart, X } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -17,6 +19,10 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import PetPalReportModal from "../home/petPals/PetPalReportModal";
+import PetPalWriteReportModal from "../home/petPals/PetPalWriteReportModal";
+import CommentOptionsModal from "./CommentOptionsModal";
+import LoadingModal from "./LoadingModal";
 
 interface UIComment {
   id: string;
@@ -26,6 +32,8 @@ interface UIComment {
   time: string;
   likesCount: number;
   isLiked: boolean;
+  authorId?: string;
+  parentId?: string;
   replies?: UIComment[];
 }
 
@@ -46,6 +54,7 @@ const mapApiCommentsToUI = (apiData: any[]): UIComment[] => {
 
     return {
       id: String(comment.id),
+      authorId: String(comment.author?.id),
       userAvatar:
         comment.author?.avatarUrl ||
         `https://i.pravatar.cc/150?u=${comment.author?.username || "user"}`,
@@ -56,6 +65,8 @@ const mapApiCommentsToUI = (apiData: any[]): UIComment[] => {
       isLiked: comment.isLikedByMe || false,
       replies: replies.map((reply: any) => ({
         id: String(reply.id),
+        authorId: String(reply.author?.id),
+        parentId: String(comment.id),
         userAvatar:
           reply.author?.avatarUrl ||
           `https://i.pravatar.cc/150?u=${reply.author?.username || "user"}`,
@@ -75,11 +86,13 @@ const CommentItem = ({
   isReply = false,
   onReply,
   onLike,
+  onLongPress,
 }: {
   comment: UIComment;
   isReply?: boolean;
   onReply: (comment: UIComment) => void;
   onLike: (commentId: string) => void;
+  onLongPress: (comment: UIComment) => void;
 }) => (
   <View style={[styles.commentContainer, isReply && styles.replyContainer]}>
     <View style={styles.commentHeader}>
@@ -88,10 +101,16 @@ const CommentItem = ({
         style={isReply ? styles.replyAvatar : styles.commentAvatar}
       />
       <View style={styles.commentContent}>
-        <View style={styles.commentBubble}>
-          <Text style={styles.commentUserName}>{comment.userName}</Text>
-          <Text style={styles.commentText}>{comment.content}</Text>
-        </View>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onLongPress={() => onLongPress(comment)}
+          delayLongPress={500}
+        >
+          <View style={styles.commentBubble}>
+            <Text style={styles.commentUserName}>{comment.userName}</Text>
+            <Text style={styles.commentText}>{comment.content}</Text>
+          </View>
+        </TouchableOpacity>
         <View style={styles.commentActions}>
           <Text style={styles.actionText}>{comment.time}</Text>
           <TouchableOpacity
@@ -135,6 +154,7 @@ const CommentItem = ({
             isReply
             onReply={onReply}
             onLike={onLike}
+            onLongPress={onLongPress}
           />
         ))}
       </View>
@@ -156,6 +176,30 @@ const CommentModal = ({
   const [replyingTo, setReplyingTo] = useState<UIComment | null>(null);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { user } = useAuthStore();
+  const [optionsModalVisible, setOptionsModalVisible] = useState(false);
+  const [selectedComment, setSelectedComment] = useState<UIComment | null>(
+    null,
+  );
+
+  // Edit State
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+
+  // Delete State
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+
+  // Report State
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showWriteReportModal, setShowWriteReportModal] = useState(false);
+  const [isReporting, setIsReporting] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
+
+  const isOwnComment = selectedComment?.userName === user?.name; // Simple check, ideally check ID if available in UIComment
+  // Better check if UIComment had authorId. Current UIComment doesn't have authorId.
+  // We need to map authorId in mapApiCommentsToUI or update UIComment.
+  // Let's update mapApiCommentsToUI to include authorId for robust check.
 
   /* -------- Fetch Comments -------- */
   const loadComments = async () => {
@@ -259,13 +303,79 @@ const CommentModal = ({
     }
   };
 
+  /* -------- Handle Comment Actions -------- */
+  const handleLongPress = (comment: UIComment) => {
+    setSelectedComment(comment);
+    setOptionsModalVisible(true);
+  };
+
+  const handleCopy = async () => {
+    if (selectedComment) {
+      await Clipboard.setStringAsync(selectedComment.content);
+      // Optional: Toast or feedback
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedComment) return;
+    try {
+      setIsDeleting(true);
+      const res = await communityService.deleteComment(selectedComment.id);
+      if (res.success) {
+        setDeleteSuccess(true);
+        setTimeout(() => {
+          setIsDeleting(false);
+          setDeleteSuccess(false);
+          loadComments(); // Refresh list
+        }, 1000);
+      } else {
+        alert("Failed to delete comment");
+        setIsDeleting(false);
+      }
+    } catch (err) {
+      console.error("Delete failed", err);
+      setIsDeleting(false);
+      alert("Error deleting comment");
+    }
+  };
+
+  const handleReport = async (reason: string) => {
+    if (!selectedComment) return;
+    try {
+      setShowReportModal(false);
+      setShowWriteReportModal(false);
+      setIsReporting(true);
+      const res = await communityService.reportComment(
+        selectedComment.id,
+        reason,
+      );
+      if (res.success) {
+        setReportSuccess(true);
+        setTimeout(() => {
+          setIsReporting(false);
+          setReportSuccess(false);
+        }, 1500);
+      } else {
+        setIsReporting(false);
+        alert("Failed to report comment");
+      }
+    } catch (err) {
+      setIsReporting(false);
+      console.error("Report failed", err);
+      alert("Error reporting comment");
+    }
+  };
+
   /* -------- Send Comment / Reply -------- */
   const handleSend = async () => {
     if (!newComment.trim() || isSubmitting) return;
 
     try {
       setIsSubmitting(true);
-      const parentId = replyingTo?.id || null;
+      // If replyingTo has a parentId, it means it's a child comment, so use its parentId.
+      // If replyingTo does NOT have a parentId, it is a top-level comment, so use its id.
+      const parentId = replyingTo?.parentId || replyingTo?.id || null;
+
       const res = await communityService.createComment({
         postId,
         text: newComment.trim(),
@@ -286,6 +396,43 @@ const CommentModal = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEditInit = () => {
+    if (selectedComment) {
+      setNewComment(selectedComment.content);
+      setEditingCommentId(selectedComment.id);
+      setReplyingTo(null); // Ensure not replying
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!newComment.trim() || !editingCommentId || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      const res = await communityService.updateComment(
+        editingCommentId,
+        newComment.trim(),
+      );
+      if (res.success) {
+        setNewComment("");
+        setEditingCommentId(null);
+        await loadComments();
+      } else {
+        alert("Failed to update comment");
+      }
+    } catch (err) {
+      console.error("Update failed", err);
+      alert("Error updating comment");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const cancelEdit = () => {
+    setNewComment("");
+    setEditingCommentId(null);
   };
 
   return (
@@ -332,6 +479,7 @@ const CommentModal = ({
                       comment={item}
                       onReply={setReplyingTo}
                       onLike={handleLike}
+                      onLongPress={handleLongPress}
                     />
                   )}
                   contentContainerStyle={styles.commentsList}
@@ -360,10 +508,25 @@ const CommentModal = ({
               </View>
             )}
 
+            {editingCommentId && (
+              <View style={styles.replyingIndicator}>
+                <Text style={styles.replyingToText}>Editing comment</Text>
+                <TouchableOpacity onPress={cancelEdit}>
+                  <X size={16} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+            )}
+
             <View style={styles.inputArea}>
               <TextInput
                 style={styles.input}
-                placeholder={replyingTo ? "Add reply..." : "Add comment..."}
+                placeholder={
+                  editingCommentId
+                    ? "Update comment..."
+                    : replyingTo
+                      ? "Add reply..."
+                      : "Add comment..."
+                }
                 placeholderTextColor="#9CA3AF"
                 value={newComment}
                 onChangeText={setNewComment}
@@ -375,17 +538,62 @@ const CommentModal = ({
                   (!newComment.trim() || isSubmitting) &&
                     styles.sendButtonDisabled,
                 ]}
-                onPress={handleSend}
+                onPress={editingCommentId ? handleUpdate : handleSend}
                 disabled={!newComment.trim() || isSubmitting}
               >
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color="#FFF" />
+                ) : editingCommentId ? (
+                  <Edit2 width={20} height={20} color="#FFFFFF" />
                 ) : (
                   <SendIcon width={24} height={24} color="#FFFFFF" />
                 )}
               </TouchableOpacity>
             </View>
           </View>
+
+          <CommentOptionsModal
+            visible={optionsModalVisible}
+            onClose={() => setOptionsModalVisible(false)}
+            isOwnComment={user?.id === selectedComment?.authorId}
+            onEdit={handleEditInit}
+            onDelete={() => {
+              setOptionsModalVisible(false);
+              handleDelete();
+            }} // Trigger directly for now or open confirmation? User asked specifically for LoadingModal while deleting.
+            onReport={() => setShowReportModal(true)}
+            onCopy={handleCopy}
+          />
+
+          <LoadingModal
+            visible={isDeleting}
+            message="Deleting comment..."
+            success={deleteSuccess}
+            successMessage="Comment deleted"
+          />
+
+          <LoadingModal
+            visible={isReporting}
+            message="Reporting..."
+            success={reportSuccess}
+            successMessage="Report submitted"
+          />
+
+          <PetPalReportModal
+            visible={showReportModal}
+            onClose={() => setShowReportModal(false)}
+            onSelectOther={() => {
+              setShowReportModal(false);
+              setShowWriteReportModal(true);
+            }}
+            onSelectReason={handleReport}
+          />
+
+          <PetPalWriteReportModal
+            visible={showWriteReportModal}
+            onClose={() => setShowWriteReportModal(false)}
+            onSend={(text: string) => handleReport(text)}
+          />
         </View>
       </KeyboardAvoidingView>
     </Modal>

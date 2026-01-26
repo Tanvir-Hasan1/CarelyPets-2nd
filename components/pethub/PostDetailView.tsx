@@ -64,7 +64,7 @@ const PostDetailView = () => {
       if (response.success) {
         setPost(response.data);
         setLikesCount(response.data.likesCount);
-        setIsLiked(response.data.isLiked);
+        setIsLiked(response.data.isLikedByMe ?? response.data.isLiked);
       }
     } catch (error) {
       console.error("Error fetching post details:", error);

@@ -25,6 +25,7 @@ export interface Post {
   commentsCount: number;
   sharesCount: number;
   isLiked: boolean;
+  isLikedByMe?: boolean;
   createdAt: string;
   updatedAt: string;
   timeAgo: string;
@@ -151,6 +152,40 @@ class CommunityService {
     message: string;
   }> {
     return await api.post(`/community/comments/${commentId}/like`, {});
+  }
+
+  async updateComment(
+    commentId: string | number,
+    text: string,
+  ): Promise<{
+    success: boolean;
+    data: Comment;
+    message: string;
+  }> {
+    return await api.patch<{
+      success: boolean;
+      data: Comment;
+      message: string;
+    }>(`/community/comments/${commentId}`, { text });
+  }
+
+  async deleteComment(commentId: string | number): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    return await api.delete<{ success: boolean; message: string }>(
+      `/community/comments/${commentId}`,
+    );
+  }
+
+  async reportComment(
+    commentId: string | number,
+    reason: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return await api.post<{ success: boolean; message: string }>(
+      `/community/comments/${commentId}/report`,
+      { reason },
+    );
   }
 
   async getPostComments(postId: string | number): Promise<CommentsResponse> {
