@@ -91,9 +91,20 @@ class ChatService {
   }
 
   async searchUsers(query: string): Promise<UserSearchResponse> {
-    return await api.get<UserSearchResponse>(
-      `/messages/users/search?query=${query}`,
-    );
+    console.log(`[ChatService] Searching users with query: "${query}"`);
+    try {
+      const response = await api.get<UserSearchResponse>(
+        `/messages/users/search?query=${encodeURIComponent(query)}`,
+      );
+      console.log(
+        `[ChatService] Search response:`,
+        JSON.stringify(response, null, 2),
+      );
+      return response;
+    } catch (error) {
+      console.error(`[ChatService] Search error:`, error);
+      throw error;
+    }
   }
 
   async getMessages(

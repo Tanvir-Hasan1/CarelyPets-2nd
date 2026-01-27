@@ -56,13 +56,20 @@ const UserSearch = ({ onSelect, value, onChangeText }: UserSearchProps) => {
 
       try {
         const response = await chatService.searchUsers(text);
+        console.log("[UserSearch] Component received response:", response);
         if (response.success) {
+          console.log(
+            "[UserSearch] Setting results:",
+            response.data ? response.data.length : "No data",
+          );
           // Filter out current user from results
           const filtered = response.data.filter((u) => u.id !== user?.id);
           setResults(filtered);
+        } else {
+          console.warn("[UserSearch] Response success is false", response);
         }
       } catch (error) {
-        console.error("Search failed", error);
+        console.error("[UserSearch] Search failed with detailed error:", error);
         setResults([]);
       } finally {
         setIsLoading(false);
