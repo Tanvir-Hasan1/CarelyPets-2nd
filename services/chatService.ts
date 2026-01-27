@@ -37,6 +37,11 @@ export interface Message {
 export interface Conversation {
   id: string;
   participants: Participant[];
+  otherParticipant?: Participant & {
+    isOnline?: boolean;
+    isBlocked?: boolean;
+    lastSeenAt?: string;
+  };
   lastMessage: Message | null;
   unreadCount: number;
   status: string;
@@ -61,6 +66,20 @@ export interface MessagesResponse {
   };
 }
 
+export interface UserResult {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  role: string;
+  isOnline: boolean;
+  lastSeenAt: string;
+}
+
+export interface UserSearchResponse {
+  success: boolean;
+  data: UserResult[];
+}
+
 class ChatService {
   async getConversations(
     search: string = "",
@@ -69,6 +88,23 @@ class ChatService {
     return await api.get<ConversationsResponse>(
       `/messages/conversations?search=${search}&status=${status}`,
     );
+  }
+
+  async searchUsers(query: string): Promise<UserSearchResponse> {
+    console.log(`[ChatService] Searching users with query: "${query}"`);
+    try {
+      const response = await api.get<UserSearchResponse>(
+        `/messages/users/search?query=${encodeURIComponent(query)}`,
+      );
+      console.log(
+        `[ChatService] Search response:`,
+        JSON.stringify(response, null, 2),
+      );
+      return response;
+    } catch (error) {
+      console.error(`[ChatService] Search error:`, error);
+      throw error;
+    }
   }
 
   async getMessages(
@@ -121,6 +157,14 @@ class ChatService {
     return await api.post<{ success: boolean; message: string }>(
       `/messages/block/${userId}`,
       {},
+    );
+  }
+
+  async deleteConversation(
+    conversationId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return await api.delete<{ success: boolean; message: string }>(
+      `/messages/conversations/${conversationId}`,
     );
   }
 

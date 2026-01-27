@@ -1,5 +1,5 @@
-import SearchIcon from "@/assets/images/icons/search.svg";
 import ConversationCard from "@/components/chat/ConversationCard";
+import UserSearch from "@/components/chat/UserSearch";
 import Header from "@/components/ui/Header";
 import { Colors, Spacing } from "@/constants/colors";
 import { Conversation } from "@/services/chatService";
@@ -12,7 +12,6 @@ import {
   FlatList,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -123,16 +122,7 @@ export default function ChatScreen() {
       <Header title="Chat" showBackButton={false} />
 
       <View style={styles.searchContainer}>
-        <View style={styles.searchInputWrapper}>
-          <SearchIcon width={25} height={25} style={styles.searchIcon} />
-          <TextInput
-            placeholder="Search or start new chat"
-            style={styles.searchInput}
-            placeholderTextColor="#000000"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+        <UserSearch value={searchQuery} onChangeText={setSearchQuery} />
       </View>
 
       <View style={styles.filterContainer}>
@@ -223,30 +213,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.sm,
-  },
-  searchInputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 25,
-    paddingHorizontal: Spacing.md,
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#EDEFF2",
-  },
-  searchIcon: {
-    marginRight: Spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#111827",
+    zIndex: 100, // Ensure dropdown shows above filters
   },
   filterContainer: {
     flexDirection: "row",
     paddingHorizontal: Spacing.md,
     gap: Spacing.sm,
     marginBottom: Spacing.md,
+    zIndex: 1,
   },
   filterChip: {
     paddingHorizontal: 20,
