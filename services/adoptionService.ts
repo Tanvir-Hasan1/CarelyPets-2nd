@@ -1,0 +1,83 @@
+import api from "./api";
+
+// Define the structure for an Adoption Pet based on the user's provided JSON
+export interface AdoptionPet {
+  id: string;
+  petName: string;
+  petType: string;
+  petBreed: string;
+  petAge: number;
+  petGender: "male" | "female"; // API returns lowercase 'male'/'female'
+  avatarUrl: string;
+  status: "available" | "pending" | "adopted"; // Matching API status
+  price: number;
+}
+
+export interface AdoptionResponse {
+  success: boolean;
+  data: {
+    data: AdoptionPet[];
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface AdoptionFilters {
+  status?: string; // "all", "available", "pending", "adopted"
+  page?: number;
+  limit?: number;
+  search?: string;
+  gender?: string;
+  type?: string[];
+  minAge?: number;
+  maxAge?: number;
+}
+
+class AdoptionService {
+  /**
+   * Fetch adoptions with filters
+   * @param filters Filtering options including status
+   * @returns AdoptionResponse
+   */
+  async getAdoptions(filters: AdoptionFilters = {}): Promise<AdoptionResponse> {
+    const params = new URLSearchParams();
+
+    // Default to 'all' if no status is provided, or use the provided status
+    // Ensure status is lowercase to match API expectation if needed,
+    // though the user request showed ?status=all | available | etc.
+    if (filters.status) {
+      params.append("status", filters.status.toLowerCase());
+    } else {
+      params.append("status", "all");
+    }
+
+    if (filters.page) params.append("page", filters.page.toString());
+    if (filters.limit) params.append("limit", filters.limit.toString());
+
+    // Add other filters if the backend supports them (assuming standard pattern)
+    if (filters.search) params.append("search", filters.search);
+    if (filters.gender && filters.gender !== "Both")
+      params.append("gender", filters.gender.toLowerCase());
+
+    // Type usually needs to be handled as array or repeated param depending on backend
+    if (filters.type && filters.type.length > 0) {
+      // Simple comma separated for now, adjust if backend needs multiple keys
+      params.append("type", filters.type.join(","));
+    }
+
+    if (filters.minAge !== undefined)
+      params.append("minAge", filters.minAge.toString());
+    if (filters.maxAge !== undefined)
+      params.append("maxAge", filters.maxAge.toString());
+
+    const queryString = params.toString();
+    const url = `/adoptions?${queryString}`;
+
+    return await api.get<AdoptionResponse>(url);
+  }
+}
+
+export const adoptionService = new AdoptionService();
+export default adoptionService;

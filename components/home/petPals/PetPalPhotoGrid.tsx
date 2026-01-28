@@ -1,8 +1,8 @@
 import { Spacing } from "@/constants/colors";
+import { Image } from "expo-image";
 import { useState } from "react";
 import {
   Dimensions,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -25,7 +25,8 @@ interface PetPalPhotoGridProps {
 }
 
 const { width } = Dimensions.get("window");
-const COLUMN_WIDTH = Math.floor((width - Spacing.lg * 2 - 20) / 3);
+const GAP = 10;
+const COLUMN_WIDTH = (width - Spacing.lg * 2 - GAP * 2) / 3;
 
 const PetPalPhotoGrid = ({ photos }: PetPalPhotoGridProps) => {
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoData | null>(null);
@@ -51,7 +52,9 @@ const PetPalPhotoGrid = ({ photos }: PetPalPhotoGridProps) => {
           <Image
             source={{ uri: photo.uri || fallbackImage }}
             style={styles.photo}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={300}
+            cachePolicy="memory-disk"
           />
         </TouchableOpacity>
       ))}
@@ -77,12 +80,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     flexWrap: "wrap",
+    gap: GAP,
   },
   photoWrapper: {
     width: COLUMN_WIDTH,
     height: COLUMN_WIDTH,
-    marginRight: 10,
-    marginBottom: 10,
   },
   photo: {
     width: "100%",

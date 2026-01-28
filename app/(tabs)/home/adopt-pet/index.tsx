@@ -1,216 +1,253 @@
-import FilterModal, { FilterState } from "@/components/home/adopt-a-pet/FilterModal";
+import FilterModal, {
+  FilterState,
+} from "@/components/home/adopt-a-pet/FilterModal";
 import PetCard from "@/components/home/adopt-a-pet/PetCard";
 import SearchComponent from "@/components/home/adopt-a-pet/SearchComponent";
 import Header from "@/components/ui/Header";
-import { Spacing } from "@/constants/colors/index";
-import { Pet, usePetStore } from "@/store/usePetStore";
+import { Colors, Spacing } from "@/constants/colors/index";
+import adoptionService, { AdoptionPet } from "@/services/adoptionService";
 import { useRouter, useSegments } from "expo-router";
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
-export const MOCK_PETS: (Partial<Pet> & { id: string; name: string; breed: string; age: number; gender: "Male" | "Female"; status: string; type: string; image: string; })[] = [
-    {
-        id: "1",
-        name: "Midu",
-        breed: "Persian Cat",
-        age: 2,
-        gender: "Female",
-        status: "Available",
-        type: "Cat",
-        image: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=500&auto=format&fit=crop",
-        traits: [],
-        snaps: [],
-        trained: true,
-        vaccinated: true,
-        neutered: false,
-        healthRecords: []
-    },
-    {
-        id: "2",
-        name: "Bob",
-        breed: "Persian Cat",
-        age: 2,
-        gender: "Male",
-        status: "Adopted",
-        type: "Cat",
-        image: "https://images.unsplash.com/photo-1544568100-847a948585b9?q=80&w=500&auto=format&fit=crop",
-        traits: [],
-        snaps: [],
-        trained: true,
-        vaccinated: true,
-        neutered: false,
-        healthRecords: []
-    },
-    {
-        id: "3",
-        name: "Bubby",
-        breed: "Persian Cat",
-        age: 2,
-        gender: "Female",
-        status: "Available",
-        type: "Cat",
-        image: "https://images.unsplash.com/photo-1543466835-00a7907e9ef1?q=80&w=500&auto=format&fit=crop",
-        traits: [],
-        snaps: [],
-        trained: true,
-        vaccinated: true,
-        neutered: false,
-        healthRecords: []
-    },
-    {
-        id: "4",
-        name: "Muku",
-        breed: "Golden Retriever",
-        age: 5,
-        gender: "Male",
-        status: "Available",
-        type: "Dog",
-        image: "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?q=80&w=500&auto=format&fit=crop",
-        traits: [],
-        snaps: [],
-        trained: true,
-        vaccinated: true,
-        neutered: false,
-        healthRecords: []
-    },
-];
-
 export default function Index() {
-    const router = useRouter();
-    const segments = useSegments();
-    const storePets = usePetStore((state) => state.pets);
-    const pets = storePets.length > 0 ? storePets : MOCK_PETS as unknown as Pet[];
+  const router = useRouter();
+  const segments = useSegments();
 
-    const [searchQuery, setSearchQuery] = useState("");
-    const [isFilterVisible, setIsFilterVisible] = useState(false);
-    const [activeFilters, setActiveFilters] = useState<FilterState>({
-        query: "",
-        gender: "",
-        petType: [],
-        ageRange: [0, 250], // Default to max age
-        availability: "",
-    });
+  // State for API data
+  const [pets, setPets] = useState<AdoptionPet[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Handle search query change from main search bar
-    const handleSearchChange = (text: string) => {
-        setSearchQuery(text);
-        setActiveFilters(prev => ({ ...prev, query: text }));
-    };
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<FilterState>({
+    query: "",
+    gender: "",
+    petType: [],
+    ageRange: [0, 250], // Default to max age
+    availability: "All",
+  });
 
-    // Filter pets based on both search query and active filters
-    const filteredPets = pets.filter((pet) => {
-        const matchesQuery = !activeFilters.query ||
-            pet.name.toLowerCase().includes(activeFilters.query.toLowerCase()) ||
-            pet.breed.toLowerCase().includes(activeFilters.query.toLowerCase());
+  // Initial load and filter change handler
+  useEffect(() => {
+    fetchPets();
+  }, [activeFilters]);
 
-        const matchesGender = !activeFilters.gender || pet.gender === activeFilters.gender;
+  const fetchPets = async () => {
+    try {
+      setIsLoading(true);
+      const response = await adoptionService.getAdoptions({
+        search: activeFilters.query,
+        gender: activeFilters.gender,
+        status:
+          activeFilters.availability === "All"
+            ? undefined
+            : activeFilters.availability,
+        type: activeFilters.petType,
+        minAge: activeFilters.ageRange[0],
+        maxAge:
+          activeFilters.ageRange[1] < 250
+            ? activeFilters.ageRange[1]
+            : undefined,
+        limit: 100, // Fetch reasonably large batch for now
+      });
 
-        const matchesType = activeFilters.petType.length === 0 ||
-            activeFilters.petType.includes(pet.type || "");
+      if (response.success) {
+        setPets(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching adoption pets:", error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
-        const petAge = Number(pet.age) || 0;
-        const matchesAge = petAge >= activeFilters.ageRange[0] && petAge <= activeFilters.ageRange[1];
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    fetchPets();
+  };
 
-        const matchesAvailability = !activeFilters.availability ||
-            (activeFilters.availability === "Available" ? pet.status === "Available" : pet.status === "Adopted");
+  // Handle search query change from main search bar
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    // Debounce could be added here, but for now we update filters directly
+    // waiting for user to stop typing or hit search would be better,
+    // but existing logic updated filters immediately.
+    // We will update filters but maybe not trigger fetch immediately if we want to debounce?
+    // For simplicity reusing existing pattern:
+    setActiveFilters((prev) => ({ ...prev, query: text }));
+  };
 
-        return matchesQuery && matchesGender && matchesType && matchesAge && matchesAvailability;
-    });
+  const renderPetItem = ({ item }: { item: AdoptionPet }) => (
+    <PetCard
+      pet={{
+        id: item.id,
+        name: item.petName,
+        breed: item.petBreed,
+        age: item.petAge,
+        gender: capitalizeFirstLetter(item.petGender) as "Male" | "Female",
+        image: item.avatarUrl || "https://via.placeholder.com/150",
+        status: capitalizeFirstLetter(item.status) as "Available" | "Adopted",
+      }}
+      onPress={() => {
+        // Remove the (tabs) part if present to form a clean path
+        const pathSegments = segments.filter((s) => s !== "(tabs)");
+        const basePath = `/${pathSegments.join("/")}`;
+        router.push(`${basePath}/${item.id}` as any);
+      }}
+    />
+  );
 
-    return (
-        <View style={styles.container}>
-            <StatusBar barStyle="dark-content" />
-            <Header title="Adopt Pet" showActions />
+  // Filter pets locally as well, to handle cases where the API might not support the specific search param
+  // or checks different fields. This ensures consistent UI behavior for the loaded batch.
+  const displayedPets = pets.filter((pet) => {
+    // 1. Search Query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        pet.petName.toLowerCase().includes(query) ||
+        pet.petBreed.toLowerCase().includes(query);
+      if (!matchesSearch) return false;
+    }
 
-            <SearchComponent
-                value={searchQuery}
-                onChangeText={handleSearchChange}
-                onFilterPress={() => setIsFilterVisible(true)}
-            />
+    // 2. Gender
+    if (
+      activeFilters.gender &&
+      activeFilters.gender !== "Both" &&
+      pet.petGender.toLowerCase() !== activeFilters.gender.toLowerCase()
+    ) {
+      return false;
+    }
 
-            <FilterModal
-                visible={isFilterVisible}
-                onClose={() => setIsFilterVisible(false)}
-                initialFilters={activeFilters}
-                onReset={() => {
-                    const defaultFilters: FilterState = {
-                        query: "",
-                        gender: "",
-                        petType: [],
-                        ageRange: [0, 250],
-                        availability: "",
-                    };
-                    setActiveFilters(defaultFilters);
-                    setSearchQuery("");
-                }}
-                onApply={(filters) => {
-                    setActiveFilters(filters);
-                    setSearchQuery(filters.query);
-                }}
-            />
+    // 3. Pet Type
+    if (
+      activeFilters.petType.length > 0 &&
+      !activeFilters.petType.some(
+        (type) => type.toLowerCase() === pet.petType.toLowerCase(),
+      )
+    ) {
+      return false;
+    }
 
-            <ScrollView
-                contentContainerStyle={styles.gridContent}
-                showsVerticalScrollIndicator={false}
-            >
-                {filteredPets.length === 0 ? (
-                    <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>No pets match your filters</Text>
-                    </View>
-                ) : (
-                    <View style={styles.grid}>
-                        {filteredPets.map((pet) => (
-                            <PetCard
-                                key={pet.id}
-                                pet={{
-                                    ...pet,
-                                    image: pet.image || "https://via.placeholder.com/150",
-                                    gender: pet.gender as "Male" | "Female",
-                                    status: (pet.status as "Available" | "Adopted") || "Available"
-                                }}
-                                onPress={() => {
-                                    // Remove the (tabs) part if present to form a clean path
-                                    const pathSegments = segments.filter(s => s !== '(tabs)');
-                                    const basePath = `/${pathSegments.join('/')}`;
-                                    router.push(`${basePath}/${pet.id}` as any);
-                                }}
-                            />
-                        ))}
-                    </View>
-                )}
-            </ScrollView>
+    // 4. Age Range
+    const age = Number(pet.petAge);
+    if (
+      age < activeFilters.ageRange[0] ||
+      (activeFilters.ageRange[1] < 250 && age > activeFilters.ageRange[1])
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <Header title="Adopt Pet" showActions />
+
+      <SearchComponent
+        value={searchQuery}
+        onChangeText={handleSearchChange}
+        onFilterPress={() => setIsFilterVisible(true)}
+      />
+
+      <FilterModal
+        visible={isFilterVisible}
+        onClose={() => setIsFilterVisible(false)}
+        initialFilters={activeFilters}
+        onReset={() => {
+          const defaultFilters: FilterState = {
+            query: "",
+            gender: "",
+            petType: [],
+            ageRange: [0, 250],
+            availability: "All",
+          };
+          setActiveFilters(defaultFilters);
+          setSearchQuery("");
+        }}
+        onApply={(filters) => {
+          setActiveFilters(filters);
+          setSearchQuery(filters.query);
+        }}
+      />
+
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
         </View>
-    );
+      ) : (
+        <FlatList
+          data={displayedPets}
+          renderItem={renderPetItem}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.grid}
+          contentContainerStyle={styles.gridContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No pets match your filters</Text>
+            </View>
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              colors={[Colors.primary]}
+            />
+          }
+        />
+      )}
+    </View>
+  );
+}
+
+// Helper to match UI expectations (Title Case) with API response (lowercase)
+function capitalizeFirstLetter(string: string) {
+  if (!string) return "";
+  return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#F8F9FA",
-    },
-    gridContent: {
-        flexGrow: 1,
-        paddingHorizontal: Spacing.lg,
-        paddingBottom: Spacing.lg,
-    },
-    grid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        justifyContent: "space-between",
-    },
-    emptyContainer: {
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    emptyText: {
-        fontSize: 16,
-        color: "#6B7280",
-    },
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F9FA",
+  },
+  gridContent: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
+  grid: {
+    justifyContent: "space-between",
+    gap: Spacing.md, // Add gap for spacing between columns if needed, though JustifyContent handles main axis
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#6B7280",
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: Spacing.xl,
+  },
 });

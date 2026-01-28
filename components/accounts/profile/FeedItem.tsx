@@ -96,7 +96,7 @@ const FeedItem = ({
           source={{ uri: userAvatar }}
           style={styles.feedAvatar}
           contentFit="cover"
-          transition={500}
+          transition={200}
           cachePolicy="memory-disk"
         />
         <View style={styles.feedMeta}>
@@ -134,7 +134,7 @@ const FeedItem = ({
           source={{ uri: contentImage }}
           style={styles.feedImage}
           contentFit="cover"
-          transition={500}
+          transition={200}
           cachePolicy="memory-disk"
         />
       ) : null}
