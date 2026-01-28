@@ -92,7 +92,7 @@ export default function BookingSuccessScreen() {
             router.push({
               pathname: "/(tabs)/home/booking/[id]",
               params: {
-                id: "latest",
+                id: (params.bookingId as string) || "latest",
                 serviceId: serviceId,
                 petId: petId,
                 date: params.date as string,

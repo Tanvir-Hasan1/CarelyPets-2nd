@@ -3,6 +3,7 @@ import FemaleIcon from "@/assets/images/icons/female.svg";
 import MaleIcon from "@/assets/images/icons/male.svg";
 import DeleteModal from "@/components/ui/DeleteModal";
 import Header from "@/components/ui/Header";
+import LoadingModal from "@/components/ui/LoadingModal";
 import {
   BorderRadius,
   Colors,
@@ -25,7 +26,6 @@ import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  Alert,
   Dimensions,
   FlatList,
   Image,
@@ -46,6 +46,11 @@ export default function PetDetailsScreen({ id }: { id: string }) {
   const pet = pets.find((p) => p.id === id);
   const [activeSlide, setActiveSlide] = useState(0);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+
+  // Deletion States
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | undefined>();
 
   useEffect(() => {
     if (id) {
@@ -87,12 +92,29 @@ export default function PetDetailsScreen({ id }: { id: string }) {
   };
 
   const confirmDelete = async () => {
-    const result = await deletePet(pet.id);
-    if (result.success) {
-      setIsDeleteModalVisible(false);
-      router.back();
-    } else {
-      Alert.alert("Error", result.message);
+    setIsDeleteModalVisible(false); // Close confirm modal first
+    setIsDeleting(true);
+    setDeleteError(undefined);
+
+    try {
+      const result = await deletePet(pet.id);
+      if (result.success) {
+        setDeleteSuccess(true);
+        setTimeout(() => {
+          setIsDeleting(false);
+          setDeleteSuccess(false);
+          router.back();
+        }, 1500);
+      } else {
+        setDeleteError(result.message || "Failed to delete.");
+        // Keep loading modal open but in failed state (if LoadingModal supports it)
+        // or close it and show alert.
+        // For this LoadingModal, we can set failed={!!deleteError} if we pass it.
+      }
+    } catch (error: any) {
+      setDeleteError(error.message || "An unexpected error occurred.");
+    } finally {
+      if (deleteError) setIsDeleting(false); // Only close if error, success handled by timeout
     }
   };
 
@@ -159,12 +181,12 @@ export default function PetDetailsScreen({ id }: { id: string }) {
     pet.photos && pet.photos.length > 0
       ? pet.photos
       : pet.snaps && pet.snaps.length > 0
-      ? pet.snaps
-      : [
-          pet.avatarUrl ||
-            pet.image ||
-            "https://images.unsplash.com/photo-1543852786-1cf6624b9987",
-        ];
+        ? pet.snaps
+        : [
+            pet.avatarUrl ||
+              pet.image ||
+              "https://images.unsplash.com/photo-1543852786-1cf6624b9987",
+          ];
 
   const renderItem = ({ item }: { item: string }) => (
     <Image source={{ uri: item }} style={styles.sliderImage} />
@@ -406,6 +428,19 @@ export default function PetDetailsScreen({ id }: { id: string }) {
         onConfirm={confirmDelete}
         title="Delete Pet"
         description={`Are you sure you want to delete ${pet.name}? This action cannot be undone.`}
+      />
+
+      <LoadingModal
+        visible={isDeleting || !!deleteError}
+        message="Deleting pet..."
+        success={deleteSuccess}
+        successMessage="Pet deleted successfully!"
+        failed={!!deleteError}
+        error={deleteError}
+        onClose={() => {
+          setIsDeleting(false);
+          setDeleteError(undefined);
+        }}
       />
     </View>
   );

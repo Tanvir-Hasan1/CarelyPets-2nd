@@ -7,12 +7,11 @@ import {
 } from "@/constants/colors";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Image } from "expo-image";
-import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function WelcomeBanner() {
   const { user } = useAuthStore();
-  const firstName = user?.name ? user.name.split(' ')[0] : 'Sara';
+  const firstName = user?.name ? user.name.split(" ")[0] : "Sara";
 
   return (
     <View style={styles.parentContainer}>
@@ -24,8 +23,13 @@ export default function WelcomeBanner() {
           </Text>
         </View>
         <Image
-          source={{ uri: user?.avatarUrl || "https://i.pravatar.cc/150?img=32" }}
+          source={{
+            uri: user?.avatarUrl || "https://i.pravatar.cc/150?img=32",
+          }}
           style={styles.avatar}
+          contentFit="cover"
+          transition={500}
+          cachePolicy="memory-disk"
         />
       </View>
     </View>

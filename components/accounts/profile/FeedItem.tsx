@@ -1,9 +1,10 @@
 import ShareIcon from "@/assets/images/icons/share.svg";
 import { Colors } from "@/constants/colors";
 import communityService from "@/services/communityService";
+import { Image } from "expo-image";
 import { Heart, MessageCircle, MoreVertical } from "lucide-react-native";
 import { useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import PetPalPostDropdown from "../../home/petPals/PetPalPostDropdown";
 import PetPalShareModal from "../../home/petPals/PetPalShareModal";
 import LoadingModal from "../../ui/LoadingModal";
@@ -91,7 +92,13 @@ const FeedItem = ({
       style={styles.feedItem}
     >
       <View style={styles.feedHeader}>
-        <Image source={{ uri: userAvatar }} style={styles.feedAvatar} />
+        <Image
+          source={{ uri: userAvatar }}
+          style={styles.feedAvatar}
+          contentFit="cover"
+          transition={500}
+          cachePolicy="memory-disk"
+        />
         <View style={styles.feedMeta}>
           <Text style={styles.feedUserText}>
             <Text style={styles.feedUserName}>{userName}</Text> {actionText}
@@ -123,7 +130,13 @@ const FeedItem = ({
       {caption ? <Text style={styles.feedCaption}>{caption}</Text> : null}
 
       {contentImage ? (
-        <Image source={{ uri: contentImage }} style={styles.feedImage} />
+        <Image
+          source={{ uri: contentImage }}
+          style={styles.feedImage}
+          contentFit="cover"
+          transition={500}
+          cachePolicy="memory-disk"
+        />
       ) : null}
 
       <View style={styles.feedActions}>
@@ -190,6 +203,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     marginRight: 12,
+    backgroundColor: "#E0E0E0",
   },
   feedMeta: {
     flex: 1,
@@ -219,6 +233,7 @@ const styles = StyleSheet.create({
     height: 300,
     borderRadius: 12,
     marginBottom: 12,
+    backgroundColor: "#E0E0E0",
   },
   feedActions: {
     flexDirection: "row",

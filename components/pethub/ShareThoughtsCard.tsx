@@ -1,5 +1,6 @@
 import { FontSizes, Spacing } from "@/constants/colors";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image } from "expo-image";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface ShareThoughtsCardProps {
   avatarUrl?: string;
@@ -23,6 +24,9 @@ const ShareThoughtsCard = ({
             : require("@/assets/images/logos/placeholder.png")
         }
         style={styles.avatar}
+        contentFit="cover"
+        transition={500}
+        cachePolicy="memory-disk"
       />
       <TouchableOpacity
         activeOpacity={1}
@@ -54,6 +58,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     marginRight: 12,
+    backgroundColor: "#E0E0E0",
   },
   inputOuter: {
     flex: 1,

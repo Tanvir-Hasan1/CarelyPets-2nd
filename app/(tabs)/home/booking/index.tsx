@@ -4,11 +4,11 @@ import Header from "@/components/ui/Header";
 import { Colors, FontSizes, FontWeights, Spacing } from "@/constants/colors";
 import bookingService from "@/services/bookingService";
 import { usePetStore } from "@/store/usePetStore";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -70,7 +70,7 @@ export default function BookServiceScreen() {
 
   // Use passed petId as default if available, otherwise first pet
   const [selectedPetId, setSelectedPetId] = useState(
-    (petId as string) || pets[0]?.id || ""
+    (petId as string) || pets[0]?.id || "",
   );
   const [selectedServiceId, setSelectedServiceId] = useState("grooming");
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -132,7 +132,7 @@ export default function BookServiceScreen() {
     console.log("--- Booking Application Info ---");
     console.log(
       "Selected Pet (Excl. Health Records):",
-      JSON.stringify(petDataToLog, null, 2)
+      JSON.stringify(petDataToLog, null, 2),
     );
     console.log("Selected Service:", JSON.stringify(selectedService, null, 2));
     console.log("Selected Time (Slot):", selectedTime);
@@ -169,37 +169,43 @@ export default function BookServiceScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.petsList}
           >
-            {pets.map((pet) => (
-              <TouchableOpacity
-                key={pet.id}
-                style={styles.petItem}
-                onPress={() => setSelectedPetId(pet.id)}
-              >
-                <View
-                  style={[
-                    styles.petImageContainer,
-                    selectedPetId === pet.id && styles.selectedPetImage,
-                  ]}
+            {pets.length === 0 ? (
+              <Text style={styles.noPetsText}>
+                No pets for service, Please add one.
+              </Text>
+            ) : (
+              pets.map((pet) => (
+                <TouchableOpacity
+                  key={pet.id}
+                  style={styles.petItem}
+                  onPress={() => setSelectedPetId(pet.id)}
                 >
-                  {pet.avatarUrl || pet.image ? (
-                    <Image
-                      source={{ uri: pet.avatarUrl || pet.image }}
-                      style={styles.petImage}
-                    />
-                  ) : (
-                    <View
-                      style={[styles.petImage, { backgroundColor: "#EEE" }]}
-                    />
-                  )}
-                  {selectedPetId === pet.id && (
-                    <View style={styles.checkBadge}>
-                      <Text style={styles.checkText}>✓</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.petName}>{pet.name}</Text>
-              </TouchableOpacity>
-            ))}
+                  <View
+                    style={[
+                      styles.petImageContainer,
+                      selectedPetId === pet.id && styles.selectedPetImage,
+                    ]}
+                  >
+                    {pet.avatarUrl || pet.image ? (
+                      <Image
+                        source={{ uri: pet.avatarUrl || pet.image }}
+                        style={styles.petImage}
+                      />
+                    ) : (
+                      <View
+                        style={[styles.petImage, { backgroundColor: "#EEE" }]}
+                      />
+                    )}
+                    {selectedPetId === pet.id && (
+                      <View style={styles.checkBadge}>
+                        <Text style={styles.checkText}>✓</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.petName}>{pet.name}</Text>
+                </TouchableOpacity>
+              ))
+            )}
           </ScrollView>
         </View>
 
@@ -299,7 +305,14 @@ export default function BookServiceScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+        <TouchableOpacity
+          style={[
+            styles.nextButton,
+            (!selectedPetId || !selectedTime) && styles.disabledButton,
+          ]}
+          onPress={handleNext}
+          disabled={!selectedPetId || !selectedTime}
+        >
           <Text style={styles.nextButtonText}>Next</Text>
         </TouchableOpacity>
 
@@ -394,6 +407,12 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     color: Colors.textSecondary,
   },
+  noPetsText: {
+    fontStyle: "italic",
+    color: Colors.textSecondary,
+    fontSize: FontSizes.sm,
+    paddingVertical: Spacing.sm,
+  },
   servicesGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -477,5 +496,9 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: FontSizes.md,
     fontWeight: FontWeights.bold,
+  },
+  disabledButton: {
+    backgroundColor: "#B0BEC5", // Greyed out color
+    opacity: 0.7,
   },
 });

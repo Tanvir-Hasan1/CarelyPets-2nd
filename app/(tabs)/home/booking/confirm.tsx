@@ -41,6 +41,7 @@ export default function ConfirmBookingScreen() {
   const [paymentError, setPaymentError] = useState<string | undefined>();
   const [bookingData, setBookingData] = useState<any>(null);
   const [cardName, setCardName] = useState("");
+  const [isCardComplete, setIsCardComplete] = useState(false);
 
   const { confirmPayment } = useConfirmPayment();
 
@@ -263,6 +264,9 @@ export default function ConfirmBookingScreen() {
                   borderRadius: 12,
                 }}
                 style={styles.cardField}
+                onCardChange={(cardDetails) => {
+                  setIsCardComplete(cardDetails.complete);
+                }}
               />
             </View>
 
@@ -311,9 +315,15 @@ export default function ConfirmBookingScreen() {
           />
 
           <TouchableOpacity
-            style={styles.confirmButton}
+            style={[
+              styles.confirmButton,
+              (!isCardComplete || !cardName || !selectedCountry) &&
+                styles.disabledButton,
+            ]}
             onPress={handleConfirm}
-            disabled={isProcessing}
+            disabled={
+              isProcessing || !isCardComplete || !cardName || !selectedCountry
+            }
           >
             <Text style={styles.confirmButtonText}>
               {isProcessing ? "Processing..." : "Confirm & Pay"}
@@ -506,5 +516,9 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  disabledButton: {
+    backgroundColor: "#B0BEC5", // Greyed out color
+    opacity: 0.7,
   },
 });

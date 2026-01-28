@@ -7,7 +7,6 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
-import React from "react";
 import {
   ScrollView,
   StyleSheet,
