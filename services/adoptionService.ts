@@ -77,6 +77,74 @@ class AdoptionService {
 
     return await api.get<AdoptionResponse>(url);
   }
+
+  /**
+   * Get single adoption listing details
+   * @param id The listing ID
+   */
+  async getAdoptionDetails(
+    id: string,
+  ): Promise<{ success: boolean; data: AdoptionDetail }> {
+    return await api.get<{ success: boolean; data: AdoptionDetail }>(
+      `/adoptions/${id}`,
+    );
+  }
+  /**
+   * Get health records for a specific adoption listing
+   * @param id The listing ID
+   * @param type The type of health record (e.g., 'vaccination')
+   */
+  async getAdoptionHealthRecords(
+    id: string,
+    type: string,
+  ): Promise<{ success: boolean; data: AdoptionHealthRecord[] }> {
+    return await api.get<{ success: boolean; data: AdoptionHealthRecord[] }>(
+      `/adoptions/${id}/health-records?type=${type}`,
+    );
+  }
+
+  /**
+   * Get single health record details
+   * @param id The listing ID
+   * @param recordId The record ID
+   */
+  async getHealthRecordDetails(
+    id: string,
+    recordId: string,
+  ): Promise<{ success: boolean; data: any }> {
+    return await api.get<{ success: boolean; data: any }>(
+      `/adoptions/${id}/health-records/${recordId}`,
+    );
+  }
+}
+
+export interface AdoptionHealthRecord {
+  id: string;
+  type: string;
+  recordName: string;
+  lastUpdated: string;
+  reminder: {
+    enabled: boolean;
+    offset: string;
+  };
+}
+
+export interface AdoptionDetail extends AdoptionPet {
+  weightLbs: number;
+  photos: string[];
+  vaccinated: boolean;
+  neutered: boolean;
+  trained: boolean;
+  shelterName: string;
+  shelterPhone: string;
+  aboutPet: string;
+  personality: string[];
+  healthSummary: {
+    [key: string]: {
+      count: number;
+      lastUpdated: string;
+    };
+  };
 }
 
 export const adoptionService = new AdoptionService();

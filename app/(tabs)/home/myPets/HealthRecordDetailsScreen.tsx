@@ -25,11 +25,12 @@ import LungIcon from "@/assets/images/icons/lung.svg";
 import TemperatureIcon from "@/assets/images/icons/temperature.svg";
 import WeightIcon from "@/assets/images/icons/weight.svg";
 import { HugeiconsIcon } from "@hugeicons/react-native";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
-  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -42,12 +43,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 interface Props {
   pet: Pet;
   record: HealthRecord;
+  isReadOnly?: boolean;
 }
 
-export default function HealthRecordDetailsScreen({ pet, record }: Props) {
+export default function HealthRecordDetailsScreen({
+  pet,
+  record,
+  isReadOnly,
+}: Props) {
   const router = useRouter();
   const { deleteHealthRecord } = usePetStore();
   const [viewedImage, setViewedImage] = useState<string | null>(null);
+  const [isImageLoading, setIsImageLoading] = useState(false);
 
   const getIconForType = (type: string) => {
     switch (type?.toLowerCase()) {
@@ -85,12 +92,12 @@ export default function HealthRecordDetailsScreen({ pet, record }: Props) {
               Alert.alert(
                 "Error",
                 result.message ||
-                  "Failed to delete record. Please check your connection."
+                  "Failed to delete record. Please check your connection.",
               );
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -137,19 +144,21 @@ export default function HealthRecordDetailsScreen({ pet, record }: Props) {
             <Text style={styles.petName}>{pet.name}</Text>
             <Text style={styles.petBreed}>{pet.breed}</Text>
           </View>
-          <TouchableOpacity
-            onPress={() => {
-              router.push({
-                pathname: "/(tabs)/home/myPets/add-health-record",
-                params: {
-                  petId: pet.id,
-                  recordId: record._id,
-                },
-              });
-            }}
-          >
-            <HugeiconsIcon icon={Edit02Icon} size={20} color="#00BCD4" />
-          </TouchableOpacity>
+          {!isReadOnly && (
+            <TouchableOpacity
+              onPress={() => {
+                router.push({
+                  pathname: "/(tabs)/home/myPets/add-health-record",
+                  params: {
+                    petId: pet.id,
+                    recordId: record._id,
+                  },
+                });
+              }}
+            >
+              <HugeiconsIcon icon={Edit02Icon} size={20} color="#00BCD4" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Record Header Card */}
@@ -367,9 +376,11 @@ export default function HealthRecordDetailsScreen({ pet, record }: Props) {
         </View>
 
         {/* Delete Button */}
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-          <Text style={styles.deleteButtonText}>Delete Record</Text>
-        </TouchableOpacity>
+        {!isReadOnly && (
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            <Text style={styles.deleteButtonText}>Delete Record</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       {/* Image Preview Modal */}
@@ -381,10 +392,20 @@ export default function HealthRecordDetailsScreen({ pet, record }: Props) {
           >
             <HugeiconsIcon icon={Cancel01Icon} size={32} color="#fff" />
           </TouchableOpacity>
+          {isImageLoading && (
+            <ActivityIndicator
+              size="large"
+              color="#ffffff"
+              style={{ position: "absolute", zIndex: 1 }}
+            />
+          )}
           <Image
             source={{ uri: viewedImage }}
             style={styles.previewImage}
-            resizeMode="contain"
+            contentFit="contain"
+            transition={500}
+            onLoadStart={() => setIsImageLoading(true)}
+            onLoad={() => setIsImageLoading(false)}
           />
         </View>
       )}

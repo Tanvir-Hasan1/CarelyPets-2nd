@@ -1,10 +1,12 @@
 import { Stack } from "expo-router";
 
 export default function AdoptPetLayout() {
-    return (
-        <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="[id]" />
-        </Stack>
-    );
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="[id]" />
+      <Stack.Screen name="health-records" />
+      <Stack.Screen name="record-details" />
+    </Stack>
+  );
 }

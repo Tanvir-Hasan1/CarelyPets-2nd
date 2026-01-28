@@ -182,7 +182,7 @@ export default function AddHealthRecordScreen() {
     if (key === "attachments" && recordId) {
       // If we are editing, track which existing attachments are being removed
       const removed = formData.attachments.filter(
-        (a) => typeof a === "string" && !value.includes(a)
+        (a) => typeof a === "string" && !value.includes(a),
       );
       if (removed.length > 0) {
         console.log("[AddHealthRecord] Tracking deletions:", removed);
@@ -196,7 +196,7 @@ export default function AddHealthRecordScreen() {
     if (recordId && petId) {
       const pet = pets.find((p) => p.id === petId);
       const record = pet?.healthRecords?.find(
-        (r) => r._id === recordId || r.id === recordId
+        (r) => r._id === recordId || r.id === recordId,
       );
 
       if (record) {
@@ -298,7 +298,11 @@ export default function AddHealthRecordScreen() {
       clinicalNotes: formData.clinicalNotes,
     };
 
+    // Determine API type (map UI "tick" to backend "tick-flea")
+    const apiType = selectedType === "tick" ? "tick-flea" : selectedType;
+
     const data = new FormData();
+    data.append("recordType", apiType);
     data.append("recordDetails", JSON.stringify(recordDetails));
     data.append("veterinarian", JSON.stringify(veterinarian));
     data.append("vitalSigns", JSON.stringify(vitalSigns));
@@ -321,7 +325,7 @@ export default function AddHealthRecordScreen() {
     if (recordId) {
       console.log(
         "[AddHealthRecord] Updating record via PATCH (FormData):",
-        recordId
+        recordId,
       );
 
       // Add deleteAttachments if we have any
@@ -330,7 +334,7 @@ export default function AddHealthRecordScreen() {
         data.append("deleteAttachments", JSON.stringify(deletedAttachments));
         console.log(
           "[AddHealthRecord] Sending deleteAttachments:",
-          deletedAttachments
+          deletedAttachments,
         );
       }
 
@@ -340,7 +344,7 @@ export default function AddHealthRecordScreen() {
       const apiType = selectedType === "tick" ? "tick-flea" : selectedType;
       console.log(
         "[AddHealthRecord] Creating record via POST for type:",
-        apiType
+        apiType,
       );
       result = await createHealthRecord(petId, apiType, data);
     }
@@ -498,8 +502,8 @@ export default function AddHealthRecordScreen() {
                   {isLoading
                     ? "Processing..."
                     : currentStepIndex === STEPS.length - 1
-                    ? "Save"
-                    : "Next"}
+                      ? "Save"
+                      : "Next"}
                 </Text>
               </TouchableOpacity>
             </View>
