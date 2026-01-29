@@ -4,7 +4,7 @@ export default {
     slug: "CarelyPets",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/icon.png",
+    icon: "./assets/images/new-logo-updated.png",
     scheme: "carelypets",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
@@ -13,11 +13,12 @@ export default {
     },
     android: {
       adaptiveIcon: {
-        backgroundColor: "#E6F4FE",
-        foregroundImage: "./assets/images/android-icon-foreground.png",
+        backgroundColor: "#ffffff",
         backgroundImage: "./assets/images/android-icon-background.png",
-        monochromeImage: "./assets/images/android-icon-monochrome.png",
+        foregroundImage: "./assets/images/new-logo-updated.png",
+        monochromeImage: "./assets/images/new-logo-updated.png",
       },
+
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       permissions: [
@@ -44,10 +45,10 @@ export default {
       [
         "expo-splash-screen",
         {
-          image: "./assets/images/splash-icon.png",
+          image: "./assets/images/Splash-screen-2.png",
           imageWidth: 200,
           resizeMode: "contain",
-          backgroundColor: "#ffffff",
+          backgroundColor: "#e4f6ff",
         },
       ],
       [
