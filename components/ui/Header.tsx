@@ -2,11 +2,12 @@ import BasketIcon from "@/assets/images/icons/basket.svg";
 import NotificationIcon from "@/assets/images/icons/notification.svg";
 import SearchIcon from "@/assets/images/icons/search.svg";
 import { Colors, FontSizes, FontWeights, Spacing } from "@/constants/colors";
+import { useBasketStore } from "@/store/useBasketStore";
 import { useChatStore } from "@/store/useChatStore";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useRouter } from "expo-router";
-import React from "react";
+import { useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -53,6 +54,14 @@ export default function Header({
     (total, conv) => total + (conv.unreadCount || 0),
     0,
   );
+
+  // Basket Store
+  const basketCount = useBasketStore((state) => state.count);
+  const fetchBasket = useBasketStore((state) => state.fetchBasket);
+
+  useEffect(() => {
+    fetchBasket();
+  }, []);
 
   const handleNotificationPress = () => {
     router.push("/notifications");
@@ -111,7 +120,16 @@ export default function Header({
                   style={styles.iconButton}
                   onPress={() => router.push("/basket")}
                 >
-                  <BasketIcon width={36} height={36} />
+                  <View style={styles.notificationContainer}>
+                    <BasketIcon width={36} height={36} />
+                    {basketCount > 0 && (
+                      <View style={styles.notificationBadge}>
+                        <Text style={styles.notificationBadgeText}>
+                          {basketCount > 99 ? "99+" : basketCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </TouchableOpacity>
               )}
               {showNotifications && (

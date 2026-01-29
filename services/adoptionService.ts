@@ -116,6 +116,54 @@ class AdoptionService {
       `/adoptions/${id}/health-records/${recordId}`,
     );
   }
+
+  /**
+   * Get basket items
+   */
+  async getBasket(): Promise<BasketResponse> {
+    return await api.get<BasketResponse>("/adoptions/basket");
+  }
+
+  /**
+   * Add item to basket
+   * @param listingId
+   */
+  async addToBasket(
+    listingId: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    return await api.post("/adoptions/basket/items", { listingId });
+  }
+
+  /**
+   * Remove item from basket
+   * @param listingId
+   */
+  async removeFromBasket(
+    listingId: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    return await api.delete(`/adoptions/basket/items/${listingId}`);
+  }
+}
+
+export interface BasketItem {
+  listingId: string;
+  petName: string;
+  petType: string;
+  petBreed: string;
+  petAge: number;
+  avatarUrl: string;
+  price: number;
+  status: string;
+  addedAt?: string;
+}
+
+export interface BasketResponse {
+  success: boolean;
+  data: {
+    items: BasketItem[];
+    createdAt?: string;
+    updatedAt?: string;
+  };
 }
 
 export interface AdoptionHealthRecord {

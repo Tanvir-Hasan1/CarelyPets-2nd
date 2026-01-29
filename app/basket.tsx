@@ -1,206 +1,322 @@
 import Header from "@/components/ui/Header";
-import { useRouter } from "expo-router";
-import { X } from "lucide-react-native";
-import React from "react";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  BorderRadius,
+  Colors,
+  FontSizes,
+  FontWeights,
+  Spacing,
+} from "@/constants/colors";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useBasketStore } from "@/store/useBasketStore";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { Image } from "expo-image";
+import { Link, useRouter } from "expo-router";
+import { useEffect } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-const MOCK_BASKET_PETS = [
-    {
-        id: "1",
-        name: "Pet name",
-        breed: "Pet breed",
-        price: 250.0,
-        image: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=100&q=80",
-    },
-    {
-        id: "2",
-        name: "Pet name",
-        breed: "Pet breed",
-        price: 250.0,
-        image: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=100&q=80",
-    },
-];
-
 export default function BasketScreen() {
-    const router = useRouter();
-    return (
-        <View style={styles.container}>
-            <Header title="Basket" />
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const { items, loading, fetchBasket, removeFromBasket } = useBasketStore();
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                {/* List of pets for adoption */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>List of pets for adoption</Text>
-                    <View style={styles.petList}>
-                        {MOCK_BASKET_PETS.map((pet) => (
-                            <View key={pet.id} style={styles.petItem}>
-                                <Image source={{ uri: pet.image }} style={styles.petImage} />
-                                <View style={styles.petInfo}>
-                                    <Text style={styles.petName}>{pet.name}</Text>
-                                    <Text style={styles.petBreed}>{pet.breed}</Text>
-                                </View>
-                                <View style={styles.priceContainer}>
-                                    <Text style={styles.label}>Price</Text>
-                                    <Text style={styles.price}>${pet.price.toFixed(2)}</Text>
-                                </View>
-                                <TouchableOpacity style={styles.removeButton}>
-                                    <X size={20} color="#4B5563" />
-                                </TouchableOpacity>
-                            </View>
-                        ))}
-                    </View>
-                </View>
+  useEffect(() => {
+    fetchBasket();
+  }, []);
 
-                {/* Customer Information */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Customer Information</Text>
+  const handleRemove = async (id: string) => {
+    await removeFromBasket(id);
+  };
 
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>NAME</Text>
-                        <TextInput style={styles.input} value="John Doe" editable={false} />
-                    </View>
+  const onRefresh = async () => {
+    await fetchBasket();
+    const currentItems = useBasketStore.getState().items;
+    console.log("Basket Information:", JSON.stringify(currentItems, null, 2));
+  };
 
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>ADDRESS</Text>
-                        <TextInput style={styles.input} value="43, John Hopkins Road, NYC" editable={false} />
-                    </View>
+  const renderItem = ({ item }: { item: any }) => (
+    <View style={styles.card}>
+      <Image
+        source={{
+          uri:
+            item.avatarUrl ||
+            "https://images.unsplash.com/photo-1543852786-1cf6624b9987",
+        }}
+        style={styles.image}
+        contentFit="cover"
+      />
 
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>PHONE NO.</Text>
-                        <TextInput style={styles.input} value="555 656 5656" editable={false} />
-                    </View>
-
-                    <Text style={styles.hintText}>
-                        <Text style={{ color: "#EF4444" }}>*</Text>Pet will be delivered to your home
-                    </Text>
-                </View>
-
-                <TouchableOpacity
-                    style={styles.checkoutButton}
-                    onPress={() => router.push("/checkout")}
-                >
-                    <Text style={styles.checkoutText}>Checkout</Text>
-                </TouchableOpacity>
-            </ScrollView>
+      <View style={styles.cardContent}>
+        <View style={styles.detailsColumn}>
+          <Text style={styles.petName}>{item.petName}</Text>
+          <Text style={styles.petBreed}>{item.petBreed}</Text>
         </View>
-    );
+
+        <View style={styles.priceColumn}>
+          <View>
+            <Text style={styles.priceLabel}>Price</Text>
+            <Text style={styles.priceValue}>${item.price.toFixed(2)}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => handleRemove(item.listingId)}
+          >
+            <HugeiconsIcon
+              icon={Cancel01Icon}
+              size={20}
+              color={Colors.textSecondary}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={{ flex: 1 }}>
+        <Header title="My Basket" showBasket={false} />
+
+        {loading && items.length === 0 ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : items.length > 0 ? (
+          <View style={{ flex: 1 }}>
+            <View style={styles.listContainer}>
+              <Text style={styles.listTitle}>List of pets for adoption</Text>
+              <FlatList
+                data={items}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.listingId}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={loading}
+                    onRefresh={onRefresh}
+                    colors={[Colors.primary]}
+                  />
+                }
+              />
+            </View>
+
+            <View style={styles.customerInfoContainer}>
+              <Text style={styles.sectionTitle}>Customer Information</Text>
+
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>NAME</Text>
+                <View style={styles.inputBox}>
+                  <Text style={styles.inputText}>
+                    {user?.name || "John Doe"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>ADDRESS</Text>
+                <View style={styles.inputBox}>
+                  <Text style={styles.inputText}>
+                    {user?.address || "No address provided"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>PHONE NO.</Text>
+                <View style={styles.inputBox}>
+                  <Text style={styles.inputText}>
+                    {user?.phone || "No phone number"}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.deliveryNote}>
+                *Pet will be delivered to your home
+              </Text>
+
+              <TouchableOpacity style={styles.checkoutButton}>
+                <Text style={styles.checkoutText}>Checkout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Your basket is empty.</Text>
+            <Link href="/(tabs)/home/adopt-pet" asChild>
+              <TouchableOpacity style={styles.browseButton}>
+                <Text style={styles.browseButtonText}>Browse Pets</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+        )}
+      </SafeAreaView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#F9FAFB",
-    },
-    scrollContent: {
-        paddingHorizontal: 20,
-        paddingBottom: 40,
-    },
-    card: {
-        backgroundColor: "#FFFFFF",
-        borderRadius: 16,
-        padding: 20,
-        marginTop: 20,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    cardTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#111827",
-        marginBottom: 16,
-    },
-    petList: {
-        gap: 12,
-    },
-    petItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F9FAFB',
-        padding: 12,
-        borderRadius: 12,
-        gap: 12,
-    },
-    petImage: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-    },
-    petInfo: {
-        flex: 1,
-    },
-    petName: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#111827',
-    },
-    petBreed: {
-        fontSize: 14,
-        color: '#6B7280',
-    },
-    priceContainer: {
-        alignItems: 'flex-end',
-        marginRight: 10,
-    },
-    label: {
-        fontSize: 10,
-        color: "#6B7280",
-        fontWeight: '500',
-        textTransform: 'uppercase',
-    },
-    price: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#111827',
-    },
-    removeButton: {
-        padding: 4,
-    },
-    inputContainer: {
-        marginBottom: 16,
-    },
-    inputLabel: {
-        fontSize: 12,
-        color: "#4B5563",
-        fontWeight: "500",
-        marginBottom: 8,
-        textTransform: "uppercase",
-    },
-    input: {
-        backgroundColor: "#F3F4F6",
-        borderRadius: 12,
-        padding: 16,
-        fontSize: 16,
-        color: "#4B5563",
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
-    },
-    hintText: {
-        fontSize: 14,
-        color: "#111827",
-        fontWeight: '500',
-        marginTop: 4,
-    },
-    checkoutButton: {
-        backgroundColor: "#00BCD4", // Specific cyan from screenshot
-        borderRadius: 12,
-        padding: 16,
-        marginTop: 24,
-        alignItems: 'center',
-    },
-    checkoutText: {
-        color: "#FFFFFF",
-        fontSize: 18,
-        fontWeight: "bold",
-    }
+  container: {
+    flex: 1,
+    backgroundColor: "#F5F5F5",
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: Spacing.lg,
+  },
+  listTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.bold,
+    color: Colors.text,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  listContent: {
+    paddingBottom: Spacing.md,
+  },
+  card: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    alignItems: "center",
+  },
+  image: {
+    width: 60,
+    height: 60,
+    borderRadius: 30, // Circle as in mockup
+    backgroundColor: "#F5F5F5",
+  },
+  cardContent: {
+    flex: 1,
+    flexDirection: "row",
+    marginLeft: Spacing.md,
+    justifyContent: "space-between",
+  },
+  detailsColumn: {
+    justifyContent: "center",
+    flex: 1,
+  },
+  petName: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.bold,
+    color: Colors.text,
+  },
+  petBreed: {
+    fontSize: FontSizes.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  priceColumn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.lg,
+  },
+  priceLabel: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontWeight: "bold",
+  },
+  priceValue: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.bold,
+    color: Colors.text,
+  },
+  removeButton: {
+    padding: 4,
+  },
+  customerInfoContainer: {
+    backgroundColor: "#FFFFFF",
+    padding: Spacing.lg,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    // Add shadow/elevation to make it pop like a bottom sheet
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  sectionTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.bold,
+    color: Colors.text,
+    marginBottom: Spacing.md,
+  },
+  fieldContainer: {
+    marginBottom: Spacing.md,
+  },
+  fieldLabel: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+    marginBottom: Spacing.xs,
+  },
+  inputBox: {
+    backgroundColor: "#F5F5F5",
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+  },
+  inputText: {
+    fontSize: FontSizes.sm,
+    color: Colors.text,
+  },
+  deliveryNote: {
+    fontSize: 12,
+    color: "#E53935",
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.lg,
+  },
+  checkoutButton: {
+    backgroundColor: "#00BCD4",
+    height: 50,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkoutText: {
+    color: "#FFFFFF",
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.bold,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.xl,
+  },
+  emptyText: {
+    fontSize: FontSizes.lg,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.lg,
+  },
+  browseButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.full,
+  },
+  browseButtonText: {
+    color: "#FFFFFF",
+    fontWeight: FontWeights.bold,
+  },
 });

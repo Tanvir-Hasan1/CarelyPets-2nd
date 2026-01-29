@@ -13,6 +13,7 @@ import {
   Spacing,
 } from "@/constants/colors/index";
 import adoptionService, { AdoptionDetail } from "@/services/adoptionService";
+import { useBasketStore } from "@/store/useBasketStore";
 import {
   Calendar03Icon,
   Note01Icon,
@@ -24,6 +25,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   FlatList,
   Image,
@@ -49,6 +51,7 @@ interface HealthRecordItem {
 
 export default function KnowMeScreen({ id }: { id: string }) {
   const router = useRouter();
+  const { addToBasket } = useBasketStore();
   const [pet, setPet] = useState<AdoptionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSlide, setActiveSlide] = useState(0);
@@ -60,7 +63,6 @@ export default function KnowMeScreen({ id }: { id: string }) {
         const response = await adoptionService.getAdoptionDetails(id);
         if (response.success) {
           setPet(response.data);
-          console.log(response.data);
         }
       } catch (error) {
         console.error("Failed to fetch pet details", error);
@@ -377,6 +379,20 @@ export default function KnowMeScreen({ id }: { id: string }) {
                 pet.status.toLowerCase() === "adopted" ||
                 pet.status.toLowerCase() === "pending"
               }
+              onPress={async () => {
+                const success = await addToBasket(pet.id);
+                if (success) {
+                  Alert.alert(
+                    "Added to Basket",
+                    `${pet.petName} has been added to your adoption basket.`,
+                  );
+                } else {
+                  Alert.alert(
+                    "Error",
+                    "Failed to add to basket. It might already be there.",
+                  );
+                }
+              }}
             >
               <Text style={styles.adoptButtonText}>
                 {pet.status.toLowerCase() === "adopted" ||
