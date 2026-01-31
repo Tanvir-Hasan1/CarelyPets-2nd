@@ -1,4 +1,5 @@
 import Header from "@/components/ui/Header";
+import LoadingModal from "@/components/ui/LoadingModal";
 import {
   BorderRadius,
   Colors,
@@ -6,15 +7,17 @@ import {
   FontWeights,
   Spacing,
 } from "@/constants/colors";
+import adoptionService from "@/services/adoptionService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBasketStore } from "@/store/useBasketStore";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Image } from "expo-image";
 import { Link, useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   SafeAreaView,
@@ -30,6 +33,9 @@ export default function BasketScreen() {
   const { user } = useAuthStore();
   const { items, loading, fetchBasket, removeFromBasket } = useBasketStore();
 
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+
   useEffect(() => {
     fetchBasket();
   }, []);
@@ -42,6 +48,54 @@ export default function BasketScreen() {
     await fetchBasket();
     const currentItems = useBasketStore.getState().items;
     console.log("Basket Information:", JSON.stringify(currentItems, null, 2));
+  };
+
+  const handleCheckout = async () => {
+    if (!user?.address || !user?.phone) {
+      Alert.alert(
+        "Missing Information",
+        "Please add your address and phone number before checking out.",
+      );
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(undefined);
+
+    try {
+      const payload = {
+        listingIds: items.map((item) => item.listingId),
+        customer: {
+          name: user.name || "User",
+          address: user.address,
+          phone: user.phone,
+        },
+      };
+
+      const response = await adoptionService.createCheckoutSession(payload);
+
+      if (response.success) {
+        router.push({
+          pathname: "/checkout",
+          params: {
+            clientSecret: response.data.clientSecret,
+            orderId: response.data.orderId,
+            subtotal: response.data.subtotal,
+            taxAmount: response.data.taxAmount,
+            processingFee: response.data.processingFee,
+            shippingFee: response.data.shippingFee,
+            total: response.data.total,
+          },
+        });
+      } else {
+        setError(response.message || "Failed to create checkout session");
+      }
+    } catch (err: any) {
+      console.error("Checkout Error:", err);
+      setError(err.message || "An unexpected error occurred");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const renderItem = ({ item }: { item: any }) => (
@@ -146,8 +200,16 @@ export default function BasketScreen() {
                 *Pet will be delivered to your home
               </Text>
 
-              <TouchableOpacity style={styles.checkoutButton}>
-                <Text style={styles.checkoutText}>Checkout</Text>
+              <TouchableOpacity
+                style={styles.checkoutButton}
+                onPress={handleCheckout}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.checkoutText}>Checkout</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -161,6 +223,17 @@ export default function BasketScreen() {
             </Link>
           </View>
         )}
+
+        <LoadingModal
+          visible={isProcessing || !!error}
+          message="Creating checkout session..."
+          failed={!!error}
+          error={error}
+          onClose={() => {
+            setError(undefined);
+            setIsProcessing(false);
+          }}
+        />
       </SafeAreaView>
     </View>
   );

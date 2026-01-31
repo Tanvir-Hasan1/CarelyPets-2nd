@@ -143,6 +143,68 @@ class AdoptionService {
   ): Promise<{ success: boolean; message?: string }> {
     return await api.delete(`/adoptions/basket/items/${listingId}`);
   }
+
+  /**
+   * Create adoption order (Mocked)
+   * @param items
+   * @param total
+   */
+  async createAdoptionOrder(
+    items: BasketItem[],
+    total: number,
+  ): Promise<{ success: boolean; clientSecret: string; orderId: string }> {
+    // ... mocked implementation ...
+    return { success: true, clientSecret: "", orderId: "" };
+  }
+
+  /**
+   * Create checkout session
+   * @param payload
+   */
+  async createCheckoutSession(payload: {
+    listingIds: string[];
+    customer: {
+      name: string;
+      address: string;
+      phone: string;
+    };
+  }): Promise<CheckoutResponse> {
+    return await api.post<CheckoutResponse>(
+      "/adoptions/basket/checkout",
+      payload,
+    );
+  }
+}
+
+export interface CheckoutResponse {
+  success: boolean;
+  data: {
+    orderId: string;
+    paymentIntentId: string;
+    clientSecret: string;
+    customer: {
+      name: string;
+      address: string;
+      phone: string;
+    };
+    subtotal: number;
+    taxPercent: number;
+    taxAmount: number;
+    processingFee: number;
+    shippingFee: number;
+    total: number;
+    items: {
+      listing: string;
+      petName: string;
+      petType: string;
+      petBreed: string;
+      petAge: number;
+      petGender: string;
+      avatarUrl: string;
+      price: number;
+    }[];
+  };
+  message: string;
 }
 
 export interface BasketItem {
