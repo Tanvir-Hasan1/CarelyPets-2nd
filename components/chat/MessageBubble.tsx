@@ -1,6 +1,13 @@
 import { Message } from "@/services/chatService";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  Linking,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface MessageBubbleProps {
   message: Message & { text?: string; time?: string };
@@ -76,7 +83,41 @@ export default function MessageBubble({
             message.attachments?.length > 0
           ) && (
             <Text style={[styles.messageText, isMe && styles.myMessageText]}>
-              {message.body || message.content}
+              {(() => {
+                const text = message.body || message.content || "";
+                // Regex to match generic URLs (scheme://...) or www.
+                // Matches any scheme (e.g. https, http, carelypets, mailto)
+                const urlRegex =
+                  /([a-z][a-z0-9+.-]*:\/\/[^\s]+)|(www\.[^\s]+)/gi;
+
+                const parts = text.split(urlRegex);
+
+                return parts.map((part, index) => {
+                  if (!part) return null;
+                  if (part.match(urlRegex)) {
+                    return (
+                      <Text
+                        key={index}
+                        style={{
+                          textDecorationLine: "underline",
+                          color: isMe ? "#FFFFFF" : "#006064",
+                        }}
+                        onPress={() => {
+                          const url = part.startsWith("www.")
+                            ? `https://${part}`
+                            : part;
+                          Linking.openURL(url).catch((err) =>
+                            console.error("Failed to open URL:", err),
+                          );
+                        }}
+                      >
+                        {part}
+                      </Text>
+                    );
+                  }
+                  return <Text key={index}>{part}</Text>;
+                });
+              })()}
             </Text>
           )}
         <View style={styles.messageFooter}>

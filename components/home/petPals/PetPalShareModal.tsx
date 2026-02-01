@@ -65,7 +65,8 @@ const PetPalShareModal = ({
 
   const handleUserPress = (userId: string) => {
     // Generate deep link
-    const deepLink = createURL(`(tabs)/pethub/view-post`, {
+    // Use the chat-specific view-post route so back button works correctly (goes back to chat)
+    const deepLink = createURL(`(tabs)/chat/view-post`, {
       queryParams: { id: postId.toString() },
     });
 
@@ -89,7 +90,7 @@ const PetPalShareModal = ({
   const handleCopyLink = async () => {
     try {
       // Create deep link for the specific post
-      const deepLink = createURL(`(tabs)/pethub/view-post`, {
+      const deepLink = createURL(`(tabs)/chat/view-post`, {
         queryParams: { id: postId.toString() },
       });
       console.log("Generated Deep Link:", deepLink);
