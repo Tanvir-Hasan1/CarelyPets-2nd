@@ -33,6 +33,7 @@ interface FeedItemProps {
   isOwnPost?: boolean;
   onReport?: () => void;
   onBlock?: () => void;
+  onProfilePress?: () => void;
 }
 
 const FeedItem = ({
@@ -58,6 +59,7 @@ const FeedItem = ({
   isOwnPost = false,
   onReport,
   onBlock,
+  onProfilePress,
 }: FeedItemProps) => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -92,19 +94,25 @@ const FeedItem = ({
       style={styles.feedItem}
     >
       <View style={styles.feedHeader}>
-        <Image
-          source={{ uri: userAvatar }}
-          style={styles.feedAvatar}
-          contentFit="cover"
-          transition={200}
-          cachePolicy="memory-disk"
-        />
-        <View style={styles.feedMeta}>
-          <Text style={styles.feedUserText}>
-            <Text style={styles.feedUserName}>{userName}</Text> {actionText}
-          </Text>
-          <Text style={styles.feedTime}>{timeAgo}</Text>
-        </View>
+        <TouchableOpacity
+          style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+          onPress={onProfilePress}
+          activeOpacity={0.8}
+        >
+          <Image
+            source={{ uri: userAvatar }}
+            style={styles.feedAvatar}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
+          <View style={styles.feedMeta}>
+            <Text style={styles.feedUserText}>
+              <Text style={styles.feedUserName}>{userName}</Text> {actionText}
+            </Text>
+            <Text style={styles.feedTime}>{timeAgo}</Text>
+          </View>
+        </TouchableOpacity>
         <View style={{ position: "relative" }}>
           <TouchableOpacity onPress={onToggleDropdown}>
             <MoreVertical size={20} color="#6B7280" />

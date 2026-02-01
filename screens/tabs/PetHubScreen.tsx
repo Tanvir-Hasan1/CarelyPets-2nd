@@ -305,6 +305,18 @@ export default function PetHubScreen() {
               })
             }
             onCommentPress={() => handleCommentPress(item)}
+            onProfilePress={() => {
+              if (item.author.id === user?.id) {
+                // Navigate to own profile within pethub stack
+                router.push("/(tabs)/pethub/profile");
+              } else {
+                // Navigate to Pet Pal profile in pethub stack
+                router.push({
+                  pathname: "/(tabs)/pethub/petPal",
+                  params: { id: item.author.id },
+                });
+              }
+            }}
           />
         )}
         contentContainerStyle={styles.listContent}
