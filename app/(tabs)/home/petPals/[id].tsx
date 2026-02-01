@@ -325,7 +325,19 @@ const PetPalProfileScreen = () => {
               ? `${palData.location.city}, ${palData.location.country}`
               : "Unknown Location"
           }
-          onMessagePress={() => console.log("Message pressed")}
+          onMessagePress={() => {
+            if (palData) {
+              router.push({
+                pathname: "/(tabs)/chat/[id]",
+                params: {
+                  id: palData.id,
+                  type: "user",
+                  name: palData.name,
+                  avatar: palData.avatarUrl || "",
+                },
+              });
+            }
+          }}
         />
 
         <PetPalTabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />

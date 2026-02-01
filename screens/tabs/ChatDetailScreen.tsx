@@ -361,6 +361,14 @@ function ChatDetailScreen() {
           avatar={avatar as string}
           onBackPress={handleBack}
           onMenuPress={() => setMenuVisible(!menuVisible)}
+          onProfilePress={() => {
+            if (targetUserId) {
+              router.push({
+                pathname: "/(tabs)/home/petPals/[id]",
+                params: { id: targetUserId },
+              });
+            }
+          }}
           paddingTop={insets.top}
           status={statusText}
         />

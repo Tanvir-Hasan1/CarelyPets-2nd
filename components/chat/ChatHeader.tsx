@@ -9,6 +9,7 @@ interface ChatHeaderProps {
   avatar: string;
   onBackPress: () => void;
   onMenuPress: () => void;
+  onProfilePress?: () => void;
   paddingTop: number;
   status?: string;
 }
@@ -18,6 +19,7 @@ const ChatHeader = ({
   avatar,
   onBackPress,
   onMenuPress,
+  onProfilePress,
   paddingTop,
   status,
 }: ChatHeaderProps) => {
@@ -27,7 +29,11 @@ const ChatHeader = ({
         <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color="#4B5563" />
       </TouchableOpacity>
 
-      <View style={styles.headerInfo}>
+      <TouchableOpacity
+        style={styles.headerInfo}
+        activeOpacity={0.7}
+        onPress={onProfilePress}
+      >
         <Image
           source={{
             uri: avatar || "https://i.pravatar.cc/150",
@@ -38,7 +44,7 @@ const ChatHeader = ({
           <Text style={styles.headerName}>{name || "User"}</Text>
           {status && <Text style={styles.headerStatus}>{status}</Text>}
         </View>
-      </View>
+      </TouchableOpacity>
 
       <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
         <HugeiconsIcon icon={MoreVerticalIcon} size={24} color="#006064" />
