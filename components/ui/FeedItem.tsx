@@ -177,6 +177,7 @@ const FeedItem = ({
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
         onShare={handleShareNow}
+        postId={postId}
       />
 
       <LoadingModal

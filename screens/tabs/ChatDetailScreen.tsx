@@ -32,7 +32,7 @@ const DEFAULT_PAGINATION = { page: 1, hasMore: true, isLoading: false };
 export default React.memo(ChatDetailScreen);
 
 function ChatDetailScreen() {
-  const { id, name, avatar, type } = useLocalSearchParams();
+  const { id, name, avatar, type, initialMessage } = useLocalSearchParams();
   const paramId = id as string;
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -96,7 +96,9 @@ function ChatDetailScreen() {
   const unblockUser = useChatStore((state) => state.unblockUser);
   const deleteConversation = useChatStore((state) => state.deleteConversation);
 
-  const [messageText, setMessageText] = useState("");
+  const [messageText, setMessageText] = useState(
+    (initialMessage as string) || "",
+  );
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);

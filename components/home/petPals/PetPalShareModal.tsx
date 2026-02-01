@@ -1,7 +1,11 @@
 import { Colors, FontSizes, Spacing } from "@/constants/colors";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useChatStore } from "@/store/useChatStore";
+import { setStringAsync } from "expo-clipboard";
+import { createURL } from "expo-linking";
+import { useRouter } from "expo-router";
 import { Copy } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FlatList,
   Image,
@@ -14,84 +18,87 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-interface ShareWithUser {
-  id: string;
-  name: string;
-  surname: string;
-  image: string;
-}
-
-const SHARE_WITH_USERS: ShareWithUser[] = [
-  {
-    id: "1",
-    name: "Kesha",
-    surname: "Saha",
-    image:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=60",
-  },
-  {
-    id: "2",
-    name: "Darrell",
-    surname: "Steward",
-    image:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=60",
-  },
-  {
-    id: "3",
-    name: "Courtney",
-    surname: "Henry",
-    image:
-      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=400&auto=format&fit=crop&q=60",
-  },
-  {
-    id: "4",
-    name: "Theresa",
-    surname: "Webb",
-    image:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=60",
-  },
-  {
-    id: "5",
-    name: "Cameron",
-    surname: "Williamson",
-    image:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=60",
-  },
-  {
-    id: "6",
-    name: "Kristin",
-    surname: "Watson",
-    image:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=60",
-  },
-  {
-    id: "7",
-    name: "D",
-    surname: "L",
-    image:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=60",
-  },
-];
+// Removed static SHARE_WITH_USERS
 
 interface PetPalShareModalProps {
   visible: boolean;
   onClose: () => void;
   onShare: (text: string) => void;
+  postId: string | number;
 }
 
 const PetPalShareModal = ({
   visible,
   onClose,
   onShare,
+  postId,
 }: PetPalShareModalProps) => {
   const [message, setMessage] = useState("");
   const insets = useSafeAreaInsets();
+  const { conversations, fetchConversations } = useChatStore();
   const { user } = useAuthStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchConversations();
+  }, []);
+
+  // Get recent users from conversations
+  const recentUsers = conversations
+    .slice(0, 10)
+    .map((conv) => {
+      const otherParticipant = conv.participants.find((p) => p.id !== user?.id);
+      return {
+        id: otherParticipant?.id || "unknown",
+        name: otherParticipant?.name || "Unknown",
+        surname: "", // Surname handling might strictly require splitting name if needed
+        image: otherParticipant?.avatarUrl || "https://i.pravatar.cc/150",
+      };
+    })
+    .filter((u) => u.id !== "unknown" && u.id !== user?.id);
 
   const handleShare = () => {
     onShare(message);
     setMessage("");
     onClose();
+  };
+
+  const handleUserPress = (userId: string) => {
+    // Generate deep link
+    const deepLink = createURL(`(tabs)/pethub/view-post`, {
+      queryParams: { id: postId.toString() },
+    });
+
+    const userToChatWith = recentUsers.find((u) => u.id === userId);
+
+    onClose();
+
+    // Navigate to chat
+    router.push({
+      pathname: "/(tabs)/pethub/inbox/[id]",
+      params: {
+        id: userId,
+        type: "user",
+        initialMessage: deepLink,
+        name: userToChatWith?.name || "User",
+        avatar: userToChatWith?.image,
+      },
+    });
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      // Create deep link for the specific post
+      const deepLink = createURL(`(tabs)/pethub/view-post`, {
+        queryParams: { id: postId.toString() },
+      });
+      console.log("Generated Deep Link:", deepLink);
+      await setStringAsync(deepLink);
+      alert("Link copied to clipboard!");
+    } catch (error) {
+      console.error("Error copying link:", error);
+      alert("Failed to copy link");
+    }
   };
 
   return (
@@ -141,15 +148,18 @@ const PetPalShareModal = ({
           </View>
 
           <View style={styles.shareWithSection}>
-            <Text style={styles.sectionTitle}>Share With</Text>
+            <Text style={styles.sectionTitle}>Recent Chats</Text>
             <FlatList
-              data={SHARE_WITH_USERS}
+              data={recentUsers}
               horizontal
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.usersList}
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.userCard}>
+                <TouchableOpacity
+                  style={styles.userCard}
+                  onPress={() => handleUserPress(item.id)}
+                >
                   <View style={styles.avatarContainer}>
                     <Image
                       source={{ uri: item.image }}
@@ -159,15 +169,12 @@ const PetPalShareModal = ({
                   <Text style={styles.userName} numberOfLines={1}>
                     {item.name}
                   </Text>
-                  <Text style={styles.userName} numberOfLines={1}>
-                    {item.surname}
-                  </Text>
                 </TouchableOpacity>
               )}
             />
           </View>
 
-          <TouchableOpacity style={styles.copyLinkRow}>
+          <TouchableOpacity style={styles.copyLinkRow} onPress={handleCopyLink}>
             <Text style={styles.copyLinkText}>Copy Link</Text>
             <Copy size={20} color="#006064" />
           </TouchableOpacity>
