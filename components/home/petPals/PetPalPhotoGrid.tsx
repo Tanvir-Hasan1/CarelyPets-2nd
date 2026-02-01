@@ -50,11 +50,18 @@ const PetPalPhotoGrid = ({ photos }: PetPalPhotoGridProps) => {
           onPress={() => setSelectedPhoto(photo)}
         >
           <Image
-            source={{ uri: photo.uri || fallbackImage }}
+            source={{
+              uri: photo.uri || fallbackImage,
+              width: COLUMN_WIDTH,
+              height: COLUMN_WIDTH,
+            }}
             style={styles.photo}
             contentFit="cover"
             transition={300}
             cachePolicy="memory-disk"
+            recyclingKey={photo.uri}
+            placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }} // Generic grey blurhash
+            placeholderContentFit="cover"
           />
         </TouchableOpacity>
       ))}

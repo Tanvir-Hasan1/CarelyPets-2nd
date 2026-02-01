@@ -7,34 +7,81 @@ import {
 } from "@/constants/colors";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-const MOCK_PALS = [
-  { id: "1", name: "Kesha", surname: "Saha", image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=60" },
-  { id: "2", name: "Darrell", surname: "Steward", image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=60" }, // Updated: Male portrait
-  { id: "3", name: "Courtney", surname: "Henry", image: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=400&auto=format&fit=crop&q=60" },
-  { id: "4", name: "Theresa", surname: "Webb", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=60" },
-];
+import { PetPal } from "@/services/userService";
+import Skeleton from "../ui/Skeleton";
 
-export default function PetPalsList() {
+export default function PetPalsList({
+  pals,
+  isLoading,
+}: {
+  pals: PetPal[];
+  isLoading: boolean;
+}) {
   const router = useRouter();
+
+  if (isLoading) {
+    return (
+      <View style={styles.listContainer}>
+        <View style={{ flexDirection: "row", gap: Spacing.md }}>
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} style={{ alignItems: "center", gap: 8 }}>
+              <Skeleton width={48} height={48} borderRadius={24} />
+              <Skeleton width={60} height={12} borderRadius={4} />
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
 
   return (
     <FlatList
-      data={MOCK_PALS}
+      data={pals}
       keyExtractor={(item) => item.id}
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.listContainer}
       renderItem={({ item }) => (
         <View style={styles.card}>
-          <Image source={{ uri: item.image }} style={styles.image} />
-          <Text style={styles.name}>{item.name}</Text>
-          <Text style={styles.name}>{item.surname}</Text>
+          <Image
+            source={
+              item.avatarUrl
+                ? { uri: item.avatarUrl }
+                : require("@/assets/images/placeholder_avatar.png")
+            }
+            style={styles.image}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+          <Text style={styles.name} numberOfLines={1}>
+            {item.name}
+          </Text>
+          {/* Use username or bio as secondary text if needed, for now just name as per design */}
+          {item.username && (
+            <Text
+              style={[
+                styles.name,
+                { color: Colors.textSecondary, fontSize: 10 },
+              ]}
+              numberOfLines={1}
+            >
+              @{item.username}
+            </Text>
+          )}
+
           <TouchableOpacity
             style={styles.button}
-            onPress={() => router.push(`/(tabs)/home/petPals/${item.id}` as any)}
+            onPress={() =>
+              router.push(`/(tabs)/home/petPals/${item.id}` as any)
+            }
           >
             <Text style={styles.buttonText}>Profile</Text>
           </TouchableOpacity>

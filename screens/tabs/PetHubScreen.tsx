@@ -1,10 +1,10 @@
-import FeedItem from "@/components/accounts/profile/FeedItem";
 import PetPalBlockModal from "@/components/home/petPals/PetPalBlockModal";
 import PetPalReportModal from "@/components/home/petPals/PetPalReportModal";
 import PetPalWriteReportModal from "@/components/home/petPals/PetPalWriteReportModal";
 import ShareThoughtsCard from "@/components/pethub/ShareThoughtsCard";
 import CommentModal from "@/components/ui/CommentModal";
 import DeleteModal from "@/components/ui/DeleteModal";
+import FeedItem from "@/components/ui/FeedItem";
 import Header from "@/components/ui/Header";
 import LoadingModal from "@/components/ui/LoadingModal";
 import { Colors, Spacing } from "@/constants/colors";

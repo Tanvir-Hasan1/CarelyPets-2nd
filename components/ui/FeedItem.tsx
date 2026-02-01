@@ -1,14 +1,14 @@
 import ShareIcon from "@/assets/images/icons/share.svg";
+import PostOptionsDropdown from "@/components/accounts/profile/PostOptionsDropdown";
+import PetPalPostDropdown from "@/components/home/petPals/PetPalPostDropdown";
+import PetPalShareModal from "@/components/home/petPals/PetPalShareModal";
+import LoadingModal from "@/components/ui/LoadingModal";
 import { Colors } from "@/constants/colors";
 import communityService from "@/services/communityService";
 import { Image } from "expo-image";
 import { Heart, MessageCircle, MoreVertical } from "lucide-react-native";
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import PetPalPostDropdown from "../../home/petPals/PetPalPostDropdown";
-import PetPalShareModal from "../../home/petPals/PetPalShareModal";
-import LoadingModal from "../../ui/LoadingModal";
-import PostOptionsDropdown from "./PostOptionsDropdown";
 
 interface FeedItemProps {
   postId: string | number;

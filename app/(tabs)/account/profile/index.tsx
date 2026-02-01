@@ -1,11 +1,11 @@
 import CameraIcon from "@/assets/images/icons/Camera.svg";
 import EditIcon from "@/assets/images/icons/edit.svg";
-import FeedItem from "@/components/accounts/profile/FeedItem";
 import PetPalPetList from "@/components/home/petPals/PetPalPetList";
 import PetPalPhotoGrid from "@/components/home/petPals/PetPalPhotoGrid";
 import ShareThoughtsCard from "@/components/pethub/ShareThoughtsCard";
 import CommentModal from "@/components/ui/CommentModal";
 import DeleteModal from "@/components/ui/DeleteModal";
+import FeedItem from "@/components/ui/FeedItem";
 import Header from "@/components/ui/Header";
 import ImageSelectionModal from "@/components/ui/ImageSelectionModal";
 import LoadingModal from "@/components/ui/LoadingModal";
@@ -110,17 +110,17 @@ export default function ProfileScreen() {
   const { user, updateAvatar, updateCoverPhoto, isLoading, fetchUser } =
     useAuthStore();
   const [activeDropdown, setActiveDropdown] = useState<string | number | null>(
-    null
+    null,
   );
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<string | number | null>(
-    null
+    null,
   );
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"Posts" | "Photos" | "My Pets">(
-    "Posts"
+    "Posts",
   );
 
   const handleCommentPress = (post: any) => {
@@ -132,11 +132,11 @@ export default function ProfileScreen() {
   >(null);
   const [avatarUri, setAvatarUri] = useState(
     user?.avatarUrl ||
-      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
   );
   const [coverUri, setCoverUri] = useState(
     user?.coverUrl ||
-      "https://images.unsplash.com/photo-1549488497-1502dc85c4ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+      "https://images.unsplash.com/photo-1549488497-1502dc85c4ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
   );
 
   // Real API integration
@@ -270,7 +270,7 @@ export default function ProfileScreen() {
         setDeleteSuccess(true);
         setTimeout(() => {
           setUserPosts((prevPosts) =>
-            prevPosts.filter((post) => post.id !== selectedPostId)
+            prevPosts.filter((post) => post.id !== selectedPostId),
           );
           setIsDeleting(false);
           setDeleteSuccess(false);
@@ -313,14 +313,14 @@ export default function ProfileScreen() {
           };
         }
         return post;
-      })
+      }),
     );
 
     try {
       const response = await communityService.likePost(postId);
       if (response.success) {
         setUserPosts((prevPosts) =>
-          prevPosts.map((post) => (post.id === postId ? response.data : post))
+          prevPosts.map((post) => (post.id === postId ? response.data : post)),
         );
       } else {
         loadPosts();
@@ -338,7 +338,7 @@ export default function ProfileScreen() {
 
   const processImageSelection = async (
     uri: string,
-    base64: string | undefined | null
+    base64: string | undefined | null,
   ) => {
     if (!imageUpdateMode) return;
 
@@ -376,7 +376,7 @@ export default function ProfileScreen() {
     if (!result.canceled && result.assets[0]) {
       await processImageSelection(
         result.assets[0].uri,
-        result.assets[0].base64
+        result.assets[0].base64,
       );
     }
   };
@@ -400,7 +400,7 @@ export default function ProfileScreen() {
       if (!result.canceled && result.assets[0]) {
         await processImageSelection(
           result.assets[0].uri,
-          result.assets[0].base64
+          result.assets[0].base64,
         );
       }
     } catch (error) {
@@ -514,7 +514,7 @@ export default function ProfileScreen() {
 
                   if (!result.canceled) {
                     const selectedImages = result.assets.map(
-                      (asset) => asset.uri
+                      (asset) => asset.uri,
                     );
                     router.push({
                       pathname: "/(tabs)/account/profile/create-post",

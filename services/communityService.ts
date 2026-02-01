@@ -53,6 +53,22 @@ export interface MyPostsResponse {
   data: Post[];
 }
 
+export interface UserPostsResponse {
+  success: boolean;
+  data: Post[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface UserPhotosResponse {
+  success: boolean;
+  data: string[];
+}
+
 export interface Comment {
   id: string | number;
   postId: string | number;
@@ -212,6 +228,22 @@ class CommunityService {
     return await api.post(`/community/posts/${postId}/share`, {
       text,
     });
+  }
+
+  async getUserPosts(
+    userId: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<UserPostsResponse> {
+    return await api.get<UserPostsResponse>(
+      `/community/posts/user/${userId}?page=${page}&limit=${limit}`,
+    );
+  }
+
+  async getUserPhotos(userId: string): Promise<UserPhotosResponse> {
+    return await api.get<UserPhotosResponse>(
+      `/community/posts/user/${userId}/photos`,
+    );
   }
 }
 
