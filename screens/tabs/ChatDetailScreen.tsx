@@ -349,6 +349,25 @@ function ChatDetailScreen() {
     }
   }
 
+  const goToProfile = () => {
+    if (targetUserId) {
+      router.push({
+        pathname: "/(tabs)/home/petPals/[id]",
+        params: { id: targetUserId },
+      });
+    }
+  };
+  const fetchNewMessages = () => {
+    if (
+      resolvedConversationId &&
+      pagination.hasMore &&
+      !pagination.isLoading &&
+      !isLoadingMessages
+    ) {
+      fetchMessages(resolvedConversationId, pagination.page + 1);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
       <KeyboardAvoidingView
@@ -361,14 +380,7 @@ function ChatDetailScreen() {
           avatar={avatar as string}
           onBackPress={handleBack}
           onMenuPress={() => setMenuVisible(!menuVisible)}
-          onProfilePress={() => {
-            if (targetUserId) {
-              router.push({
-                pathname: "/(tabs)/home/petPals/[id]",
-                params: { id: targetUserId },
-              });
-            }
-          }}
+          onProfilePress={goToProfile}
           paddingTop={insets.top}
           status={statusText}
         />
@@ -419,16 +431,7 @@ function ChatDetailScreen() {
             />
           )}
           // Pagination props
-          onEndReached={() => {
-            if (
-              resolvedConversationId &&
-              pagination.hasMore &&
-              !pagination.isLoading &&
-              !isLoadingMessages
-            ) {
-              fetchMessages(resolvedConversationId, pagination.page + 1);
-            }
-          }}
+          onEndReached={fetchNewMessages}
           onEndReachedThreshold={0.2}
           ListFooterComponent={
             pagination.isLoading ? (
