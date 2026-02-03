@@ -121,6 +121,13 @@ export default function AdoptionHistoryScreen() {
     );
   };
 
+  const filteredOrders = orders.filter((order) => {
+    if (activeTab === "All") return true;
+    // Match the logic used in renderOrderItem
+    const statusLabel = order.status === "paid" ? "Delivered" : "Processing";
+    return statusLabel === activeTab;
+  });
+
   return (
     <View style={styles.container}>
       <Header title="Adoption History" />
@@ -150,7 +157,7 @@ export default function AdoptionHistoryScreen() {
         </View>
       ) : (
         <FlatList
-          data={orders}
+          data={filteredOrders}
           keyExtractor={(item) => item.orderId}
           renderItem={renderOrderItem}
           contentContainerStyle={styles.listContent}
