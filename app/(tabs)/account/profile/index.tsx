@@ -10,9 +10,9 @@ import Header from "@/components/ui/Header";
 import ImageSelectionModal from "@/components/ui/ImageSelectionModal";
 import LoadingModal from "@/components/ui/LoadingModal";
 import { Colors, FontSizes, FontWeights, Spacing } from "@/constants/colors";
-import communityService, { Post } from "@/services/communityService";
-import petService from "@/services/petService";
+import communityService from "@/services/communityService";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useProfileStore } from "@/store/useProfileStore";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -26,84 +26,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const MOCK_PHOTOS = [
-  {
-    uri: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop",
-    userName: "Tanvir Hasan",
-    dateText: "MON AT 6:06 PM",
-    caption: "He is very diligent pet, save you whatever the situation",
-    likesCount: "1.2 K",
-    commentsCount: "1.2 K",
-    sharesCount: "1.2 K",
-  },
-  {
-    uri: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400&auto=format&fit=crop",
-    userName: "Tanvir Hasan",
-    dateText: "TUE AT 2:15 PM",
-    caption: "Playtime at the park is always the best part of the day!",
-    likesCount: "850",
-    commentsCount: "45",
-    sharesCount: "12",
-  },
-  {
-    uri: "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=400&auto=format&fit=crop",
-    userName: "Tanvir Hasan",
-    dateText: "WED AT 10:30 AM",
-    caption: "Someone is waiting for treats...",
-    likesCount: "2.1 K",
-    commentsCount: "156",
-    sharesCount: "89",
-  },
-  {
-    uri: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&auto=format&fit=crop",
-    userName: "Tanvir Hasan",
-    dateText: "THU AT 4:00 PM",
-    caption: "Nap time sequence initiated.",
-    likesCount: "1.5 K",
-    commentsCount: "92",
-    sharesCount: "34",
-  },
-  {
-    uri: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=400&auto=format&fit=crop",
-    userName: "Tanvir Hasan",
-    dateText: "FRI AT 8:20 PM",
-    caption: "Gazing at the sunset with my best pal.",
-    likesCount: "3.2 K",
-    commentsCount: "245",
-    sharesCount: "120",
-  },
-];
-
-const MOCK_PETS = [
-  {
-    id: "p1",
-    name: "Buddy",
-    gender: "Female" as const,
-    breed: "Persian Cat",
-    age: "2 years old",
-    image:
-      "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&auto=format&fit=crop",
-  },
-  {
-    id: "p2",
-    name: "Max",
-    gender: "Male" as const,
-    breed: "Golden Retriever",
-    age: "3 years old",
-    image:
-      "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400&auto=format&fit=crop",
-  },
-  {
-    id: "p3",
-    name: "Luna",
-    gender: "Female" as const,
-    breed: "Siamese Cat",
-    age: "1 year old",
-    image:
-      "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=400&auto=format&fit=crop",
-  },
-];
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -139,91 +61,29 @@ export default function ProfileScreen() {
       "https://images.unsplash.com/photo-1549488497-1502dc85c4ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
   );
 
-  // Real API integration
-  const [userPosts, setUserPosts] = useState<Post[]>([]);
-  const [userPhotos, setUserPhotos] = useState<any[]>([]);
-  const [userPetsList, setUserPetsList] = useState<any[]>([]);
+  // Global State Integration
+  const {
+    userPosts,
+    userPhotos,
+    userPetsList,
+    isLoadingPosts,
+    isLoadingPhotos,
+    isLoadingPets,
+    fetchUserPosts,
+    fetchUserPhotos,
+    fetchUserPets,
+    fetchAllProfileData,
+    setUserPosts,
+  } = useProfileStore();
+
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isLoadingPhotos, setIsLoadingPhotos] = useState(false);
-  const [isLoadingPets, setIsLoadingPets] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
 
-  useEffect(() => {
-    loadAllData();
-  }, []);
-
-  const loadAllData = async () => {
-    loadPosts();
-    loadPhotos();
-    loadPets();
-  };
-
-  const loadPets = async () => {
-    try {
-      setIsLoadingPets(true);
-      const data = await petService.getPets();
-      setUserPetsList(data);
-    } catch (error) {
-      console.error("Error loading pets:", error);
-    } finally {
-      setIsLoadingPets(false);
-    }
-  };
-
-  const loadPhotos = async () => {
-    try {
-      setIsLoadingPhotos(true);
-      const response = await communityService.getMyPhotos();
-      if (response.success) {
-        // Map backend Photo to PhotoData expected by PetPalPhotoGrid
-        // Handle various potential field names (url, media, etc.)
-        const mappedPhotos = response.data
-          .map((photo: any) => {
-            const photoUrl =
-              photo.url ||
-              (photo.media && photo.media.length > 0
-                ? photo.media[0].url
-                : null) ||
-              photo.image;
-
-            return {
-              uri: photoUrl,
-              userName: user?.name || "Me",
-              dateText: photo.createdAt
-                ? new Date(photo.createdAt).toLocaleDateString()
-                : "",
-              caption: photo.text || "",
-              likesCount: (photo.likesCount || 0).toString(),
-              commentsCount: (photo.commentsCount || 0).toString(),
-              sharesCount: (photo.sharesCount || 0).toString(),
-            };
-          })
-          .filter((p) => p.uri); // Only show photos that have a valid URI
-
-        setUserPhotos(mappedPhotos);
-      }
-    } catch (error) {
-      console.error("Error loading photos:", error);
-    } finally {
-      setIsLoadingPhotos(false);
-    }
-  };
-
-  const loadPosts = async () => {
-    try {
-      const response = await communityService.getMyPosts();
-      if (response.success) {
-        setUserPosts(response.data);
-      }
-    } catch (error) {
-      console.error("Error loading user posts:", error);
-    }
-  };
-
+  // Initial load is now handled by HomeScreen, but we can refresh here
   const onRefresh = async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchUser(), loadPosts(), loadPhotos(), loadPets()]);
+    await Promise.all([fetchUser(), fetchAllProfileData()]);
     setIsRefreshing(false);
   };
 
@@ -539,48 +399,69 @@ export default function ProfileScreen() {
               />
 
               {/* Dynamic Feed Items */}
-              {userPosts.map((post) => (
-                <FeedItem
-                  key={post.id}
-                  postId={post.id}
-                  userAvatar={post.author.avatarUrl || avatarUri}
-                  userName={post.author.name}
-                  actionText={
-                    post.postType === "profile_update"
-                      ? "updated their profile"
-                      : "posted an update"
-                  }
-                  timeAgo={post.timeAgo}
-                  contentImage={
-                    post.media && post.media.length > 0
-                      ? post.media[0].url
-                      : undefined
-                  }
-                  caption={post.text}
-                  likesCount={post.likesCount.toString()}
-                  commentsCount={post.commentsCount.toString()}
-                  sharesCount={post.sharesCount?.toString() || "0"}
-                  isLiked={post.isLiked}
-                  onLike={() => handleLikePost(post.id)}
-                  isOwnPost={true}
-                  isDropdownVisible={activeDropdown === post.id}
-                  onToggleDropdown={() => toggleDropdown(post.id)}
-                  onCloseDropdown={() => setActiveDropdown(null)}
-                  onEditPost={() => handleEditPost(post.id)}
-                  onDeletePost={() => handleDeletePost(post.id)}
-                  onPress={() => handleViewPost(post.id)}
-                  onCommentPress={() => handleCommentPress(post)}
+              {isLoadingPosts ? (
+                <ActivityIndicator
+                  size="large"
+                  color={Colors.primary}
+                  style={{ marginTop: 20 }}
                 />
-              ))}
+              ) : (
+                <>
+                  {userPosts.map((post) => (
+                    <FeedItem
+                      key={post.id}
+                      postId={post.id}
+                      userAvatar={post.author.avatarUrl || avatarUri}
+                      userName={post.author.name}
+                      actionText={
+                        post.sharedPost
+                          ? "shared"
+                          : post.postType === "profile_update"
+                            ? "updated profile"
+                            : "posted an update"
+                      }
+                      timeAgo={post.timeAgo}
+                      contentImage={
+                        post.media && post.media.length > 0
+                          ? post.media[0].url
+                          : undefined
+                      }
+                      caption={post.shareText || post.text}
+                      likesCount={post.likesCount.toString()}
+                      commentsCount={post.commentsCount.toString()}
+                      sharesCount={post.sharesCount?.toString() || "0"}
+                      isLiked={post.isLiked}
+                      onLike={() => handleLikePost(post.id)}
+                      isOwnPost={true}
+                      isDropdownVisible={activeDropdown === post.id}
+                      onToggleDropdown={() => toggleDropdown(post.id)}
+                      onCloseDropdown={() => setActiveDropdown(null)}
+                      onEditPost={() => handleEditPost(post.id)}
+                      onDeletePost={() => handleDeletePost(post.id)}
+                      onPress={() => handleViewPost(post.id)}
+                      onCommentPress={() => handleCommentPress(post)}
+                      sharedPost={post.sharedPost}
+                      onSharedPostPress={() => {
+                        if (post.sharedPost?.id) {
+                          handleViewPost(post.sharedPost.id);
+                        }
+                      }}
+                    />
+                  ))}
 
-              {userPosts.length === 0 && !isRefreshing && (
-                <View style={{ padding: Spacing.xl, alignItems: "center" }}>
-                  <Text
-                    style={{ color: Colors.textSecondary, fontStyle: "italic" }}
-                  >
-                    No posts yet.
-                  </Text>
-                </View>
+                  {userPosts.length === 0 && (
+                    <View style={{ padding: Spacing.xl, alignItems: "center" }}>
+                      <Text
+                        style={{
+                          color: Colors.textSecondary,
+                          fontStyle: "italic",
+                        }}
+                      >
+                        No posts yet.
+                      </Text>
+                    </View>
+                  )}
+                </>
               )}
             </>
           ) : activeTab === "Photos" ? (

@@ -442,16 +442,22 @@ const CommentModal = ({
       visible={visible}
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={onClose}>
-            <View style={StyleSheet.absoluteFill} />
-          </TouchableWithoutFeedback>
-
+      <View style={styles.modalOverlay}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: "rgba(0,0,0,0.5)" },
+            ]}
+          />
+        </TouchableWithoutFeedback>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+          enabled
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+          style={{ flex: 1, justifyContent: "flex-end" }}
+          pointerEvents="box-none"
+        >
           <View style={styles.modalContent}>
             <View style={styles.headerHandle} />
 
@@ -594,8 +600,8 @@ const CommentModal = ({
             onClose={() => setShowWriteReportModal(false)}
             onSend={(text: string) => handleReport(text)}
           />
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
@@ -603,7 +609,6 @@ const CommentModal = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
   modalContent: {

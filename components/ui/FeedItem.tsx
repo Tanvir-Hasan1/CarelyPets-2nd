@@ -34,6 +34,8 @@ interface FeedItemProps {
   onReport?: () => void;
   onBlock?: () => void;
   onProfilePress?: () => void;
+  sharedPost?: any;
+  onSharedPostPress?: () => void;
 }
 
 const FeedItem = ({
@@ -60,6 +62,8 @@ const FeedItem = ({
   onReport,
   onBlock,
   onProfilePress,
+  sharedPost,
+  onSharedPostPress,
 }: FeedItemProps) => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -137,7 +141,45 @@ const FeedItem = ({
 
       {caption ? <Text style={styles.feedCaption}>{caption}</Text> : null}
 
-      {contentImage ? (
+      {sharedPost && (
+        <TouchableOpacity
+          style={styles.sharedPostContainer}
+          activeOpacity={0.8}
+          onPress={() => {
+            console.log(
+              "Shared Post Data:",
+              JSON.stringify(sharedPost, null, 2),
+            );
+            if (onSharedPostPress) onSharedPostPress();
+          }}
+        >
+          <View style={styles.sharedHeader}>
+            <Image
+              source={{ uri: sharedPost.author?.avatarUrl }}
+              style={styles.sharedAvatar}
+              contentFit="cover"
+            />
+            <View>
+              <Text style={styles.sharedUserName}>
+                {sharedPost.author?.name}
+              </Text>
+              <Text style={styles.sharedTime}>{sharedPost.timeAgo}</Text>
+            </View>
+          </View>
+          {sharedPost.text ? (
+            <Text style={styles.sharedCaption}>{sharedPost.text}</Text>
+          ) : null}
+          {sharedPost.media && sharedPost.media.length > 0 ? (
+            <Image
+              source={{ uri: sharedPost.media[0].url }}
+              style={styles.sharedImage}
+              contentFit="cover"
+            />
+          ) : null}
+        </TouchableOpacity>
+      )}
+
+      {contentImage && !sharedPost ? (
         <Image
           source={{ uri: contentImage }}
           style={styles.feedImage}
@@ -256,6 +298,48 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 14,
     color: "#4B5563",
+  },
+  // Shared Post Styles
+  sharedPostContainer: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: "#F9FAFB",
+  },
+  sharedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  sharedAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+    backgroundColor: "#E0E0E0",
+  },
+  sharedUserName: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#111827",
+  },
+  sharedTime: {
+    fontSize: 11,
+    color: "#9CA3AF",
+  },
+  sharedCaption: {
+    fontSize: 13,
+    color: "#4B5563",
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  sharedImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: 8,
+    backgroundColor: "#E0E0E0",
   },
 });
 
