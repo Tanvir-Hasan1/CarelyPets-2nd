@@ -113,6 +113,19 @@ class CommunityService {
     return response;
   }
 
+  async updatePost(
+    postId: string | number,
+    formData: FormData,
+  ): Promise<{ success: boolean; data?: Post; message?: string }> {
+    return await api.patch<{
+      success: boolean;
+      data?: Post;
+      message?: string;
+    }>(`/community/posts/${postId}`, formData, {
+      timeout: 60000,
+    });
+  }
+
   async getMyPosts(
     page: number = 1,
     limit: number = 10,

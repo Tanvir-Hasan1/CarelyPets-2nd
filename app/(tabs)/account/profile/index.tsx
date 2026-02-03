@@ -13,12 +13,12 @@ import { Colors, FontSizes, FontWeights, Spacing } from "@/constants/colors";
 import communityService from "@/services/communityService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useProfileStore } from "@/store/useProfileStore";
+import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -183,11 +183,11 @@ export default function ProfileScreen() {
           prevPosts.map((post) => (post.id === postId ? response.data : post)),
         );
       } else {
-        loadPosts();
+        fetchAllProfileData();
       }
     } catch (error) {
       console.error("Error liking post:", error);
-      loadPosts();
+      fetchAllProfileData();
     }
   };
 
@@ -286,7 +286,14 @@ export default function ProfileScreen() {
         <View style={styles.headerContainer}>
           {/* Cover Photo Container */}
           <View style={styles.coverContainer}>
-            <Image source={{ uri: coverUri }} style={styles.coverPhoto} />
+            <Image
+              source={{ uri: coverUri }}
+              style={styles.coverPhoto}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+              priority="high"
+            />
             <TouchableOpacity
               style={styles.coverCameraButton}
               onPress={() => handleUpdateImage("cover")}
@@ -302,7 +309,14 @@ export default function ProfileScreen() {
 
           {/* Overlapping Avatar Container */}
           <View style={styles.avatarContainer}>
-            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+            <Image
+              source={{ uri: avatarUri }}
+              style={styles.avatar}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+              priority="high"
+            />
             <TouchableOpacity
               style={styles.avatarCameraButton}
               onPress={() => handleUpdateImage("avatar")}
@@ -407,8 +421,9 @@ export default function ProfileScreen() {
                 />
               ) : (
                 <>
-                  {userPosts.map((post) => (
+                  {userPosts.map((post, index) => (
                     <FeedItem
+                      priority={index < 3 ? "high" : "normal"}
                       key={post.id}
                       postId={post.id}
                       userAvatar={post.author.avatarUrl || avatarUri}

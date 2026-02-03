@@ -36,6 +36,7 @@ interface FeedItemProps {
   onProfilePress?: () => void;
   sharedPost?: any;
   onSharedPostPress?: () => void;
+  priority?: "low" | "normal" | "high";
 }
 
 const FeedItem = ({
@@ -64,6 +65,7 @@ const FeedItem = ({
   onProfilePress,
   sharedPost,
   onSharedPostPress,
+  priority = "normal",
 }: FeedItemProps) => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -109,6 +111,7 @@ const FeedItem = ({
             contentFit="cover"
             transition={200}
             cachePolicy="memory-disk"
+            allowDownscaling={true}
           />
           <View style={styles.feedMeta}>
             <Text style={styles.feedUserText}>
@@ -158,6 +161,9 @@ const FeedItem = ({
               source={{ uri: sharedPost.author?.avatarUrl }}
               style={styles.sharedAvatar}
               contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+              allowDownscaling={true}
             />
             <View>
               <Text style={styles.sharedUserName}>
@@ -174,6 +180,9 @@ const FeedItem = ({
               source={{ uri: sharedPost.media[0].url }}
               style={styles.sharedImage}
               contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+              allowDownscaling={true}
             />
           ) : null}
         </TouchableOpacity>
@@ -186,6 +195,9 @@ const FeedItem = ({
           contentFit="cover"
           transition={200}
           cachePolicy="memory-disk"
+          priority={priority}
+          allowDownscaling={true}
+          recyclingKey={contentImage}
         />
       ) : null}
 

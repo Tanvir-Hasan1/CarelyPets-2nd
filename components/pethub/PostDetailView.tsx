@@ -6,6 +6,7 @@ import LoadingModal from "@/components/ui/LoadingModal";
 import { Colors } from "@/constants/colors";
 import communityService, { Post } from "@/services/communityService";
 import { useAuthStore } from "@/store/useAuthStore";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Heart, MessageCircle, MoreVertical } from "lucide-react-native";
 import { useEffect, useState } from "react";
@@ -13,7 +14,6 @@ import {
   ActivityIndicator,
   Dimensions,
   FlatList,
-  Image,
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView,
@@ -63,6 +63,15 @@ const PostDetailView = () => {
       const response = await communityService.getPostById(id as string);
       if (response.success) {
         setPost(response.data);
+
+        // Prefetch images for smoother experience
+        if (response.data.media && response.data.media.length > 0) {
+          const urlsToPrefetch = response.data.media.map(
+            (m: { url: string }) => m.url,
+          );
+          Image.prefetch(urlsToPrefetch);
+        }
+
         setLikesCount(response.data.likesCount);
         setIsLiked(response.data.isLikedByMe ?? response.data.isLiked);
       }
@@ -75,7 +84,12 @@ const PostDetailView = () => {
 
   const handleEditPost = () => {
     setDropdownVisible(false);
-    router.push("/(tabs)/account/profile/edit-post");
+    if (post) {
+      router.push({
+        pathname: "/(tabs)/account/profile/edit-post",
+        params: { id: post.id },
+      });
+    }
   };
 
   const handleDeletePost = () => {
@@ -215,6 +229,9 @@ const PostDetailView = () => {
                   "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
               }}
               style={styles.avatar}
+              contentFit="cover"
+              transition={200}
+              allowDownscaling={true}
             />
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{post.author.name}</Text>
@@ -262,7 +279,15 @@ const PostDetailView = () => {
                 showsHorizontalScrollIndicator={false}
                 onScroll={handleScroll}
                 renderItem={({ item }) => (
-                  <Image source={{ uri: item.url }} style={styles.postImage} />
+                  <Image
+                    source={{ uri: item.url }}
+                    style={styles.postImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                    allowDownscaling={true}
+                    recyclingKey={item.url}
+                  />
                 )}
               />
               {post.media.length > 1 && (
