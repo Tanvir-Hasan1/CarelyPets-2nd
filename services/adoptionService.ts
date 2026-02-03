@@ -174,6 +174,56 @@ class AdoptionService {
       payload,
     );
   }
+
+  /**
+   * Get adoption history orders
+   */
+  async getAdoptionOrders(): Promise<AdoptionOrdersResponse> {
+    return await api.get<AdoptionOrdersResponse>("/adoptions/me/orders");
+  }
+
+  /**
+   * Get single adoption order by ID
+   * @param orderId
+   */
+  async getAdoptionOrderById(
+    orderId: string,
+  ): Promise<{ success: boolean; data: AdoptionOrder }> {
+    return await api.get<{ success: boolean; data: AdoptionOrder }>(
+      `/adoptions/me/orders/${orderId}`,
+    );
+  }
+}
+
+export interface AdoptionOrder {
+  orderId: string;
+  status: string;
+  paymentStatus: string;
+  paidAt: string | null;
+  createdAt: string;
+  currency: string;
+  paymentIntentId: string;
+  subtotal: number;
+  taxPercent: number;
+  taxAmount: number;
+  processingFee: number;
+  shippingFee: number;
+  total: number;
+  items: {
+    listingId: string;
+    petName: string;
+    petType: string;
+    petBreed: string;
+    petAge: number;
+    petGender: string;
+    avatarUrl: string;
+    price: number;
+  }[];
+}
+
+export interface AdoptionOrdersResponse {
+  success: boolean;
+  data: AdoptionOrder[];
 }
 
 export interface CheckoutResponse {
