@@ -15,7 +15,12 @@ import LoadingModal from "@/components/ui/LoadingModal";
 import { Colors } from "@/constants/colors";
 import communityService from "@/services/communityService";
 import userService, { UserProfile } from "@/services/userService";
-import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import {
+  useLocalSearchParams,
+  useNavigation,
+  useRouter,
+  useSegments,
+} from "expo-router";
 import { useEffect, useLayoutEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -30,6 +35,7 @@ const PetPalProfileScreen = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
   const router = useRouter();
+  const segments = useSegments();
   const [activeTab, setActiveTab] = useState<PetPalTab>("Posts");
   const [activeDropdownId, setActiveDropdownId] = useState<
     number | string | null
@@ -327,8 +333,14 @@ const PetPalProfileScreen = () => {
           }
           onMessagePress={() => {
             if (palData) {
+              let pathname = "/(tabs)/home/petPals/inbox";
+              // Check if we are in the pethub stack
+              if (router.canGoBack() && segments.includes("pethub")) {
+                pathname = "/(tabs)/pethub/inbox";
+              }
+
               router.push({
-                pathname: "/(tabs)/chat/[id]",
+                pathname,
                 params: {
                   id: palData.id,
                   type: "user",

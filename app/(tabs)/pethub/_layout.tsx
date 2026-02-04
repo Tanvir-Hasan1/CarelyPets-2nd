@@ -8,6 +8,7 @@ export default function PetHubLayout() {
       <Stack.Screen name="view-post" />
       <Stack.Screen name="petPal" />
       <Stack.Screen name="profile" />
+      <Stack.Screen name="inbox" />
     </Stack>
   );
 }

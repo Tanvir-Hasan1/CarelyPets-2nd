@@ -5,6 +5,7 @@ export default function PetPalsLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="[id]" />
       <Stack.Screen name="all-pals" />
+      <Stack.Screen name="inbox" />
     </Stack>
   );
 }
