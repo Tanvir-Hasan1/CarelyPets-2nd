@@ -352,11 +352,47 @@ function ChatDetailScreen() {
   }
 
   const goToProfile = () => {
-    if (targetUserId) {
+    let profileId = targetUserId;
+    console.log("goToProfile: Initial targetUserId:", targetUserId);
+
+    if (!profileId && resolvedConversationId) {
+      console.log(
+        "goToProfile: Attempting to resolve from conversation",
+        resolvedConversationId,
+      );
+      const { conversations } = useChatStore.getState();
+      const conversation = conversations.find(
+        (c) => c.id === resolvedConversationId,
+      );
+
+      if (conversation) {
+        const otherParticipant = conversation.participants.find(
+          (p) => p.id !== user?.id,
+        );
+        profileId = otherParticipant?.id || null;
+        console.log(
+          "goToProfile: Resolved from store:",
+          profileId,
+          "Participant:",
+          otherParticipant,
+        );
+      } else {
+        console.log(
+          "goToProfile: Conversation not found in store for ID:",
+          resolvedConversationId,
+        );
+      }
+    }
+
+    console.log("goToProfile: Final profileId:", profileId);
+
+    if (profileId) {
       router.push({
-        pathname: "/(tabs)/home/petPals/[id]",
-        params: { id: targetUserId },
+        pathname: "/(tabs)/chat/petPals",
+        params: { id: String(profileId) },
       });
+    } else {
+      console.warn("goToProfile: Could not resolve profile ID for navigation");
     }
   };
   const fetchNewMessages = () => {

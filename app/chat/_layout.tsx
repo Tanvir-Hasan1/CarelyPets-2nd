@@ -1,14 +1,10 @@
 import { Stack } from "expo-router";
 
-const ChatLayout = () => {
+export default function ChatLayout() {
   return (
     <Stack>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="view-post" options={{ headerShown: false }} />
       <Stack.Screen name="petPals" options={{ headerShown: false }} />
     </Stack>
   );
-};
-
-export default ChatLayout;
+}
