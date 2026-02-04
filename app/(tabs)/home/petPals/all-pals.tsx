@@ -70,7 +70,7 @@ export default function AllPalsScreen() {
           source={
             item.avatarUrl
               ? { uri: item.avatarUrl }
-              : require("@/assets/images/placeholder_avatar.png")
+              : require("@/assets/images/user_placeholder.png")
           }
           style={styles.image}
           contentFit="cover"

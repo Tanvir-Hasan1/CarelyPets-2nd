@@ -58,7 +58,7 @@ export default function SearchScreen() {
         source={
           item.avatarUrl
             ? { uri: item.avatarUrl }
-            : require("@/assets/images/placeholder_avatar.png")
+            : require("@/assets/images/user_placeholder.png")
         }
         style={styles.avatar}
         contentFit="cover"
