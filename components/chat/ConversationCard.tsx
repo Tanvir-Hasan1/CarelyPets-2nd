@@ -2,6 +2,7 @@ import { Spacing } from "@/constants/colors";
 import { Conversation } from "@/services/chatService";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import VideoThumbnail from "./VideoThumbnail";
 
 interface ConversationCardProps {
   conversation: Conversation;
@@ -81,9 +82,45 @@ const ConversationCard = ({
           </Text>
         </View>
         <View style={styles.footer}>
-          <Text style={styles.lastMessage} numberOfLines={2}>
-            {lastMsg ? lastMsg.body || lastMsg.content : "No messages yet"}
-          </Text>
+          <View style={styles.lastMessageContainer}>
+            {lastMsg?.attachments &&
+              lastMsg.attachments.length > 0 &&
+              (lastMsg.attachments[0].mimeType.startsWith("video/") ? (
+                <VideoThumbnail
+                  videoUri={lastMsg.attachments[0].url}
+                  style={styles.messageThumbnail}
+                />
+              ) : (
+                <Image
+                  source={{ uri: lastMsg.attachments[0].url }}
+                  style={styles.messageThumbnail}
+                />
+              ))}
+            <Text style={styles.lastMessage} numberOfLines={1}>
+              {(() => {
+                if (!lastMsg) return "No messages yet";
+                if (lastMsg.attachments && lastMsg.attachments.length > 0) {
+                  const isVideo = lastMsg.attachments.some((a) =>
+                    a.mimeType.startsWith("video/"),
+                  );
+                  const isPhoto = lastMsg.attachments.some((a) =>
+                    a.mimeType.startsWith("image/"),
+                  );
+                  const prefix = isVideo
+                    ? "📹 Video"
+                    : isPhoto
+                      ? "📷 Photo"
+                      : "📎 Attachment";
+                  const body =
+                    lastMsg.body && lastMsg.body !== "📎"
+                      ? ` ${lastMsg.body}`
+                      : "";
+                  return `${prefix}${body}`;
+                }
+                return lastMsg.body || lastMsg.content || "";
+              })()}
+            </Text>
+          </View>
           <View style={styles.statusContainer}>
             {showStatus && renderStatus()}
             {showUnreadBadge && conversation.unreadCount > 0 && (
@@ -157,7 +194,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#4B5563",
     flex: 1,
+  },
+  lastMessageContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
     marginRight: 8,
+    gap: 8,
+  },
+  messageThumbnail: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: "#F3F4F6",
   },
   statusContainer: {
     flexDirection: "row",

@@ -122,7 +122,7 @@ class CommunityService {
       data?: Post;
       message?: string;
     }>(`/community/posts/${postId}`, formData, {
-      timeout: 60000,
+      timeout: 30000,
     });
   }
 

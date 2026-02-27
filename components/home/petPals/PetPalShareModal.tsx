@@ -65,8 +65,7 @@ const PetPalShareModal = ({
 
   const handleUserPress = (userId: string) => {
     // Generate deep link
-    // Use the chat-specific view-post route so back button works correctly (goes back to chat)
-    const deepLink = createURL(`(tabs)/chat/view-post`, {
+    const deepLink = createURL(`(tabs)/pethub/view-post`, {
       queryParams: { id: postId.toString() },
     });
 

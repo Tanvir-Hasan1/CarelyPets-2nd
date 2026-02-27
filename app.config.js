@@ -67,6 +67,7 @@ export default {
         },
       ],
       "expo-location",
+      "expo-video",
     ],
     experiments: {
       typedRoutes: true,

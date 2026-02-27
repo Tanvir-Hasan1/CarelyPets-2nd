@@ -6,6 +6,7 @@ import MessageBubble from "@/components/chat/MessageBubble";
 import MessageOptionsModal from "@/components/chat/MessageOptionsModal";
 import PetPalBlockModal from "@/components/home/petPals/PetPalBlockModal";
 import ImageViewingModal from "@/components/ui/ImageViewingModal";
+import VideoViewingModal from "@/components/ui/VideoViewingModal";
 import { Colors, Spacing } from "@/constants/colors";
 import { Message } from "@/services/chatService";
 import socketService from "@/services/socketService";
@@ -105,6 +106,7 @@ function ChatDetailScreen() {
   const [blockModalVisible, setBlockModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [viewingVideo, setViewingVideo] = useState<string | null>(null);
   const [isBlocked, setIsBlocked] = useState(isBlockedInStore);
 
   // State for message actions
@@ -151,14 +153,14 @@ function ChatDetailScreen() {
 
   const handleAttachment = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ["images", "videos"],
       allowsMultipleSelection: true,
       quality: 0.7,
     });
 
     if (!result.canceled) {
-      const newImages = result.assets.map((asset) => asset.uri);
-      setSelectedImages((prev) => [...prev, ...newImages]);
+      const newMedia = result.assets.map((asset) => asset.uri);
+      setSelectedImages((prev) => [...prev, ...newMedia]);
     }
   };
 
@@ -198,15 +200,22 @@ function ChatDetailScreen() {
         if (!recipientId) throw new Error("Recipient not found");
 
         const formData = new FormData();
-        const bodyContent = messageText.trim() || " ";
+        const bodyContent = messageText.trim() || "📎";
 
         formData.append("recipientId", recipientId);
         formData.append("body", bodyContent);
 
         selectedImages.forEach((uri, index) => {
-          const fileName = uri.split("/").pop() || "image.jpg";
+          const fileName = uri.split("/").pop() || "file.jpg";
           const match = /\.(\w+)$/.exec(fileName);
-          const type = match ? `image/${match[1]}` : "image/jpeg";
+          const extension = match ? match[1].toLowerCase() : "jpg";
+
+          let type = "image/jpeg";
+          if (["mp4", "mov", "m4v", "avi", "mkv", "webm"].includes(extension)) {
+            type = `video/${extension === "mov" ? "quicktime" : extension}`;
+          } else {
+            type = `image/${extension === "png" ? "png" : "jpeg"}`;
+          }
 
           // @ts-ignore
           formData.append("files", {
@@ -465,6 +474,7 @@ function ChatDetailScreen() {
             <MessageBubble
               message={item}
               onImagePress={(uri) => setViewingImage(uri)}
+              onVideoPress={(uri) => setViewingVideo(uri)}
               onLongPress={(m) => setSelectedMessage(m)}
             />
           )}
@@ -588,6 +598,12 @@ function ChatDetailScreen() {
           visible={!!viewingImage}
           imageUri={viewingImage}
           onClose={() => setViewingImage(null)}
+        />
+
+        <VideoViewingModal
+          visible={!!viewingVideo}
+          videoUri={viewingVideo}
+          onClose={() => setViewingVideo(null)}
         />
       </KeyboardAvoidingView>
     </View>

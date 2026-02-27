@@ -1,5 +1,7 @@
 import { Message } from "@/services/chatService";
 import { useAuthStore } from "@/store/useAuthStore";
+import { PlayIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
   Image,
   Linking,
@@ -8,16 +10,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import VideoThumbnail from "./VideoThumbnail";
 
 interface MessageBubbleProps {
   message: Message & { text?: string; time?: string };
   onImagePress: (uri: string) => void;
+  onVideoPress: (uri: string) => void;
   onLongPress: (message: Message) => void;
 }
 
 export default function MessageBubble({
   message,
   onImagePress,
+  onVideoPress,
   onLongPress,
 }: MessageBubbleProps) {
   const isMe =
@@ -64,16 +69,41 @@ export default function MessageBubble({
         {/* API has images grid from attachments */}
         {message.attachments && message.attachments.length > 0 && (
           <View style={styles.imageGrid}>
-            {message.attachments.map((at, idx) => (
-              <TouchableOpacity
-                key={idx}
-                onPress={() => onImagePress(at.url)}
-                onLongPress={() => onLongPress(message)}
-                delayLongPress={200}
-              >
-                <Image source={{ uri: at.url }} style={styles.messageImage} />
-              </TouchableOpacity>
-            ))}
+            {message.attachments.map((at, idx) => {
+              const isVideo = at.mimeType?.startsWith("video/");
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() =>
+                    isVideo ? onVideoPress(at.url) : onImagePress(at.url)
+                  }
+                  onLongPress={() => onLongPress(message)}
+                  delayLongPress={200}
+                  style={styles.attachmentItem}
+                >
+                  {isVideo ? (
+                    <VideoThumbnail
+                      videoUri={at.url}
+                      style={styles.messageImage}
+                    />
+                  ) : (
+                    <Image
+                      source={{ uri: at.url }}
+                      style={styles.messageImage}
+                    />
+                  )}
+                  {isVideo && (
+                    <View style={styles.playOverlay}>
+                      <HugeiconsIcon
+                        icon={PlayIcon}
+                        size={24}
+                        color="#FFFFFF"
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
         {(message.body || message.content) &&
@@ -186,9 +216,20 @@ const styles = StyleSheet.create({
     gap: 4,
     marginBottom: 4,
   },
+  attachmentItem: {
+    position: "relative",
+  },
   messageImage: {
     width: 100,
     height: 100,
+    borderRadius: 8,
+    backgroundColor: "#E5E7EB",
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 8,
   },
   messageText: {
