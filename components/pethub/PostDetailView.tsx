@@ -26,6 +26,7 @@ import PetPalBlockModal from "../home/petPals/PetPalBlockModal";
 import PetPalPostDropdown from "../home/petPals/PetPalPostDropdown";
 import PetPalReportModal from "../home/petPals/PetPalReportModal";
 import PetPalWriteReportModal from "../home/petPals/PetPalWriteReportModal";
+import PetHubVideoPlayer from "./PetHubVideoPlayer";
 
 const { width: windowWidth } = Dimensions.get("window");
 
@@ -278,17 +279,34 @@ const PostDetailView = () => {
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
                 onScroll={handleScroll}
-                renderItem={({ item }) => (
-                  <Image
-                    source={{ uri: item.url }}
-                    style={styles.postImage}
-                    contentFit="cover"
-                    transition={200}
-                    cachePolicy="memory-disk"
-                    allowDownscaling={true}
-                    recyclingKey={item.url}
-                  />
-                )}
+                renderItem={({ item }) => {
+                  const isVideo =
+                    item.type?.includes("video") ||
+                    item.url?.match(
+                      /\.(mp4|mov|m4v|avi|mkv|webm)$|^https:\/\/.*video/,
+                    );
+
+                  if (isVideo) {
+                    return (
+                      <PetHubVideoPlayer
+                        uri={item.url}
+                        style={styles.postImage}
+                      />
+                    );
+                  }
+
+                  return (
+                    <Image
+                      source={{ uri: item.url }}
+                      style={styles.postImage}
+                      contentFit="cover"
+                      transition={200}
+                      cachePolicy="memory-disk"
+                      allowDownscaling={true}
+                      recyclingKey={item.url}
+                    />
+                  );
+                }}
               />
               {post.media.length > 1 && (
                 <View style={styles.dotContainer}>

@@ -99,15 +99,16 @@ export interface AddCommentResponse {
 }
 
 class CommunityService {
-  async createPost(formData: FormData): Promise<PostResponse> {
-    const response = await api.post<PostResponse>(
+  async createPost(
+    formData: FormData,
+    onProgress?: (progress: number) => void,
+  ): Promise<PostResponse> {
+    const response = await api.upload<PostResponse>(
       "/community/posts",
       formData,
+      onProgress,
       {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        timeout: 60000, // Increase timeout for file uploads
+        timeout: 300000, // 5 minutes for video uploads
       },
     );
     return response;
@@ -116,13 +117,15 @@ class CommunityService {
   async updatePost(
     postId: string | number,
     formData: FormData,
+    onProgress?: (progress: number) => void,
   ): Promise<{ success: boolean; data?: Post; message?: string }> {
-    return await api.patch<{
+    return await api.upload<{
       success: boolean;
       data?: Post;
       message?: string;
-    }>(`/community/posts/${postId}`, formData, {
-      timeout: 30000,
+    }>(`/community/posts/${postId}`, formData, onProgress, {
+      method: "PATCH",
+      timeout: 300000,
     });
   }
 

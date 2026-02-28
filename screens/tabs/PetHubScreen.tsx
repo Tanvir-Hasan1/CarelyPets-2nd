@@ -191,31 +191,39 @@ export default function PetHubScreen() {
 
   const handleGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images", "videos"],
       allowsMultipleSelection: true,
       quality: 1,
     });
 
     if (!result.canceled) {
-      const selectedImages = result.assets.map((asset) => asset.uri);
+      const selectedMedia = result.assets.map((asset) => ({
+        uri: asset.uri,
+        type: asset.type === "video" ? "video" : "image",
+      }));
       router.push({
         pathname: "/(tabs)/pethub/create-post",
-        params: { initialImages: JSON.stringify(selectedImages) },
+        params: { initialMedia: JSON.stringify(selectedMedia) },
       });
     }
   };
 
   const handleCamera = async () => {
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images", "videos"],
       quality: 1,
     });
 
     if (!result.canceled) {
-      const selectedImages = [result.assets[0].uri];
+      const selectedMedia = [
+        {
+          uri: result.assets[0].uri,
+          type: result.assets[0].type === "video" ? "video" : "image",
+        },
+      ];
       router.push({
         pathname: "/(tabs)/pethub/create-post",
-        params: { initialImages: JSON.stringify(selectedImages) },
+        params: { initialMedia: JSON.stringify(selectedMedia) },
       });
     }
   };
@@ -273,6 +281,16 @@ export default function PetHubScreen() {
               item.media && item.media.length > 0
                 ? item.media[0].url
                 : undefined
+            }
+            isVideo={
+              !!(
+                item.media &&
+                item.media.length > 0 &&
+                (item.media[0].type?.includes("video") ||
+                  item.media[0].url?.match(
+                    /\.(mp4|mov|m4v|avi|mkv|webm)$|^https:\/\/.*video/,
+                  ))
+              )
             }
             caption={item.text}
             likesCount={item.likesCount.toString()}

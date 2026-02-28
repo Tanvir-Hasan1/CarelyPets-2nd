@@ -19,6 +19,7 @@ interface LoadingModalProps {
   error?: string;
   onClose?: () => void;
   onViewDetails?: () => void;
+  progress?: number;
 }
 
 export default function LoadingModal({
@@ -30,6 +31,7 @@ export default function LoadingModal({
   error,
   onClose,
   onViewDetails,
+  progress,
 }: LoadingModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -53,7 +55,7 @@ export default function LoadingModal({
                 <Text style={{ fontSize: 32, color: "#F44336" }}>✕</Text>
               </View>
               <Text style={[styles.text, { color: "#F44336" }]}>
-                Payment Failed
+                Request Failed
               </Text>
               <Text style={styles.errorText}>
                 {error || "Something went wrong"}
@@ -76,6 +78,21 @@ export default function LoadingModal({
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#00BCD4" />
               <Text style={styles.text}>{message}</Text>
+              {progress !== undefined && progress > 0 && (
+                <View style={styles.progressWrapper}>
+                  <View style={styles.progressBarBg}>
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        { width: `${Math.min(100, progress)}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {Math.min(100, progress)}%
+                  </Text>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -160,5 +177,26 @@ const styles = StyleSheet.create({
   detailsButtonText: {
     color: "#FFFFFF",
     fontWeight: "600",
+  },
+  progressWrapper: {
+    width: "100%",
+    alignItems: "center",
+    marginTop: Spacing.sm,
+  },
+  progressBarBg: {
+    width: 200,
+    height: 8,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: Colors.primary,
+  },
+  progressText: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 4,
   },
 });

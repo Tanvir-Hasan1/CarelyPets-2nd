@@ -6,7 +6,7 @@ import LoadingModal from "@/components/ui/LoadingModal";
 import { Colors } from "@/constants/colors";
 import communityService from "@/services/communityService";
 import { Image } from "expo-image";
-import { Heart, MessageCircle, MoreVertical } from "lucide-react-native";
+import { Heart, MessageCircle, MoreVertical, Play } from "lucide-react-native";
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -37,6 +37,7 @@ interface FeedItemProps {
   sharedPost?: any;
   onSharedPostPress?: () => void;
   priority?: "low" | "normal" | "high";
+  isVideo?: boolean;
 }
 
 const FeedItem = ({
@@ -66,6 +67,7 @@ const FeedItem = ({
   sharedPost,
   onSharedPostPress,
   priority = "normal",
+  isVideo = false,
 }: FeedItemProps) => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -189,16 +191,23 @@ const FeedItem = ({
       )}
 
       {contentImage && !sharedPost ? (
-        <Image
-          source={{ uri: contentImage }}
-          style={styles.feedImage}
-          contentFit="cover"
-          transition={200}
-          cachePolicy="memory-disk"
-          priority={priority}
-          allowDownscaling={true}
-          recyclingKey={contentImage}
-        />
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: contentImage }}
+            style={styles.feedImage}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+            priority={priority}
+            allowDownscaling={true}
+            recyclingKey={contentImage}
+          />
+          {isVideo && (
+            <View style={styles.videoIndicator}>
+              <Play size={24} fill="#FFFFFF" color="#FFFFFF" />
+            </View>
+          )}
+        </View>
       ) : null}
 
       <View style={styles.feedActions}>
@@ -293,9 +302,8 @@ const styles = StyleSheet.create({
   },
   feedImage: {
     width: "100%",
-    height: 300,
+    height: "100%",
     borderRadius: 12,
-    marginBottom: 12,
     backgroundColor: "#E0E0E0",
   },
   feedActions: {
@@ -352,6 +360,24 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 8,
     backgroundColor: "#E0E0E0",
+  },
+  imageContainer: {
+    position: "relative",
+    width: "100%",
+    height: 300,
+    marginBottom: 12,
+  },
+  videoIndicator: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: [{ translateX: -20 }, { translateY: -20 }],
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 

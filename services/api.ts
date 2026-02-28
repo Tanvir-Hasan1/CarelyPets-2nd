@@ -293,11 +293,12 @@ class ApiClient {
     options?: RequestOptions,
   ): Promise<T> {
     const url = this.buildUrl(endpoint);
+    const method = options?.method || "POST";
     const timeout = options?.timeout || 300000; // Default 5 mins for uploads
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", url);
+      xhr.open(method, url);
 
       // Set headers
       if (this.authToken) {
@@ -315,7 +316,10 @@ class ApiClient {
       if (xhr.upload && onProgress) {
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
-            const progress = Math.round((event.loaded / event.total) * 100);
+            const progress = Math.min(
+              100,
+              Math.round((event.loaded / event.total) * 100),
+            );
             onProgress(progress);
           }
         };

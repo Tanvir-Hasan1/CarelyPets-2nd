@@ -7,7 +7,7 @@ import communityService from "@/services/communityService";
 import { useAuthStore } from "@/store/useAuthStore";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { X } from "lucide-react-native";
+import { Play, X } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
   Image,
@@ -30,86 +30,130 @@ const CreatePostView = () => {
   const params = useLocalSearchParams();
   const { user } = useAuthStore();
   const [postText, setPostText] = useState("");
-  const [images, setImages] = useState<string[]>([]);
+  const [mediaItems, setMediaItems] = useState<
+    { uri: string; type: "image" | "video" }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [showError, setShowError] = useState(false);
 
   useEffect(() => {
-    if (params.initialImages) {
+    if (params.initialMedia) {
+      try {
+        const initial = JSON.parse(params.initialMedia as string);
+        if (Array.isArray(initial)) {
+          setMediaItems(initial);
+        }
+      } catch (e) {
+        console.error("Error parsing initialMedia", e);
+      }
+    } else if (params.initialImages) {
+      // Legacy support for initialImages
       try {
         const initial = JSON.parse(params.initialImages as string);
         if (Array.isArray(initial)) {
-          setImages(initial);
+          setMediaItems(initial.map((uri: string) => ({ uri, type: "image" })));
         }
       } catch (e) {
         console.error("Error parsing initialImages", e);
       }
     }
-  }, [params.initialImages]);
+  }, [params.initialMedia, params.initialImages]);
 
-  const pickImage = async () => {
+  const pickMedia = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ["images", "videos"],
       allowsMultipleSelection: true,
-      quality: 1,
+      quality: 0.7,
     });
 
     if (!result.canceled) {
-      const selectedImages = result.assets.map((asset) => asset.uri);
-      setImages([...images, ...selectedImages]);
+      const selectedItems = result.assets.map((asset) => ({
+        uri: asset.uri,
+        type: asset.type === "video" ? ("video" as const) : ("image" as const),
+      }));
+      setMediaItems([...mediaItems, ...selectedItems]);
     }
   };
 
-  const takePhoto = async () => {
+  const takeMedia = async () => {
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ["images"],
-      quality: 1,
+      mediaTypes: ["images", "videos"],
+      quality: 0.7,
     });
 
     if (!result.canceled) {
-      setImages([...images, result.assets[0].uri]);
+      setMediaItems([
+        ...mediaItems,
+        {
+          uri: result.assets[0].uri,
+          type: result.assets[0].type === "video" ? "video" : "image",
+        },
+      ]);
     }
   };
 
-  const removeImage = (uri: string) => {
-    setImages(images.filter((img) => img !== uri));
+  const removeMedia = (uri: string) => {
+    setMediaItems(mediaItems.filter((item) => item.uri !== uri));
   };
 
   const handlePost = async () => {
-    if (!postText.trim() && images.length === 0) return;
+    if (!postText.trim() && mediaItems.length === 0) return;
 
     setIsLoading(true);
     try {
       const formData = new FormData();
       formData.append("text", postText);
 
-      // Append images
-      images.forEach((uri, index) => {
-        const filename = uri.split("/").pop() || `post_image_${index}.jpg`;
+      // Append media
+      mediaItems.forEach((item, index) => {
+        const { uri, type } = item;
+        const filename =
+          uri.split("/").pop() ||
+          `post_media_${index}.${type === "video" ? "mp4" : "jpg"}`;
         const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : `image/jpeg`;
+        const extension = match
+          ? match[1].toLowerCase()
+          : type === "video"
+            ? "mp4"
+            : "jpg";
+
+        let mimeType = "image/jpeg";
+        if (type === "video") {
+          mimeType = `video/${extension === "mov" ? "quicktime" : extension}`;
+        } else {
+          mimeType = `image/${extension === "png" ? "png" : "jpeg"}`;
+        }
 
         formData.append("files", {
           uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
           name: filename,
-          type,
+          type: mimeType,
         } as any);
       });
 
-      const result = await communityService.createPost(formData);
+      const result = await communityService.createPost(formData, (progress) => {
+        setUploadProgress(progress);
+      });
       if (result.success) {
         console.log("Post creation success:", JSON.stringify(result, null, 2));
         setShowSuccess(true);
         setTimeout(() => {
           setShowSuccess(false);
+          setUploadProgress(0);
           router.back();
         }, 2000);
       } else {
         alert("Failed to create post. Please try again.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating post:", error);
-      alert("An error occurred while creating the post.");
+      setErrorDetails(
+        error?.message || "An error occurred while creating the post.",
+      );
+      setShowError(true);
     } finally {
       setIsLoading(false);
     }
@@ -119,10 +163,18 @@ const CreatePostView = () => {
     <View style={styles.container}>
       <Header title="Create Post" />
       <LoadingModal
-        visible={isLoading || showSuccess}
-        message="Creating post..."
+        visible={isLoading || showSuccess || showError}
+        message={
+          uploadProgress > 0
+            ? `Uploading... ${uploadProgress}%`
+            : "Creating post..."
+        }
         success={showSuccess}
         successMessage="Post created successfully!"
+        progress={uploadProgress}
+        failed={showError}
+        error={errorDetails || ""}
+        onClose={() => setShowError(false)}
       />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -161,14 +213,22 @@ const CreatePostView = () => {
               />
             </View>
 
-            {/* Image Preview Grid */}
+            {/* Media Preview Grid */}
             <View style={styles.imageGrid}>
-              {images.map((uri, index) => (
+              {mediaItems.map((item, index) => (
                 <View key={index} style={styles.imageWrapper}>
-                  <Image source={{ uri }} style={styles.previewImage} />
+                  <Image
+                    source={{ uri: item.uri }}
+                    style={styles.previewImage}
+                  />
+                  {item.type === "video" && (
+                    <View style={styles.videoIndicator}>
+                      <Play size={12} fill="#FFFFFF" color="#FFFFFF" />
+                    </View>
+                  )}
                   <TouchableOpacity
                     style={styles.removeButton}
-                    onPress={() => removeImage(uri)}
+                    onPress={() => removeMedia(item.uri)}
                   >
                     <X size={14} color="#FFFFFF" />
                   </TouchableOpacity>
@@ -178,10 +238,10 @@ const CreatePostView = () => {
 
             {/* Actions */}
             <View style={styles.actionsRow}>
-              <TouchableOpacity onPress={pickImage} style={styles.actionBtn}>
+              <TouchableOpacity onPress={pickMedia} style={styles.actionBtn}>
                 <GalleryIcon width={24} height={24} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={takePhoto} style={styles.actionBtn}>
+              <TouchableOpacity onPress={takeMedia} style={styles.actionBtn}>
                 <CameraIcon width={24} height={24} />
               </TouchableOpacity>
             </View>
@@ -190,10 +250,10 @@ const CreatePostView = () => {
           <TouchableOpacity
             style={[
               styles.postButton,
-              !postText && images.length === 0 && styles.postButtonDisabled,
+              !postText && mediaItems.length === 0 && styles.postButtonDisabled,
             ]}
             onPress={handlePost}
-            disabled={!postText && images.length === 0}
+            disabled={!postText && mediaItems.length === 0}
           >
             <Text style={styles.postButtonText}>Post</Text>
           </TouchableOpacity>
@@ -301,6 +361,15 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  videoIndicator: {
+    position: "absolute",
+    bottom: 4,
+    left: 4,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    borderRadius: 10,
+    padding: 2,
+    zIndex: 1,
   },
 });
 
