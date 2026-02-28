@@ -29,7 +29,7 @@ export default {
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION",
       ],
-      package: "com.anonymous.CarelyPets",
+      package: "com.carelypets.app",
       config: {
         googleMaps: {
           apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,

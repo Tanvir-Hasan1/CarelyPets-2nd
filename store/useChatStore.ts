@@ -27,6 +27,7 @@ interface ChatState {
   sendMessageWithAttachments: (
     conversationId: string,
     formData: FormData,
+    onProgress?: (progress: number) => void,
   ) => Promise<void>;
   addMessage: (conversationId: string, message: Message) => void;
   updateMessage: (conversationId: string, message: Message) => void;
@@ -188,9 +189,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sendMessageWithAttachments: async (
     conversationId: string,
     formData: FormData,
+    onProgress?: (progress: number) => void,
   ) => {
     try {
-      const response = await chatService.sendMessageWithAttachments(formData);
+      const response = await chatService.sendMessageWithAttachments(
+        formData,
+        onProgress,
+      );
       if (response.success) {
         const newMessage = response.data;
         get().addMessage(conversationId, newMessage);

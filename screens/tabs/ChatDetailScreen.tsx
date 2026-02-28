@@ -8,7 +8,7 @@ import PetPalBlockModal from "@/components/home/petPals/PetPalBlockModal";
 import ImageViewingModal from "@/components/ui/ImageViewingModal";
 import VideoViewingModal from "@/components/ui/VideoViewingModal";
 import { Colors, Spacing } from "@/constants/colors";
-import { Message } from "@/services/chatService";
+import chatService, { Message } from "@/services/chatService";
 import socketService from "@/services/socketService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useChatStore } from "@/store/useChatStore";
@@ -83,6 +83,7 @@ function ChatDetailScreen() {
   const isLoadingMessages = useChatStore((state) => state.isLoadingMessages);
 
   // Get action functions (these don't cause re-renders)
+  const fetchConversations = useChatStore((state) => state.fetchConversations);
   const fetchMessages = useChatStore((state) => state.fetchMessages);
   const sendMessage = useChatStore((state) => state.sendMessage);
   const editMessage = useChatStore((state) => state.editMessage);
@@ -108,6 +109,7 @@ function ChatDetailScreen() {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [viewingVideo, setViewingVideo] = useState<string | null>(null);
   const [isBlocked, setIsBlocked] = useState(isBlockedInStore);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // State for message actions
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
@@ -248,19 +250,35 @@ function ChatDetailScreen() {
         // and let backend create it.
 
         if (resolvedConversationId) {
-          await sendMessageWithAttachments(resolvedConversationId, formData);
-        } else {
-          // We can't use store's `sendMessageWithAttachments` if it demands conversationId.
-          // But let's check store usage in previous code: `sendMessageWithAttachments(conversationId, formData)`
-          // So it DOES require conversationId.
-          // If we are in "new" mode, we might need to fallback to `chatService` directly or handle it.
-          // Since this is complex, let's focus on text messages first logic in `else` block below.
-          console.warn(
-            "Sending attachments in new conversation not fully supported via store yet without conversationId",
+          await sendMessageWithAttachments(
+            resolvedConversationId,
+            formData,
+            (progress) => {
+              setUploadProgress(progress);
+            },
           );
-          // For now, let's try to fetch conversation again or just error.
-          // OR better, we use `chatService` directly and then refresh.
+        } else {
+          // New conversation
+          const response = await chatService.sendMessageWithAttachments(
+            formData,
+            (progress) => {
+              setUploadProgress(progress);
+            },
+          );
+          if (response.success) {
+            fetchConversations();
+            router.replace({
+              pathname: "/chat/[id]",
+              params: {
+                id: response.data.conversationId,
+                name: (name as string) || "New Chat",
+              },
+            });
+          }
         }
+        setUploadProgress(0);
+        setSelectedImages([]);
+        setMessageText("");
       } else {
         // TEXT MESSAGE
         if (resolvedConversationId) {
@@ -276,12 +294,10 @@ function ChatDetailScreen() {
           // Most likely NOT.
 
           // FIX: Use `chatService.sendMessage` directly for new conversation, then refresh.
-
           // We need to import chatService if not imported. It is imported as `Message` type source, but maybe not default.
           // It is imported: `import { Message } from "@/services/chatService";` - NOT default.
           // Use `useChatStore`'s `fetchConversations` to refresh after.
 
-          const { chatService } = require("@/services/chatService"); // Dynamic import or assume available?
           // It's cleaner to use `import chatService from ...`
           // I will add import in next step if missing.
 
@@ -529,6 +545,7 @@ function ChatDetailScreen() {
               setEditingMessageId(null);
               setMessageText("");
             }}
+            uploadProgress={uploadProgress}
           />
         )}
 
@@ -636,6 +653,24 @@ const styles = StyleSheet.create({
   blockedSubtext: {
     fontSize: 14,
     color: "#F57C00",
+    textAlign: "center",
+  },
+  progressContainer: {
+    height: 30,
+    backgroundColor: "#E5E7EB",
+    justifyContent: "center",
+    position: "relative",
+    overflow: "hidden",
+  },
+  progressBar: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.primary,
+    opacity: 0.3,
+  },
+  progressText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.primary,
     textAlign: "center",
   },
 });

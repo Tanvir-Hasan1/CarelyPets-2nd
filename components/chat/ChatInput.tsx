@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import ProgressCircle from "../ui/ProgressCircle";
 
 interface ChatInputProps {
   messageText: string;
@@ -26,6 +27,7 @@ interface ChatInputProps {
   paddingBottom: number;
   isEditing?: boolean;
   onCancelEdit?: () => void;
+  uploadProgress?: number;
 }
 
 export default function ChatInput({
@@ -39,6 +41,7 @@ export default function ChatInput({
   paddingBottom,
   isEditing = false,
   onCancelEdit,
+  uploadProgress = 0,
 }: ChatInputProps) {
   return (
     <View style={[styles.inputContainer, { paddingBottom }]}>
@@ -57,6 +60,11 @@ export default function ChatInput({
               >
                 <HugeiconsIcon icon={Cancel01Icon} size={16} color="#FFFFFF" />
               </TouchableOpacity>
+              {isSending && uploadProgress > 0 && uploadProgress < 100 && (
+                <View style={styles.progressOverlay}>
+                  <ProgressCircle progress={uploadProgress} size={40} />
+                </View>
+              )}
             </View>
           ))}
         </ScrollView>
@@ -178,5 +186,12 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     justifyContent: "center",
     alignItems: "center",
+  },
+  progressOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 8,
   },
 });

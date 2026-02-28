@@ -25,9 +25,14 @@ class SocketService {
 
     this.socket = io(baseUrl, {
       auth: { token },
-      transports: ["websocket", "polling"], // Fallback to polling if websocket fails
+      transports: ["websocket"], // Force websocket for better stability on AWS
+      upgrade: false, // Don't try to upgrade from polling, stay on websocket
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity, // Keep trying to reconnect
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000, // Connection timeout
+      autoConnect: true,
     });
 
     this.socket.on("connect", () => {

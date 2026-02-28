@@ -131,15 +131,14 @@ class ChatService {
 
   async sendMessageWithAttachments(
     formData: FormData,
+    onProgress?: (progress: number) => void,
   ): Promise<{ success: boolean; data: Message }> {
-    return await api.post<{ success: boolean; data: Message }>(
+    return await api.upload<{ success: boolean; data: Message }>(
       "/messages/attachments",
       formData,
+      onProgress,
       {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        timeout: 60000, // Higher timeout for file uploads
+        timeout: 300000, // 5 minutes for video uploads
       },
     );
   }
