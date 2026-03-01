@@ -7,6 +7,7 @@ import config from "@/config";
 
 interface RequestOptions extends RequestInit {
   timeout?: number;
+  abortRef?: { current: (() => void) | null };
 }
 
 interface ApiError {
@@ -354,9 +355,72 @@ class ApiClient {
         reject({ message: "Request timed out", status: 408 });
       };
 
+      // Register abort function in abortRef so caller can cancel
+      if (options?.abortRef) {
+        options.abortRef.current = () => {
+          xhr.abort();
+          reject({ message: "UPLOAD_CANCELLED", status: -1 });
+        };
+      }
+
+      xhr.onabort = () => {
+        reject({ message: "UPLOAD_CANCELLED", status: -1 });
+        if (options?.abortRef) options.abortRef.current = null;
+      };
+
       xhr.timeout = timeout;
       xhr.send(formData as any);
     });
+  }
+
+  /**
+   * Upload with automatic retry on network failure.
+   * Retries up to maxRetries times with exponential backoff.
+   * Does NOT retry on client errors (4xx / "File too large").
+   */
+  async uploadWithRetry<T>(
+    endpoint: string,
+    formData: FormData,
+    onProgress?: (progress: number) => void,
+    options?: RequestOptions,
+    maxRetries: number = 3,
+  ): Promise<T> {
+    let lastError: any;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[API] Upload attempt ${attempt}/${maxRetries}...`);
+        if (attempt > 1) {
+          // Reset progress on retry
+          if (onProgress) onProgress(0);
+          // Exponential backoff: 2s, 4s, 8s
+          await new Promise((res) =>
+            setTimeout(res, Math.pow(2, attempt - 1) * 2000),
+          );
+        }
+        return await this.upload<T>(endpoint, formData, onProgress, options);
+      } catch (error: any) {
+        lastError = error;
+        const status = error?.status ?? 0;
+        const isClientError = status >= 400 && status < 500;
+        const isFileTooLarge =
+          typeof error?.message === "string" &&
+          error.message.toLowerCase().includes("too large");
+        const isCancelled = error?.message === "UPLOAD_CANCELLED";
+        if (isCancelled || isClientError || isFileTooLarge) {
+          console.warn(
+            `[API] Non-retryable error (${status}):`,
+            error?.message,
+          );
+          throw error;
+        }
+        console.warn(
+          `[API] Upload attempt ${attempt} failed (status ${status}):`,
+          error?.message,
+          attempt < maxRetries ? "— retrying..." : "— giving up.",
+        );
+      }
+    }
+    throw lastError;
   }
 }
 

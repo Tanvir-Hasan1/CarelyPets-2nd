@@ -32,6 +32,10 @@ export interface Message {
   content?: string;
   status?: string;
   sender?: string;
+  // Optimistic upload fields (local only, never from server)
+  isPending?: boolean;
+  uploadProgress?: number;
+  localUris?: string[]; // local file:// URIs for thumbnail while uploading
 }
 
 export interface Conversation {

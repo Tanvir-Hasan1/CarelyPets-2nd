@@ -158,6 +158,7 @@ function ChatDetailScreen() {
       mediaTypes: ["images", "videos"],
       allowsMultipleSelection: true,
       quality: 0.7,
+      videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
     });
 
     if (!result.canceled) {
@@ -227,41 +228,28 @@ function ChatDetailScreen() {
           });
         });
 
-        // Use a generic send method or existing one. existing sendMessageWithAttachments likely expects conversationId.
-        // If it's a new conversation, we can't use `sendMessageWithAttachments` if it requires conversationId in API path?
-        // Checking existing `sendMessageWithAttachments`: it posts to `/messages/attachments`.
-        // Wait, `sendMessageWithAttachments` in `chatService` takes `formData`. It does NOT take conversationId in code I saw?
-        // Checking `chatService.ts` again...
-        // `sendMessageWithAttachments(formData: FormData)` -> YES. It relies on formData having recipientId?
-        // It seems `sendMessage` implementation in `ChatDetailScreen` passed `conversationId` to `sendMessageWithAttachments`.
-        // BUT `chatService.ts`: `sendMessageWithAttachments(formData)` (lines 96-108). It DOES NOT take conversationId as arg.
-        // `useChatStore` might have a wrapper.
-        // Let's assume `useChatStore.sendMessageWithAttachments` signature matches `chatService` roughly OR handles store update.
-        // If I call the store function, it might expect conversationId for optimistic updates?
-        // Let's use `chatService` directly if needed, or handle store limitation.
-        // Actually, for NEW conversation, `chatService.sendMessage` works because it takes `recipientId`.
-
-        // Let's just use `sendMessage` (text) logic first as it's simpler to fix.
-        // For attachments, we need to ensure the store action supports it.
-        // Just calling the store action `sendMessageWithAttachments` might be an issue if it requires conversationId.
-        // I will assume for now we use `sendMessage` for text.
-
-        // If resolvedConversationId exists, we use it. If not (isNewConversation), we probably should rely on `recipientId` alone
-        // and let backend create it.
+        // Clear input immediately so user can type while upload runs
+        const capturedImages = [...selectedImages];
+        const capturedBody = bodyContent;
+        setSelectedImages([]);
+        setMessageText("");
+        setUploadProgress(0);
 
         if (resolvedConversationId) {
-          await sendMessageWithAttachments(
+          // Fire-and-forget: UI stays free while upload happens in background
+          sendMessageWithAttachments(
             resolvedConversationId,
             formData,
-            (progress) => {
-              setUploadProgress(progress);
-            },
+            capturedImages,
+            user?.id || "",
+            recipientId,
+            capturedBody,
           );
         } else {
-          // New conversation
+          // New conversation — must await to get the conversationId
           const response = await chatService.sendMessageWithAttachments(
             formData,
-            (progress) => {
+            (progress: number) => {
               setUploadProgress(progress);
             },
           );
@@ -276,9 +264,6 @@ function ChatDetailScreen() {
             });
           }
         }
-        setUploadProgress(0);
-        setSelectedImages([]);
-        setMessageText("");
       } else {
         // TEXT MESSAGE
         if (resolvedConversationId) {

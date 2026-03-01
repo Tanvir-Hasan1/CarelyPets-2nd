@@ -102,13 +102,15 @@ class CommunityService {
   async createPost(
     formData: FormData,
     onProgress?: (progress: number) => void,
+    abortRef?: { current: (() => void) | null },
   ): Promise<PostResponse> {
-    const response = await api.upload<PostResponse>(
+    const response = await api.uploadWithRetry<PostResponse>(
       "/community/posts",
       formData,
       onProgress,
       {
         timeout: 300000, // 5 minutes for video uploads
+        abortRef,
       },
     );
     return response;
@@ -119,7 +121,7 @@ class CommunityService {
     formData: FormData,
     onProgress?: (progress: number) => void,
   ): Promise<{ success: boolean; data?: Post; message?: string }> {
-    return await api.upload<{
+    return await api.uploadWithRetry<{
       success: boolean;
       data?: Post;
       message?: string;

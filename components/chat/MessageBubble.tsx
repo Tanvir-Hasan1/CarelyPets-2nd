@@ -3,6 +3,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { PlayIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
+  ActivityIndicator,
   Image,
   Linking,
   StyleSheet,
@@ -66,51 +67,82 @@ export default function MessageBubble({
         delayLongPress={200}
         style={[styles.bubble, isMe ? styles.myBubble : styles.otherBubble]}
       >
-        {/* API has images grid from attachments */}
-        {message.attachments && message.attachments.length > 0 && (
-          <View style={styles.imageGrid}>
-            {message.attachments.map((at, idx) => {
-              const isVideo = at.mimeType?.startsWith("video/");
-              return (
-                <TouchableOpacity
-                  key={idx}
-                  onPress={() =>
-                    isVideo ? onVideoPress(at.url) : onImagePress(at.url)
-                  }
-                  onLongPress={() => onLongPress(message)}
-                  delayLongPress={200}
-                  style={styles.attachmentItem}
-                >
-                  {isVideo ? (
-                    <VideoThumbnail
-                      videoUri={at.url}
-                      style={styles.messageImage}
-                    />
-                  ) : (
-                    <Image
-                      source={{ uri: at.url }}
-                      style={styles.messageImage}
-                    />
-                  )}
-                  {isVideo && (
-                    <View style={styles.playOverlay}>
-                      <HugeiconsIcon
-                        icon={PlayIcon}
-                        size={24}
-                        color="#FFFFFF"
-                      />
+        {/* Pending upload: show local thumbnails with progress overlay */}
+        {message.isPending &&
+          message.localUris &&
+          message.localUris.length > 0 && (
+            <View style={styles.imageGrid}>
+              {message.localUris.map((uri, idx) => {
+                const progress = message.uploadProgress ?? 0;
+                return (
+                  <View key={idx} style={styles.attachmentItem}>
+                    <Image source={{ uri }} style={styles.messageImage} />
+                    <View style={styles.pendingOverlay}>
+                      {progress < 100 ? (
+                        <>
+                          <View style={styles.progressRing}>
+                            <Text style={styles.progressRingText}>
+                              {progress}%
+                            </Text>
+                          </View>
+                        </>
+                      ) : (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      )}
                     </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        {/* Uploaded attachments from server */}
+        {!message.isPending &&
+          message.attachments &&
+          message.attachments.length > 0 && (
+            <View style={styles.imageGrid}>
+              {message.attachments.map((at, idx) => {
+                const isVideo = at.mimeType?.startsWith("video/");
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() =>
+                      isVideo ? onVideoPress(at.url) : onImagePress(at.url)
+                    }
+                    onLongPress={() => onLongPress(message)}
+                    delayLongPress={200}
+                    style={styles.attachmentItem}
+                  >
+                    {isVideo ? (
+                      <VideoThumbnail
+                        videoUri={at.url}
+                        style={styles.messageImage}
+                      />
+                    ) : (
+                      <Image
+                        source={{ uri: at.url }}
+                        style={styles.messageImage}
+                      />
+                    )}
+                    {isVideo && (
+                      <View style={styles.playOverlay}>
+                        <HugeiconsIcon
+                          icon={PlayIcon}
+                          size={24}
+                          color="#FFFFFF"
+                        />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         {(message.body || message.content) &&
-          // Hide placeholder text (space or emoji) when there are attachments
+          // Hide placeholder text (space or emoji) when there are attachments or pending files
           !(
             (message.body === " " || message.body === "📎") &&
-            message.attachments?.length > 0
+            (message.attachments?.length > 0 ||
+              (message.isPending && (message.localUris?.length ?? 0) > 0))
           ) && (
             <Text style={[styles.messageText, isMe && styles.myMessageText]}>
               {(() => {
@@ -262,5 +294,27 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     color: "#6B7280",
     fontSize: 14,
+  },
+  pendingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  progressRing: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  progressRingText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });

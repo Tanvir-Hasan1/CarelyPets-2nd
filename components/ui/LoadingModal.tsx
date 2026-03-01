@@ -19,6 +19,7 @@ interface LoadingModalProps {
   error?: string;
   onClose?: () => void;
   onViewDetails?: () => void;
+  onCancel?: () => void;
   progress?: number;
 }
 
@@ -31,6 +32,7 @@ export default function LoadingModal({
   error,
   onClose,
   onViewDetails,
+  onCancel,
   progress,
 }: LoadingModalProps) {
   return (
@@ -92,6 +94,14 @@ export default function LoadingModal({
                     {Math.min(100, progress)}%
                   </Text>
                 </View>
+              )}
+              {onCancel && (
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={onCancel}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel Upload</Text>
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -198,5 +208,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6B7280",
     marginTop: 4,
+  },
+  cancelButton: {
+    marginTop: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#EF4444",
+  },
+  cancelButtonText: {
+    color: "#EF4444",
+    fontWeight: "600",
+    fontSize: FontSizes.sm,
   },
 });

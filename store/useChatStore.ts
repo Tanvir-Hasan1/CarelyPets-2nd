@@ -27,11 +27,27 @@ interface ChatState {
   sendMessageWithAttachments: (
     conversationId: string,
     formData: FormData,
+    localUris: string[],
+    currentUserId: string,
+    recipientId: string,
+    body: string,
     onProgress?: (progress: number) => void,
-  ) => Promise<void>;
+  ) => void; // Fire-and-forget — does NOT await
   addMessage: (conversationId: string, message: Message) => void;
   updateMessage: (conversationId: string, message: Message) => void;
   deleteMessage: (conversationId: string, messageId: string) => void;
+  addPendingMessage: (conversationId: string, message: Message) => void;
+  updatePendingProgress: (
+    conversationId: string,
+    tempId: string,
+    progress: number,
+  ) => void;
+  replacePendingMessage: (
+    conversationId: string,
+    tempId: string,
+    realMessage: Message,
+  ) => void;
+  removePendingMessage: (conversationId: string, tempId: string) => void;
   editMessage: (
     conversationId: string,
     messageId: string,
@@ -186,25 +202,107 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessageWithAttachments: async (
+  sendMessageWithAttachments: (
     conversationId: string,
     formData: FormData,
+    localUris: string[],
+    currentUserId: string,
+    recipientId: string,
+    body: string,
     onProgress?: (progress: number) => void,
   ) => {
-    try {
-      const response = await chatService.sendMessageWithAttachments(
-        formData,
-        onProgress,
-      );
-      if (response.success) {
-        const newMessage = response.data;
-        get().addMessage(conversationId, newMessage);
+    const tempId = `pending_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const pendingMsg: Message = {
+      id: tempId,
+      conversationId,
+      senderId: currentUserId,
+      recipientId,
+      body,
+      readAt: null,
+      editedAt: null,
+      deletedAt: null,
+      isDeleted: false,
+      attachments: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isPending: true,
+      uploadProgress: 0,
+      localUris,
+    };
+
+    // 1. Immediately show the pending message in the chat
+    get().addPendingMessage(conversationId, pendingMsg);
+
+    // 2. Upload in the background — no await, UI stays free
+    (async () => {
+      try {
+        const response = await chatService.sendMessageWithAttachments(
+          formData,
+          (progress) => {
+            get().updatePendingProgress(conversationId, tempId, progress);
+            if (onProgress) onProgress(progress);
+          },
+        );
+        if (response.success) {
+          get().replacePendingMessage(conversationId, tempId, response.data);
+        } else {
+          get().removePendingMessage(conversationId, tempId);
+        }
+      } catch (error: any) {
+        console.error("[Store] sendMessageWithAttachments failed:", error);
+        get().removePendingMessage(conversationId, tempId);
       }
-    } catch (error: any) {
-      set({
-        error: error.message || "Error sending message with attachments",
-      });
-    }
+    })();
+  },
+
+  addPendingMessage: (conversationId: string, message: Message) => {
+    set((state) => ({
+      messages: {
+        ...state.messages,
+        [conversationId]: [message, ...(state.messages[conversationId] || [])],
+      },
+    }));
+  },
+
+  updatePendingProgress: (
+    conversationId: string,
+    tempId: string,
+    progress: number,
+  ) => {
+    set((state) => ({
+      messages: {
+        ...state.messages,
+        [conversationId]: (state.messages[conversationId] || []).map((m) =>
+          m.id === tempId ? { ...m, uploadProgress: progress } : m,
+        ),
+      },
+    }));
+  },
+
+  replacePendingMessage: (
+    conversationId: string,
+    tempId: string,
+    realMessage: Message,
+  ) => {
+    set((state) => ({
+      messages: {
+        ...state.messages,
+        [conversationId]: (state.messages[conversationId] || []).map((m) =>
+          m.id === tempId ? realMessage : m,
+        ),
+      },
+    }));
+  },
+
+  removePendingMessage: (conversationId: string, tempId: string) => {
+    set((state) => ({
+      messages: {
+        ...state.messages,
+        [conversationId]: (state.messages[conversationId] || []).filter(
+          (m) => m.id !== tempId,
+        ),
+      },
+    }));
   },
 
   // Action: Edit message via API
@@ -247,16 +345,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((state) => {
       const conversationMessages = state.messages[conversationId] || [];
 
-      // Avoid duplicate messages
-      if (conversationMessages.find((m) => m.id === message.id)) {
-        return state;
-      }
-
       console.log(
         `[Store] Updating state with new message for ${conversationId}.`,
       );
-      // For Inverted FlatList, Newest message must be at INDEX 0
-      const updatedMessages = [message, ...conversationMessages];
+      // Prepend new message and deduplicate by ID in one pass (fixes socket + API race condition)
+      const seen = new Set<string>();
+      const updatedMessages = [message, ...conversationMessages].filter((m) => {
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      });
       const currentUserId = useAuthStore.getState().user?.id;
 
       const conversationExists = state.conversations.find(

@@ -60,9 +60,13 @@ export default function ChatInput({
               >
                 <HugeiconsIcon icon={Cancel01Icon} size={16} color="#FFFFFF" />
               </TouchableOpacity>
-              {isSending && uploadProgress > 0 && uploadProgress < 100 && (
+              {isSending && (
                 <View style={styles.progressOverlay}>
-                  <ProgressCircle progress={uploadProgress} size={40} />
+                  {uploadProgress < 100 ? (
+                    <ProgressCircle progress={uploadProgress} size={40} />
+                  ) : (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  )}
                 </View>
               )}
             </View>

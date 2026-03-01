@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Play, X } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -38,6 +38,18 @@ const CreatePostView = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
+  // Ref that holds the abort function for the active XHR upload
+  const abortRef = useRef<(() => void) | null>(null);
+
+  const handleCancel = () => {
+    if (abortRef.current) {
+      abortRef.current();
+      abortRef.current = null;
+    }
+    setIsLoading(false);
+    setUploadProgress(0);
+    setShowError(false);
+  };
 
   useEffect(() => {
     if (params.initialMedia) {
@@ -67,13 +79,24 @@ const CreatePostView = () => {
       mediaTypes: ["images", "videos"],
       allowsMultipleSelection: true,
       quality: 0.7,
+      videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
     });
 
     if (!result.canceled) {
-      const selectedItems = result.assets.map((asset) => ({
-        uri: asset.uri,
-        type: asset.type === "video" ? ("video" as const) : ("image" as const),
-      }));
+      const selectedItems = result.assets.map((asset) => {
+        // Warn if file is > 20MB
+        if (asset.fileSize && asset.fileSize > 20 * 1024 * 1024) {
+          console.warn(
+            `File ${asset.fileName} is large (${(asset.fileSize / (1024 * 1024)).toFixed(1)}MB). It might fail to upload.`,
+          );
+        }
+        return {
+          uri: asset.uri,
+          type:
+            asset.type === "video" ? ("video" as const) : ("image" as const),
+          fileSize: asset.fileSize,
+        };
+      });
       setMediaItems([...mediaItems, ...selectedItems]);
     }
   };
@@ -82,6 +105,7 @@ const CreatePostView = () => {
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images", "videos"],
       quality: 0.7,
+      videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
     });
 
     if (!result.canceled) {
@@ -103,6 +127,30 @@ const CreatePostView = () => {
     if (!postText.trim() && mediaItems.length === 0) return;
 
     setIsLoading(true);
+    setUploadProgress(0);
+    setShowError(false);
+
+    // Pre-flight network check using XMLHttpRequest (more reliable than fetch on Android)
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        // Use the same base URL from .env (via api internals) — just hit the /health route
+        xhr.open("GET", `${process.env.EXPO_PUBLIC_API_URL}/health`);
+        xhr.timeout = 5000;
+        xhr.onload = () => resolve();
+        xhr.onerror = () => reject(new Error("Network unavailable"));
+        xhr.ontimeout = () => reject(new Error("Server unreachable (timeout)"));
+        xhr.send();
+      });
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorDetails(
+        "No internet connection or server unreachable. Please check your network and try again.",
+      );
+      setShowError(true);
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append("text", postText);
@@ -134,9 +182,11 @@ const CreatePostView = () => {
         } as any);
       });
 
-      const result = await communityService.createPost(formData, (progress) => {
-        setUploadProgress(progress);
-      });
+      const result = await communityService.createPost(
+        formData,
+        (progress) => setUploadProgress(progress),
+        abortRef,
+      );
       if (result.success) {
         console.log("Post creation success:", JSON.stringify(result, null, 2));
         setShowSuccess(true);
@@ -146,10 +196,18 @@ const CreatePostView = () => {
           router.back();
         }, 2000);
       } else {
-        alert("Failed to create post. Please try again.");
+        setErrorDetails("Failed to create post. Please try again.");
+        setShowError(true);
       }
     } catch (error: any) {
+      if (error?.message === "UPLOAD_CANCELLED") {
+        // User cancelled — reset silently, no error shown
+        setIsLoading(false);
+        setUploadProgress(0);
+        return;
+      }
       console.error("Error creating post:", error);
+      setUploadProgress(0);
       setErrorDetails(
         error?.message || "An error occurred while creating the post.",
       );
@@ -165,9 +223,11 @@ const CreatePostView = () => {
       <LoadingModal
         visible={isLoading || showSuccess || showError}
         message={
-          uploadProgress > 0
-            ? `Uploading... ${uploadProgress}%`
-            : "Creating post..."
+          uploadProgress === 100
+            ? "Processing post... Please wait"
+            : uploadProgress > 0
+              ? `Uploading... ${uploadProgress}%`
+              : "Creating post..."
         }
         success={showSuccess}
         successMessage="Post created successfully!"
@@ -175,6 +235,9 @@ const CreatePostView = () => {
         failed={showError}
         error={errorDetails || ""}
         onClose={() => setShowError(false)}
+        onCancel={
+          isLoading && !showSuccess && !showError ? handleCancel : undefined
+        }
       />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
