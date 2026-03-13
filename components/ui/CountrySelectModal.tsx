@@ -8,6 +8,7 @@ import {
 import { useState } from "react";
 import {
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -82,12 +83,14 @@ export default function CountrySelectModal({
   );
 
   const handleSelect = (country: string) => {
+    Keyboard.dismiss();
     onSelect(country);
     setSearchQuery("");
     onClose();
   };
 
   const handleClose = () => {
+    Keyboard.dismiss();
     setSearchQuery("");
     onClose();
   };
@@ -100,7 +103,7 @@ export default function CountrySelectModal({
       onRequestClose={handleClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
         style={styles.modalOverlay}
       >
         <View style={styles.modalContainer}>
@@ -125,6 +128,7 @@ export default function CountrySelectModal({
 
           {/* Country List */}
           <FlatList
+            keyboardShouldPersistTaps="handled"
             data={filteredCountries}
             keyExtractor={(item) => item}
             renderItem={({ item }) => (
